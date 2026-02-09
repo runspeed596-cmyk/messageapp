@@ -1,0 +1,115 @@
+D  onAnimationEnd,canceled: false
+2025-12-27 12:43:38.748 11063-11063 InsetsController        com.hasani.messageapp                D  cancelAnimation of types: 8, animType: 0, host: com.hasani.messageapp/com.hasani.messageapp.MainActivity invokeCallback=false reason=android.view.InsetsController.notifyFinished:1792 android.view.InsetsAnimationThreadControlRunner$1.lambda$notifyFinished$0:84 android.view.InsetsAnimationThreadControlRunner$1.$r8$lambda$cDFF0h4Ncq-8EXdGszv69jrUu7c:0 android.view.InsetsAnimationThreadControlRunner$1$$ExternalSyntheticLambda1.run:0 android.os.Handler.handleCallback:959 android.os.Handler.dispatchMessage:100 android.os.Looper.loopOnce:249 android.os.Looper.loop:337 android.app.ActivityThread.main:9500 java.lang.reflect.Method.invoke:-2 
+2025-12-27 12:43:38.748 11063-11063 ImeTracker              com.hasani.messageapp                I  com.hasani.messageapp:e97fdbea: onShown
+2025-12-27 12:43:39.659 11063-11063 MIUIInput               com.hasani.messageapp                I  [MotionEvent] ViewRootImpl windowName 'com.hasani.messageapp/com.hasani.messageapp.MainActivity', { action=ACTION_DOWN, id[0]=0, pointerCount=1, eventTime=261314998, downTime=261314998, phoneEventTime=۱۲:۴۳:۳۹.۶۵۶ } moveCount:0
+2025-12-27 12:43:39.733 11063-11063 MIUIInput               com.hasani.messageapp                I  [MotionEvent] ViewRootImpl windowName 'com.hasani.messageapp/com.hasani.messageapp.MainActivity', { action=ACTION_UP, id[0]=0, pointerCount=1, eventTime=261315073, downTime=261314998, phoneEventTime=۱۲:۴۳:۳۹.۷۳۱ } moveCount:0
+2025-12-27 12:43:39.736 11063-11063 ConversationViewModel   com.hasani.messageapp                D  Message queued: local_695a48aa-ee33-484d-a2b5-4038bffd420b
+2025-12-27 12:43:39.741 11063-15391 MessageSyncManager      com.hasani.messageapp                D  Found 1 pending messages to sync
+2025-12-27 12:43:39.741 11063-15391 MessageSyncManager      com.hasani.messageapp                D  Syncing message local_695a48aa-ee33-484d-a2b5-4038bffd420b to chat 6aa962c8-76bc-4310-975a-32b285f0ec0e
+2025-12-27 12:43:39.742 11063-11063 HandWritingStubImpl     com.hasani.messageapp                I  getCurrentKeyboardType: 1
+2025-12-27 12:43:39.750 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  --> POST http://10.30.218.98:8080/api/chats/6aa962c8-76bc-4310-975a-32b285f0ec0e/messages
+2025-12-27 12:43:39.750 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  Content-Type: application/json; charset=UTF-8
+2025-12-27 12:43:39.750 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  Content-Length: 38
+2025-12-27 12:43:39.750 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJlYWY0ZWM0OS1jMDAxLTRkZGItODU1MC1iOWE2N2Q4MDYxMTciLCJpYXQiOjE3NjY3NzA2MzEsImV4cCI6MTc2Njg1NzAzMX0.Xj_wsr6NP_pZUzeR5aHJmQ57PL3NTki7zhSzLabHVoO2pCGWJH3D633s8VZ0AQHNeyPXCr6WE1BRRgFrFhuWvw
+2025-12-27 12:43:39.750 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  {"content":"ممنون","type":"TEXT"}
+2025-12-27 12:43:39.750 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  --> END POST (38-byte body)
+2025-12-27 12:43:39.760 11063-11063 ConversationViewModel   com.hasani.messageapp                D  Received 33 messages from database for chat: 6aa962c8-76bc-4310-975a-32b285f0ec0e
+2025-12-27 12:43:39.771 11063-15389 GlobalSyncManager       com.hasani.messageapp                D  📊 Chat list in DB: 5 chats. Subscribing to topics...
+2025-12-27 12:43:39.778 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  <-- 200 http://10.30.218.98:8080/api/chats/6aa962c8-76bc-4310-975a-32b285f0ec0e/messages (27ms)
+2025-12-27 12:43:39.778 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  Vary: Origin
+2025-12-27 12:43:39.778 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  Vary: Access-Control-Request-Method
+2025-12-27 12:43:39.778 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  Vary: Access-Control-Request-Headers
+2025-12-27 12:43:39.779 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  Content-Type: application/json
+2025-12-27 12:43:39.779 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  Transfer-Encoding: chunked
+2025-12-27 12:43:39.779 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  Date: Sat, 27 Dec 2025 09:13:40 GMT
+2025-12-27 12:43:39.779 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  Keep-Alive: timeout=60
+2025-12-27 12:43:39.779 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  Connection: keep-alive
+2025-12-27 12:43:39.779 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  {"success":true,"message":"پیام ارسال شد","data":{"id":"8be17d92-70ec-4c9d-aa76-a32d8faf7666","chatId":"6aa962c8-76bc-4310-975a-32b285f0ec0e","senderId":"eaf4ec49-c001-4ddb-8550-b9a67d806117","senderName":"عباس عباسیان","senderAvatar":null,"type":"TEXT","content":"ممنون","mediaUrl":null,"replyToMessageId":null,"forwardedFrom":null,"status":"SENT","isEdited":false,"createdAt":"2025-12-27T09:13:40.057796200Z","editedAt":null}}
+2025-12-27 12:43:39.779 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  <-- END HTTP (28ms, 455-byte body)
+2025-12-27 12:43:39.794 11063-15386 MessageSyncManager      com.hasani.messageapp                D  Message local_695a48aa-ee33-484d-a2b5-4038bffd420b synced successfully as 8be17d92-70ec-4c9d-aa76-a32d8faf7666
+2025-12-27 12:43:39.816 11063-11063 ConversationViewModel   com.hasani.messageapp                D  Received 33 messages from database for chat: 6aa962c8-76bc-4310-975a-32b285f0ec0e
+2025-12-27 12:43:39.827 11063-15389 GlobalSyncManager       com.hasani.messageapp                D  📊 Chat list in DB: 5 chats. Subscribing to topics...
+2025-12-27 12:43:39.840 11063-11063 InsetsController        com.hasani.messageapp                D  show(ime(), fromIme=true)
+2025-12-27 12:43:39.840 11063-11063 ImeTracker              com.hasani.messageapp                I  com.hasani.messageapp:35c2a29f: onCancelled at PHASE_CLIENT_APPLY_ANIMATION
+2025-12-27 12:43:40.453 11063-11063 MIUIInput               com.hasani.messageapp                I  [KeyEvent] ViewRootImpl windowName 'com.hasani.messageapp/com.hasani.messageapp.MainActivity', KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x8, repeatCount=0, eventTime=261315788000000, downTime=261315788000000, deviceId=-1, source=0x101, displayId=0 }, phoneEventTime=۱۲:۴۳:۴۰.۴۴۵
+2025-12-27 12:43:40.470 11063-11063 MIUIInput               com.hasani.messageapp                I  [KeyEvent] ViewRootImpl windowName 'com.hasani.messageapp/com.hasani.messageapp.MainActivity', KeyEvent { action=ACTION_UP, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x8, repeatCount=0, eventTime=261315788000000, downTime=261315788000000, deviceId=-1, source=0x101, displayId=0 }, phoneEventTime=۱۲:۴۳:۴۰.۴۴۶
+2025-12-27 12:43:40.476 11063-11063 InsetsController        com.hasani.messageapp                D  hide(ime(), fromIme=true)
+2025-12-27 12:43:40.477 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  requestedTypes: 8
+2025-12-27 12:43:40.493 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationStart
+2025-12-27 12:43:40.517 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.0
+2025-12-27 12:43:40.520 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.013276251
+2025-12-27 12:43:40.530 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.04877614
+2025-12-27 12:43:40.537 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.0989067
+2025-12-27 12:43:40.545 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.15794414
+2025-12-27 12:43:40.553 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.2216503
+2025-12-27 12:43:40.561 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.28693774
+2025-12-27 12:43:40.570 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.35160097
+2025-12-27 12:43:40.578 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.41410878
+2025-12-27 12:43:40.587 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.4734535
+2025-12-27 12:43:40.594 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.5290018
+2025-12-27 12:43:40.603 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.5804251
+2025-12-27 12:43:40.612 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.62758577
+2025-12-27 12:43:40.620 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.6705074
+2025-12-27 12:43:40.628 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.7093206
+2025-12-27 12:43:40.637 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.74422544
+2025-12-27 12:43:40.646 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.77546424
+2025-12-27 12:43:40.653 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.803307
+2025-12-27 12:43:40.661 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.82803094
+2025-12-27 12:43:40.670 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.84991455
+2025-12-27 12:43:40.678 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.86922765
+2025-12-27 12:43:40.686 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.8862297
+2025-12-27 12:43:40.695 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.90115887
+2025-12-27 12:43:40.703 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.91424024
+2025-12-27 12:43:40.711 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.92568
+2025-12-27 12:43:40.720 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.93566656
+2025-12-27 12:43:40.729 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.94436926
+2025-12-27 12:43:40.736 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.95194197
+2025-12-27 12:43:40.745 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9585219
+2025-12-27 12:43:40.753 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.964232
+2025-12-27 12:43:40.761 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9691812
+2025-12-27 12:43:40.769 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9734662
+2025-12-27 12:43:40.778 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9771721
+2025-12-27 12:43:40.786 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9803739
+2025-12-27 12:43:40.794 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9831377
+2025-12-27 12:43:40.802 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9855213
+2025-12-27 12:43:40.811 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9875753
+2025-12-27 12:43:40.819 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9893438
+2025-12-27 12:43:40.828 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9908655
+2025-12-27 12:43:40.836 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9921743
+2025-12-27 12:43:40.844 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9932988
+2025-12-27 12:43:40.854 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9942646
+2025-12-27 12:43:40.861 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.99509335
+2025-12-27 12:43:40.870 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.995804
+2025-12-27 12:43:40.878 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9964131
+2025-12-27 12:43:40.886 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.996935
+2025-12-27 12:43:40.894 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9973819
+2025-12-27 12:43:40.902 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9977644
+2025-12-27 12:43:40.911 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9980917
+2025-12-27 12:43:40.919 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.99837154
+2025-12-27 12:43:40.927 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9986108
+2025-12-27 12:43:40.936 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9988153
+2025-12-27 12:43:40.944 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 1.0
+2025-12-27 12:43:40.946 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationEnd,canceled: false
+2025-12-27 12:43:40.958 11063-11063 InsetsController        com.hasani.messageapp                D  cancelAnimation of types: 8, animType: 1, host: com.hasani.messageapp/com.hasani.messageapp.MainActivity invokeCallback=false reason=android.view.InsetsController.notifyFinished:1792 android.view.InsetsAnimationThreadControlRunner$1.lambda$notifyFinished$0:84 android.view.InsetsAnimationThreadControlRunner$1.$r8$lambda$cDFF0h4Ncq-8EXdGszv69jrUu7c:0 android.view.InsetsAnimationThreadControlRunner$1$$ExternalSyntheticLambda1.run:0 android.os.Handler.handleCallback:959 android.os.Handler.dispatchMessage:100 android.os.Looper.loopOnce:249 android.os.Looper.loop:337 android.app.ActivityThread.main:9500 java.lang.reflect.Method.invoke:-2 
+2025-12-27 12:43:40.959 11063-11063 ImeTracker              com.hasani.messageapp                I  com.hasani.messageapp:cd9ac5be: onRequestHide at ORIGIN_CLIENT reason HIDE_SOFT_INPUT_ON_ANIMATION_STATE_CHANGED fromUser false
+2025-12-27 12:43:40.961 11063-11063 ImeTracker              com.hasani.messageapp                I  com.google.android.inputmethod.latin:f98e5bed: onHidden
+2025-12-27 12:43:44.761 11063-15403 WebSocketManager        com.hasani.messageapp                D  📥 WebSocket RAW message received (1 chars)
+2025-12-27 12:43:44.762 11063-15403 WebSocketManager        com.hasani.messageapp                D  📥 Content: 
+2025-12-27 12:43:44.762 11063-15403 WebSocketManager        com.hasani.messageapp                V  💓 Heartbeat received
+2025-12-27 12:43:48.198 11063-15391 WebSocketManager        com.hasani.messageapp                V  💓 Heartbeat sent: true
+
+2025-12-27T12:43:40.054+03:30  INFO 19392 --- [MessageApp] [.0-8080-exec-10] c.i.springboot.services.MessageService   : 📨 sendMessage called: chatId=6aa962c8-76bc-4310-975a-32b285f0ec0e, senderId=eaf4ec49-c001-4ddb-8550-b9a67d806117, content=ممنون...
+Hibernate: select c1_0.id,c1_0.avatar_url,c1_0.created_at,c1_0.is_archived,c1_0.is_muted,c1_0.is_pinned,c1_0.title,c1_0.type,c1_0.updated_at from chats c1_0 where c1_0.id=?
+Hibernate: select u1_0.id,u1_0.avatar_url,u1_0.bio,u1_0.created_at,u1_0.display_name,u1_0.is_online,u1_0.last_seen,u1_0.password_hash,u1_0.phone_number,u1_0.username from users u1_0 where u1_0.id=?
+Hibernate: select p1_0.chat_id,p1_1.id,p1_1.avatar_url,p1_1.bio,p1_1.created_at,p1_1.display_name,p1_1.is_online,p1_1.last_seen,p1_1.password_hash,p1_1.phone_number,p1_1.username from chat_participants p1_0 join users p1_1 on p1_1.id=p1_0.user_id where p1_0.chat_id=?
+2025-12-27T12:43:40.058+03:30  INFO 19392 --- [MessageApp] [.0-8080-exec-10] c.i.springboot.services.MessageService   : ✅ Message saved to DB: 8be17d92-70ec-4c9d-aa76-a32d8faf7666
+2025-12-27T12:43:40.058+03:30  INFO 19392 --- [MessageApp] [.0-8080-exec-10] c.i.springboot.services.MessageService   : 📡 Broadcasting to participants...
+2025-12-27T12:43:40.058+03:30  INFO 19392 --- [MessageApp] [.0-8080-exec-10] c.i.s.websocket.WebSocketMessageHandler  : 📤 Broadcasting message 8be17d92-70ec-4c9d-aa76-a32d8faf7666 to 1 recipients in chat 6aa962c8-76bc-4310-975a-32b285f0ec0e
+2025-12-27T12:43:40.058+03:30  INFO 19392 --- [MessageApp] [.0-8080-exec-10] c.i.s.websocket.WebSocketMessageHandler  :    → Sending to user: 0ad3ae7e-5750-492d-83c3-abf7405b668e
+2025-12-27T12:43:40.059+03:30  INFO 19392 --- [MessageApp] [.0-8080-exec-10] c.i.s.websocket.WebSocketMessageHandler  : ✅ Broadcast complete for message 8be17d92-70ec-4c9d-aa76-a32d8faf7666
+2025-12-27T12:43:40.059+03:30  INFO 19392 --- [MessageApp] [.0-8080-exec-10] c.i.springboot.services.MessageService   : 📡 Notifying chat update...
+Hibernate: insert into messages (chat_id,content,created_at,edited_at,forwarded_from,is_edited,media_url,reply_to_id,sender_id,status,type,id) values (?,?,?,?,?,?,?,?,?,?,?,?)
+Hibernate: update chats set avatar_url=?,created_at=?,is_archived=?,is_muted=?,is_pinned=?,title=?,type=?,updated_at=? where id=?
+Hibernate: select count(m1_0.id) from messages m1_0 where m1_0.chat_id=? and m1_0.sender_id<>? and m1_0.status<>'READ'
+2025-12-27T12:43:40.063+03:30  INFO 19392 --- [MessageApp] [.0-8080-exec-10] c.i.s.websocket.WebSocketMessageHandler  : 📤 Notifying chat update to user: 0ad3ae7e-5750-492d-83c3-abf7405b668e, chatId: 6aa962c8-76bc-4310-975a-32b285f0ec0e, lastMessage: ممنون
+2025-12-27T12:43:40.064+03:30  INFO 19392 --- [MessageApp] [.0-8080-exec-10] c.i.s.websocket.WebSocketMessageHandler  : ✅ Chat update notification sent to /user/0ad3ae7e-5750-492d-83c3-abf7405b668e/queue/chats

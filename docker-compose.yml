@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  # =============================================
+  # PostgreSQL Database
+  # =============================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: messageapp-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-messageapp}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - messageapp-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-messageapp}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =============================================
+  # Spring Boot API
+  # =============================================
+  api:
+    build:
+      context: ./springboot
+      dockerfile: Dockerfile
+    container_name: messageapp-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-messageapp}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-123}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost}
+      JWT_SECRET: ${JWT_SECRET:-2Qw1Qk5vQ2p6b3J4bGd2d2h5b2J6d3J4bGd2d2h5b2J6d3J4bGd2d2h5b2J6d3J4bGd2d2h5b2J6d3J4bGd2d2h5b2J6d3J4bGd2d2h5b2J6d3J4bGQ=}
+    volumes:
+      - uploads_data:/app/uploads
+    networks:
+      - messageapp-network
+    expose:
+      - "8080"
+
+  # =============================================
+  # Admin Panel (React + Nginx)
+  # =============================================
+  admin:
+    build:
+      context: ./admin-panel
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${APP_BASE_URL:-http://localhost}/api
+    container_name: messageapp-admin
+    restart: unless-stopped
+    networks:
+      - messageapp-network
+    expose:
+      - "80"
+
+  # =============================================
+  # Nginx Reverse Proxy
+  # =============================================
+  nginx:
+    image: nginx:alpine
+    container_name: messageapp-nginx
+    restart: unless-stopped
+    depends_on:
+      - api
+      - admin
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - uploads_data:/app/uploads:ro
+    networks:
+      - messageapp-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+# =============================================
+# Volumes
+# =============================================
+volumes:
+  postgres_data:
+    driver: local
+  uploads_data:
+    driver: local
+
+# =============================================
+# Networks
+# =============================================
+networks:
+  messageapp-network:
+    driver: bridge

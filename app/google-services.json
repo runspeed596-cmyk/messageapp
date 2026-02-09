@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1083784249401",
+    "project_id": "com-kelasor-app",
+    "storage_bucket": "com-kelasor-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083784249401:android:997280c6dba59f3b0c4de8",
+        "android_client_info": {
+          "package_name": "com.Kelasor.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyArxQq0suws125LbsDUWipj0M5EG4HScLQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

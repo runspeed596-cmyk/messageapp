@@ -1,0 +1,23 @@
+> Task :checkKotlinGradlePluginConfigurationErrors
+> Task :processResources UP-TO-DATE
+
+> Task :compileKotlin
+w: file:///E:/Learn/programming/ponisha/MessageApp2/SpringBoot/src/main/kotlin/com/iliyadev/springboot/services/AuthChatServices.kt:329:78 Parameter 'initiatorId' is never used
+w: file:///E:/Learn/programming/ponisha/MessageApp2/SpringBoot/src/main/kotlin/com/iliyadev/springboot/services/AuthChatServices.kt:413:13 Expression under 'when' is never equal to null
+w: file:///E:/Learn/programming/ponisha/MessageApp2/SpringBoot/src/main/kotlin/com/iliyadev/springboot/services/AuthChatServices.kt:609:13 Expression under 'when' is never equal to null
+w: file:///E:/Learn/programming/ponisha/MessageApp2/SpringBoot/src/main/kotlin/com/iliyadev/springboot/services/GroupChannelServices.kt:218:13 Variable 'membership' is never used
+w: file:///E:/Learn/programming/ponisha/MessageApp2/SpringBoot/src/main/kotlin/com/iliyadev/springboot/services/GroupChannelServices.kt:230:13 Variable 'membership' is never used
+
+> Task :compileJava NO-SOURCE
+> Task :classes UP-TO-DATE
+
+[Incubating] Problems report is available at: file:///E:/Learn/programming/ponisha/MessageApp2/SpringBoot/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.2/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 9s
+3 actionable tasks: 2 executed, 1 up-to-date

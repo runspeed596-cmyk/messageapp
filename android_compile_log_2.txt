@@ -1,0 +1,125 @@
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :app:kspDebugKotlin
+
+> Task :app:compileDebugKotlin
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/MainActivity.kt:32:32 'constructor(p0: String!): Locale' is deprecated. Deprecated in Java.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/MainActivity.kt:37:19 'fun updateConfiguration(p0: Configuration!, p1: DisplayMetrics!): Unit' is deprecated. Deprecated in Java.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/data/audio/AudioPlayerManager.kt:57:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/data/location/LocationManager.kt:43:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/data/media/SoundPlayer.kt:18:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/data/notification/NotificationHelper.kt:22:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/data/repository/ChannelRepository.kt:233:67 'fun create(contentType: MediaType?, file: File): RequestBody' is deprecated. Moved to extension function. Put the 'file' argument first to fix Java.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/data/repository/ChannelRepository.kt:288:55 'fun create(contentType: MediaType?, file: File): RequestBody' is deprecated. Moved to extension function. Put the 'file' argument first to fix Java.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/data/repository/ContactsRepository.kt:26:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/data/repository/GroupRepository.kt:121:55 'fun create(contentType: MediaType?, file: File): RequestBody' is deprecated. Moved to extension function. Put the 'file' argument first to fix Java.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/data/repository/GroupRepository.kt:160:55 'fun create(contentType: MediaType?, file: File): RequestBody' is deprecated. Moved to extension function. Put the 'file' argument first to fix Java.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/data/repository/SettingsRepository.kt:24:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/data/repository/StoryRepository.kt:32:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/data/session/SessionManager.kt:24:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/data/sync/MessageSyncManager.kt:44:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/data/voice/VoiceRecorderManager.kt:46:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/di/DatabaseModule.kt:26:14 'fun fallbackToDestructiveMigration(): RoomDatabase.Builder<AppDatabase>' is deprecated. Replace by overloaded version with parameter to indicate if all tables should be dropped or not.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/components/Badges.kt:164:37 'val Icons.Filled.VolumeOff: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.VolumeOff.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/components/Buttons.kt:462:41 'val Icons.Filled.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Send.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/components/ChatBubble.kt:236:13 'fun ClickableText(text: AnnotatedString, modifier: Modifier = ..., style: TextStyle = ..., softWrap: Boolean = ..., overflow: TextOverflow = ..., maxLines: Int = ..., onTextLayout: (TextLayoutResult) -> Unit = ..., onClick: (Int) -> Unit): Unit' is deprecated. Use Text or BasicText and pass an AnnotatedString that contains a LinkAnnotation. Check LinkAnnotation's documentation for more details and samples.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/components/FileMessageBubble.kt:239:49 'val Icons.Filled.OpenInNew: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.OpenInNew.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/components/LocationPickerDialog.kt:314:57 'val Icons.Filled.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Send.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/screens/auth/LoginScreen.kt:128:53 'val Icons.Filled.Chat: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Chat.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/screens/channel/ChannelSettingsScreen.kt:87:28 'val LocalClipboardManager: ProvidableCompositionLocal<ClipboardManager>' is deprecated. Use LocalClipboard instead which supports suspend functions.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/screens/channel/ChannelSettingsScreen.kt:135:17 'when' is exhaustive so 'else' is redundant here.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/screens/channel/ChannelViewScreen.kt:69:28 'val LocalClipboardManager: ProvidableCompositionLocal<ClipboardManager>' is deprecated. Use LocalClipboard instead which supports suspend functions.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/screens/channel/ChannelViewScreen.kt:310:25 'fun Divider(modifier: Modifier = ..., thickness: Dp = ..., color: Color = ...): Unit' is deprecated. Renamed to HorizontalDivider.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/screens/channel/ChannelViewScreen.kt:327:41 'fun Divider(modifier: Modifier = ..., thickness: Dp = ..., color: Color = ...): Unit' is deprecated. Renamed to HorizontalDivider.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/screens/chat/ConversationScreen.kt:153:57 'val LocalClipboardManager: ProvidableCompositionLocal<ClipboardManager>' is deprecated. Use LocalClipboard instead which supports suspend functions.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/screens/group/GroupConversationScreen.kt:121:28 'val LocalClipboardManager: ProvidableCompositionLocal<ClipboardManager>' is deprecated. Use LocalClipboard instead which supports suspend functions.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/screens/splash/SplashScreen.kt:191:53 'val Icons.Filled.Chat: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Chat.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/screens/story/CreateTextStoryScreen.kt:99:40 'val Icons.Filled.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Send.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/screens/story/MyStoriesScreen.kt:84:44 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/theme/Theme.kt:289:20 'var statusBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/theme/Theme.kt:290:20 'var navigationBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/viewmodel/ChannelViewModel.kt:789:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/viewmodel/ChatViewModel.kt:256:41 Condition is always 'true'.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/viewmodel/CreateChannelViewModel.kt:36:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/viewmodel/GroupViewModel.kt:669:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/viewmodel/GroupViewModel.kt:970:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///E:/Learn/programming/ponisha/MessageApp2/app/src/main/java/com/hasani/messageapp/ui/viewmodel/StoryViewModel.kt:27:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+
+BUILD SUCCESSFUL in 22s
+17 actionable tasks: 2 executed, 15 up-to-date
