@@ -45,7 +45,8 @@ const HomePage = () => {
         title: '',
         videoUrl: '',
         thumbnailUrl: '',
-        duration: '00:00'
+        duration: '00:00',
+        isActive: true
     });
 
     const [discountForm, setDiscountForm] = useState({
@@ -181,7 +182,7 @@ const HomePage = () => {
         e.preventDefault();
         setIsActionLoading(true);
         try {
-            const res = await adminApi.saveMovie(movieForm);
+            const res = await adminApi.saveMovie({ ...movieForm, isActive: true } as any);
             if (res.data.success) {
                 showNotify('success', 'ویدیو با موفقیت ثبت شد');
                 setShowAddModal(false);

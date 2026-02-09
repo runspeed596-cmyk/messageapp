@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { adminApi } from '../api/adminApi';
 import type { EntertainmentMovie, EntertainmentMusic, EntertainmentRiddle, RiddleOption } from '../api/adminApi';
-import { Film, Music, Brain, Plus, Trash2, Check, X, Upload, Loader2, Play, Pause, AlertCircle } from 'lucide-react';
+import { Film, Music, Brain, Plus, Trash2, Check, X, Upload, Loader2, Play, AlertCircle } from 'lucide-react';
 
 type TabType = 'cinema' | 'music' | 'riddle';
 
@@ -17,9 +17,7 @@ const Entertainment = () => {
 
     // File refs
     const videoRef = useRef<HTMLInputElement>(null);
-    const thumbnailRef = useRef<HTMLInputElement>(null);
     const audioRef = useRef<HTMLInputElement>(null);
-    const coverRef = useRef<HTMLInputElement>(null);
 
     // Video form
     const [videoFile, setVideoFile] = useState<File | null>(null);
