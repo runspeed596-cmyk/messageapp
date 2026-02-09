@@ -8,7 +8,7 @@ import com.Kelasor.app.domain.model.StoryUser
 import java.time.Instant
 
 // Hardcoding BASE_URL matching NetworkModule for quick fix. Ideally inject it.
-private const val BASE_URL = "http://192.168.70.113:8080"
+private const val BASE_URL = "http://46.249.100.239"
 
 fun StoryDto.toDomain(): Story {
     return Story(

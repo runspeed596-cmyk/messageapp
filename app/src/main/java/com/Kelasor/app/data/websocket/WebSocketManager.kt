@@ -85,7 +85,7 @@ class WebSocketManager @Inject constructor(
 ) {
     companion object {
         private const val TAG = "WebSocketManager"
-        private const val WS_BASE_URL = "ws://192.168.70.113:8080/ws"
+        private const val WS_BASE_URL = "ws://46.249.100.239/ws"
         private const val RECONNECT_DELAY_MS = 5000L
         private const val MAX_RECONNECT_ATTEMPTS = 5
     }
