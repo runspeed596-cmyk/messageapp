@@ -24,8 +24,8 @@ dependencyResolutionManagement {
             credentials {
                 // Do not change the username
                 username = "mapbox"
-                // Use the secret token you supplied
-                password = "sk.eyJ1IjoiaWxpYXhwIiwiYSI6ImNtbDd3bHg4dTAwM2szY3IwdzN6Z3JyazkifQ.hKJt723NGEIg0HWFjUNG6Q"
+                // Use the secret token from environment variable or local properties
+                password = System.getenv("MAPBOX_DOWNLOADS_TOKEN") ?: ""
             }
         }
     }
