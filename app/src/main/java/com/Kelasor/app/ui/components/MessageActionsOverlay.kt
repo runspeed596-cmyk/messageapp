@@ -34,6 +34,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -43,6 +46,7 @@ import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Reply
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -102,7 +106,8 @@ fun MessageActionsOverlay(
     onForwardClick: (() -> Unit)? = null,
     onCopyLinkClick: (() -> Unit)? = null,
     onSelectClick: (() -> Unit)? = null,
-    onLockContentClick: (() -> Unit)? = null // Feature 2: Lock content (UI only)
+    onLockContentClick: (() -> Unit)? = null, // Feature 2: Lock content (UI only)
+    onEditScheduleClick: (() -> Unit)? = null // Edit scheduled time
 ) {
     val extendedColors = MessageAppTheme.extendedColors
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -297,6 +302,10 @@ fun MessageActionsOverlay(
                                 it.invoke()
                                 onDismiss()
                             } } else null,
+                            onEditScheduleClick = onEditScheduleClick?.let { {
+                                it.invoke()
+                                onDismiss()
+                            } },
                             onDeleteClick = if (isOwner) { { showDeleteDialog = true } } else null,
                             onSelectClick = {
                                 onSelectClick?.invoke()
@@ -311,54 +320,132 @@ fun MessageActionsOverlay(
 }
 
 /**
- * Emoji reaction bar with animated emojis
+ * Emoji reaction bar with animated emojis and expandable categories
  */
 @Composable
 private fun EmojiReactionBar(
     onReactionClick: (String) -> Unit
 ) {
-    val reactions = listOf("❤️", "👍", "👎", "😂", "🔥", "😱")
-    Card(
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        modifier = Modifier.padding(horizontal = 16.dp)
+    val quickReactions = listOf("❤️", "👍", "👎", "😂", "🔥", "😱")
+    val emojiCategories = mapOf(
+        "😊 صورتک" to listOf("😀", "😃", "😄", "😁", "😆", "🥹", "😅", "😂", "🤣", "🥲", "😊", "😇", "🙂", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚", "😋", "😛", "😜", "🤪", "😝", "🤑", "🤗", "🤭", "🤫", "🤔", "🫣", "🤐", "🤨", "😐"),
+        "❤️ قلب" to listOf("❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "💕", "💞", "💓", "💗", "💖", "💘", "💝"),
+        "👋 دست" to listOf("👍", "👎", "👏", "🙌", "🤝", "👊", "✊", "🤛", "🤜", "🤞", "✌️", "🫰", "🤟", "🤘", "👌", "🤌", "🤏", "👈", "👉", "👆", "👇", "☝️", "✋", "🤚", "🖐️", "🖖", "👋", "🫱", "🫲"),
+        "🎉 اشیا" to listOf("🔥", "⭐", "✨", "💯", "🎉", "🎊", "🏆", "🎯", "💡", "📌", "🚀", "💎", "🌟", "🎵", "🎶", "💪", "🙏", "🫡", "👀", "💤")
+    )
+    var isExpanded by remember { mutableStateOf(false) }
+    var selectedCategory by remember { mutableStateOf(emojiCategories.keys.first()) }
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically
+        // Quick reaction bar
+        Card(
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
-            reactions.forEachIndexed { index, emoji ->
-                var isPressed by remember { mutableStateOf(false) }
-                val emojiScale by animateFloatAsState(
-                    targetValue = if (isPressed) 1.3f else 1f,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessHigh
-                    ),
-                    label = "emoji_scale_$index"
-                )
+            Row(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                quickReactions.forEachIndexed { index, emoji ->
+                    var isPressed by remember { mutableStateOf(false) }
+                    val emojiScale by animateFloatAsState(
+                        targetValue = if (isPressed) 1.3f else 1f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessHigh
+                        ),
+                        label = "emoji_scale_$index"
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                isPressed = true
+                                onReactionClick(emoji)
+                            }
+                            .scale(emojiScale),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = emoji, fontSize = 28.sp)
+                    }
+                }
+                // Expand button
                 Box(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(CircleShape)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            isPressed = true
-                            onReactionClick(emoji)
-                        }
-                        .scale(emojiScale),
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable { isExpanded = !isExpanded },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = emoji,
-                        fontSize = 28.sp
+                    Icon(
+                        imageVector = if (isExpanded) Icons.Filled.Close else Icons.Filled.Add,
+                        contentDescription = "بیشتر",
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            }
+        }
+        // Expanded emoji grid
+        AnimatedVisibility(visible = isExpanded) {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .widthIn(max = 340.dp)
+            ) {
+                Column(modifier = Modifier.padding(8.dp)) {
+                    // Category tabs
+                    androidx.compose.foundation.lazy.LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    ) {
+                        emojiCategories.keys.forEach { category ->
+                            item {
+                                FilterChip(
+                                    selected = selectedCategory == category,
+                                    onClick = { selectedCategory = category },
+                                    label = { Text(category, fontSize = 12.sp, fontFamily = VazirFontFamily) },
+                                    modifier = Modifier.height(32.dp)
+                                )
+                            }
+                        }
+                    }
+                    // Emoji grid
+                    val currentEmojis = emojiCategories[selectedCategory] ?: emptyList()
+                    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                        columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(7),
+                        modifier = Modifier.height(150.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        currentEmojis.forEach { emoji ->
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable {
+                                            onReactionClick(emoji)
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(text = emoji, fontSize = 24.sp)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -379,6 +466,7 @@ private fun ActionMenuCard(
     onForwardClick: (() -> Unit)? = null,
     onLockContentClick: (() -> Unit)? = null,
     onEditClick: (() -> Unit)? = null,
+    onEditScheduleClick: (() -> Unit)? = null,
     onDeleteClick: (() -> Unit)? = null,
     onSelectClick: () -> Unit
 ) {
@@ -440,6 +528,15 @@ private fun ActionMenuCard(
                     text = "قفل گذاری محتوا",
                     iconTint = extendedColors.accent,
                     onClick = onLockContentClick
+                )
+            }
+            // Edit scheduled time (scheduled messages only)
+            if (onEditScheduleClick != null) {
+                ActionMenuItem(
+                    icon = Icons.Default.Schedule,
+                    text = "ویرایش زمان",
+                    iconTint = Color(0xFFFFA726),
+                    onClick = onEditScheduleClick
                 )
             }
             // Edit (owner only)

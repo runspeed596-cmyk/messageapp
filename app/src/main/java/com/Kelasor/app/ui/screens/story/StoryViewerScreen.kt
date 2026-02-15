@@ -1,5 +1,7 @@
 package com.Kelasor.app.ui.screens.story
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -43,6 +45,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
@@ -55,11 +58,39 @@ import com.Kelasor.app.domain.model.StoryType
 import com.Kelasor.app.domain.model.StoryUser
 import com.Kelasor.app.ui.theme.MessageAppTypography
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.Duration
 
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.ui.text.input.TextFieldValue
+import android.widget.Toast
+import androidx.compose.foundation.layout.navigationBarsPadding
+
+/**
+ * Computes a Persian relative time string from an Instant.
+ */
+private fun getRelativeTime(instant: Instant): String {
+    val now = Instant.now()
+    val duration = Duration.between(instant, now)
+    val seconds = duration.seconds
+    return when {
+        seconds < 60 -> "الان"
+        seconds < 3600 -> "${seconds / 60} دقیقه پیش"
+        seconds < 86400 -> "${seconds / 3600} ساعت پیش"
+        else -> "${seconds / 86400} روز پیش"
+    }
+}
 
 /**
  * Full screen story viewer.
@@ -78,6 +109,20 @@ fun StoryViewerScreen(
     var isPaused by remember { mutableStateOf(false) }
     var showViewersSheet by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var replyText by remember { mutableStateOf("") }
+    val context = LocalContext.current
+
+    // Listen for reply sent events
+    LaunchedEffect(Unit) {
+        viewModel.replySentEvent.collect { success ->
+            if (success) {
+                replyText = ""
+                Toast.makeText(context, "پاسخ ارسال شد", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "خطا در ارسال پاسخ", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
     
     // Ensure index is valid
     val safeIndex = currentStoryIndex.coerceIn(storyUser.stories.indices)
@@ -111,10 +156,26 @@ fun StoryViewerScreen(
         }
     }
 
+    // Immersive entry animation
+    val entryAlpha = remember { Animatable(0f) }
+    val entryScale = remember { Animatable(1.05f) }
+    LaunchedEffect(Unit) {
+        launch {
+            entryAlpha.animateTo(1f, animationSpec = tween(350, easing = FastOutSlowInEasing))
+        }
+        launch {
+            entryScale.animateTo(1f, animationSpec = tween(400, easing = FastOutSlowInEasing))
+        }
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
+            .graphicsLayer {
+                alpha = entryAlpha.value
+                scaleX = entryScale.value
+                scaleY = entryScale.value
+            }
             // Gesture handling
             .pointerInput(Unit) {
                 detectTapGestures(
@@ -157,7 +218,9 @@ fun StoryViewerScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 16.dp, bottom = 32.dp)
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .imePadding()
         ) {
             // 1. Progress Bars
             Row(
@@ -172,9 +235,17 @@ fun StoryViewerScreen(
                         index == currentStoryIndex -> progress // Current
                         else -> 0f // Future
                     }
-                    
+                    // Smooth animated progress
+                    val animatedBarProgress by animateFloatAsState(
+                        targetValue = barProgress,
+                        animationSpec = tween(
+                            durationMillis = if (index == currentStoryIndex) 80 else 200,
+                            easing = LinearEasing
+                        ),
+                        label = "progressBar_$index"
+                    )
                     LinearProgressIndicator(
-                        progress = { barProgress },
+                        progress = { animatedBarProgress },
                         modifier = Modifier
                             .weight(1f)
                             .height(2.dp)
@@ -194,15 +265,13 @@ fun StoryViewerScreen(
                     .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Avatar
-                AsyncImage(
+                // Avatar with initials fallback
+                com.Kelasor.app.ui.components.story.StoryAvatarImage(
                     model = storyUser.avatarUrl,
-                    contentDescription = null,
+                    displayName = storyUser.displayName,
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(Color.Gray),
-                    contentScale = ContentScale.Crop
                 )
                 
                 Spacer(modifier = Modifier.width(12.dp))
@@ -214,7 +283,7 @@ fun StoryViewerScreen(
                         color = Color.White
                     )
                     Text(
-                        text = "12 ساعت پیش", // TODO: Real relative time
+                        text = getRelativeTime(currentStory.createdAt),
                         style = MessageAppTypography.caption,
                         color = Color.White.copy(alpha = 0.7f)
                     )
@@ -293,9 +362,8 @@ fun StoryViewerScreen(
                 )
             }
             
-            // 4. Viewers (Only for current user)
+            // 4. Viewers (Only for current user) — positioned above caption
             if (storyUser.isCurrentUser) {
-                Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
@@ -315,10 +383,60 @@ fun StoryViewerScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "${currentStory.viewCount}",
+                        text = "${currentStory.viewCount} بازدید",
                         color = Color.White,
                         style = MessageAppTypography.body
                     )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // 5. Reply Input (for other users' stories)
+            if (!storyUser.isCurrentUser) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp)
+                        .imePadding(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextField(
+                        value = replyText,
+                        onValueChange = {
+                            replyText = it
+                            isPaused = it.isNotEmpty()
+                        },
+                        placeholder = { Text("پاسخ بدهید...", color = Color.White.copy(alpha = 0.5f)) },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.White.copy(alpha = 0.5f),
+                            unfocusedContainerColor = Color.White.copy(alpha = 0.35f),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            cursorColor = Color.White,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        ),
+                        shape = RoundedCornerShape(24.dp),
+                        singleLine = true,
+                        modifier = Modifier
+                            .weight(1f)
+                            .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(24.dp))
+                    )
+                    if (replyText.isNotBlank()) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        IconButton(
+                            onClick = {
+                                viewModel.replyToStory(currentStory.id, replyText.trim())
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Send,
+                                contentDescription = "ارسال",
+                                tint = Color.White
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -339,8 +457,14 @@ fun StoryViewerScreen(
                     if (viewers.isEmpty()) {
                         Text("هنوز کسی ندیده است.", style = MessageAppTypography.body, color = Color.Gray)
                     } else {
+                        // Deduplicate viewers by userId, keeping the latest viewedAt
+                        val uniqueViewers = remember(viewers) {
+                            viewers.groupBy { it.userId }
+                                .map { (_, group) -> group.maxByOrNull { it.viewedAt } ?: group.first() }
+                                .sortedByDescending { it.viewedAt }
+                        }
                         androidx.compose.foundation.lazy.LazyColumn {
-                            items(viewers) { viewer ->
+                            items(uniqueViewers) { viewer ->
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -351,24 +475,24 @@ fun StoryViewerScreen(
                                         .padding(vertical = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    AsyncImage(
+                                    // Avatar with initials fallback
+                                    com.Kelasor.app.ui.components.story.StoryAvatarImage(
                                         model = viewer.avatarUrl,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.Gray),
-                                        contentScale = ContentScale.Crop
+                                        displayName = viewer.displayName,
+                                        modifier = Modifier.size(40.dp).clip(CircleShape)
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column {
                                         Text(viewer.displayName, style = MessageAppTypography.body)
                                         Text(
-                                            text = "مشاهده پروفایل",
+                                            text = getRelativeTime(viewer.viewedAt),
                                             style = MessageAppTypography.caption,
                                             color = Color.Gray
                                         )
                                     }
                                     Spacer(modifier = Modifier.weight(1f))
                                     androidx.compose.material3.Icon(
-                                        imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.KeyboardArrowRight, // Use Right for "Go To" in LTR, flips in RTL
+                                        imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                         contentDescription = "View Profile",
                                         tint = Color.Gray
                                     )

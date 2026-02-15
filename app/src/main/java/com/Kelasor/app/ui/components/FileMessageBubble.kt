@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.theme.MessageAppTypography
+import com.Kelasor.app.domain.model.MessageStatus
 import com.Kelasor.app.util.Constants
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -76,6 +77,8 @@ fun FileMessageBubble(
     fileName: String,
     fileSize: String = "",
     isMyMessage: Boolean,
+    time: String = "",
+    status: MessageStatus = MessageStatus.SENT,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -212,6 +215,25 @@ fun FileMessageBubble(
                 style = MessageAppTypography.messageTime,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            // Time + status row
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (time.isNotEmpty()) {
+                    Text(
+                        text = time,
+                        style = MessageAppTypography.messageTime,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (isMyMessage) {
+                    MessageStatusIcon(
+                        status = status,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
         
         // Save button (only when downloaded)

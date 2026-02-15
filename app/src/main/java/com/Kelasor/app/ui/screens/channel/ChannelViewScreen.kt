@@ -46,11 +46,16 @@ import com.Kelasor.app.ui.components.ChatBubble
 import com.Kelasor.app.ui.components.MediaType
 import com.Kelasor.app.data.remote.dto.ChannelPostCommentDto
 import com.Kelasor.app.ui.components.MessageActionSheet
+import com.Kelasor.app.ui.components.PinnedMessageBanner
+import kotlinx.coroutines.launch
 import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.theme.MessageAppTypography
 import com.Kelasor.app.ui.viewmodel.ChannelViewViewModel
 import com.Kelasor.app.ui.screens.chat.EditMessageDialog
 import com.Kelasor.app.ui.screens.chat.MessageSelectionTopBar
+import com.Kelasor.app.ui.components.VideoNoteBubble
+import com.Kelasor.app.ui.components.CircularVideoRecorder
+import com.Kelasor.app.data.video.VideoNoteRecordingState
 import java.time.format.DateTimeFormatter
 import java.time.ZoneId
 
@@ -58,6 +63,7 @@ import java.time.ZoneId
 @Composable
 fun ChannelViewScreen(
     channelId: String,
+    initialMessageId: String? = null,
     onNavigateBack: () -> Unit,
     onNavigateToChannelSettings: () -> Unit = {},
     viewModel: ChannelViewViewModel = hiltViewModel()
@@ -66,6 +72,28 @@ fun ChannelViewScreen(
     val state by viewModel.state.collectAsState()
     val listState = rememberLazyListState()
     var postForActions by remember { mutableStateOf<ChannelPost?>(null) }
+    val scope = rememberCoroutineScope()
+    
+    // Auto-scroll to initial message
+    val initialScrollDone = remember { mutableStateOf(false) }
+    LaunchedEffect(state.posts, initialMessageId) {
+        if (!initialScrollDone.value && initialMessageId != null && state.posts.isNotEmpty()) {
+            val index = state.posts.indexOfFirst { it.id == initialMessageId }
+            if (index != -1) {
+                listState.scrollToItem(index)
+                initialScrollDone.value = true
+            }
+        }
+    }
+    
+    // Message Highlighting
+    var highlightedMessageId by remember { mutableStateOf(initialMessageId) }
+    LaunchedEffect(highlightedMessageId) {
+        if (highlightedMessageId != null) {
+            kotlinx.coroutines.delay(2000)
+            highlightedMessageId = null
+        }
+    }
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     
@@ -83,6 +111,8 @@ fun ChannelViewScreen(
     // Edit dialog state
     var showEditPostDialog by remember { mutableStateOf(false) }
     var postToEdit by remember { mutableStateOf<ChannelPost?>(null) }
+    // Video note recording state
+    var showVideoNoteRecorder by remember { mutableStateOf(false) }
 
     // File picker launcher
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -140,6 +170,7 @@ fun ChannelViewScreen(
 
     val isInSelectionMode = state.selectedPostIds.isNotEmpty()
     Scaffold(
+        contentWindowInsets = WindowInsets(0),
         topBar = {
             if (isInSelectionMode) {
                 MessageSelectionTopBar(
@@ -205,6 +236,65 @@ fun ChannelViewScreen(
                     }
                 )
             }
+        },
+        bottomBar = {
+            Column(modifier = Modifier.navigationBarsPadding().imePadding()) {
+                if (state.canPost) {
+                    com.Kelasor.app.ui.components.MessageInputBar(
+                        text = state.newPostContent,
+                        onTextChange = { viewModel.setNewPostContent(it) },
+                        onSendClick = {
+                            if (state.newPostContent.isNotBlank()) {
+                                viewModel.createOrEditPost()
+                            }
+                        },
+                        onAttachClick = { showAttachmentMenu = true },
+                        voiceRecorderManager = viewModel.voiceRecorderManager,
+                        onVoiceRecorded = { file, duration, amplitudes ->
+                            viewModel.sendVoiceMessage(file, duration, amplitudes)
+                        },
+                        onVideoNoteClick = {
+                            showVideoNoteRecorder = true
+                        }
+                    )
+                } else if (!state.isMember) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.material3.Button(
+                            onClick = { viewModel.subscribe() },
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = extendedColors.accent
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "عضویت در کانال",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Color.White
+                            )
+                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "فقط مدیران می‌توانند پست ارسال کنند",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
         }
     ) { paddingValues ->
         Column(
@@ -220,8 +310,31 @@ fun ChannelViewScreen(
                         )
                     )
                 )
-                .imePadding()
         ) {
+            // Pinned post banner
+            val pinnedPost = remember(state.posts) {
+                state.posts.filter { it.isPinned }.maxByOrNull { it.pinnedAt ?: java.time.Instant.EPOCH }
+            }
+            if (pinnedPost != null) {
+                PinnedMessageBanner(
+                    content = pinnedPost.content,
+                    senderName = state.channel?.name,
+                    messageType = pinnedPost.type,
+                    onClick = {
+                        val sortedPosts = state.posts.sortedByDescending { it.createdAt }
+                        val index = sortedPosts.indexOfFirst { it.id == pinnedPost.id }
+                        if (index != -1) {
+                            scope.launch {
+                                listState.animateScrollToItem(index)
+                                highlightedMessageId = pinnedPost.id
+                            }
+                        }
+                    },
+                    onUnpin = {
+                        viewModel.pinPost(pinnedPost.id, false)
+                    }
+                )
+            }
             // Posts List
             Box(modifier = Modifier.weight(1f)) {
                  if (state.isLoading && state.posts.isEmpty()) {
@@ -256,6 +369,7 @@ fun ChannelViewScreen(
                                 post = post,
                                 viewModel = viewModel,
                                 isSelected = isSelected,
+                                isHighlighted = post.id == highlightedMessageId,
                                 isInSelectionMode = isInSelectionMode,
                                 onClick = {
                                     if (isInSelectionMode) {
@@ -347,8 +461,21 @@ fun ChannelViewScreen(
             
             // Edit Post Dialog
             if (showEditPostDialog && postToEdit != null) {
+                // For media posts, extract caption (strip emoji prefix + file name)
+                val editableContent = remember(postToEdit) {
+                    val p = postToEdit!!
+                    if (p.type in listOf(MessageType.IMAGE, MessageType.VIDEO)) {
+                        val stripped = p.content
+                            .removePrefix("🖼️ ")
+                            .removePrefix("🎬 ")
+                            .trim()
+                        if (stripped.startsWith("media_") || stripped.startsWith("edited_")) "" else stripped
+                    } else {
+                        p.content
+                    }
+                }
                 EditMessageDialog(
-                    originalMessage = postToEdit!!.content,
+                    originalMessage = editableContent,
                     onConfirm = { newContent ->
                         viewModel.editPost(postToEdit!!.id, newContent)
                         Toast.makeText(context, "پست ویرایش شد", Toast.LENGTH_SHORT).show()
@@ -474,59 +601,10 @@ fun ChannelViewScreen(
                     }
                 }
 
-                com.Kelasor.app.ui.components.MessageInputBar(
-                    text = state.newPostContent,
-                    onTextChange = { viewModel.setNewPostContent(it) },
-                    onSendClick = {
-                        if (state.newPostContent.isNotBlank()) {
-                            viewModel.createOrEditPost()
-                        }
-                    },
-                    onAttachClick = { showAttachmentMenu = true },
-                    voiceRecorderManager = viewModel.voiceRecorderManager,
-                    onVoiceRecorded = { file, duration, amplitudes ->
-                        viewModel.sendVoiceMessage(file, duration, amplitudes)
-                    }
-                )
-            } else if (!state.isMember) {
-                // Non-member: Show Join Channel button
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surface)
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    androidx.compose.material3.Button(
-                        onClick = { viewModel.subscribe() },
-                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                            containerColor = extendedColors.accent
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "عضویت در کانال",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = Color.White
-                        )
-                    }
-                }
-            } else {
-                // Member but not admin: Show read-only message
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surface)
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "فقط مدیران می‌توانند پست ارسال کنند",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
+            
+
         }
 
         // Overlay Menus
@@ -580,8 +658,29 @@ fun ChannelViewScreen(
                 }
             )
         }
+
+        // Circular Video Note Recorder Overlay
+        if (showVideoNoteRecorder) {
+            CircularVideoRecorder(
+                videoNoteRecorderManager = viewModel.videoNoteRecorderManager,
+                onRecordComplete = {
+                    showVideoNoteRecorder = false
+                    val info = viewModel.videoNoteRecorderManager.recordingInfo.value
+                    if (info.state == VideoNoteRecordingState.COMPLETED && info.filePath != null) {
+                        viewModel.sendVideoNote(
+                            java.io.File(info.filePath!!),
+                            info.durationMs
+                        )
+                        viewModel.videoNoteRecorderManager.reset()
+                    }
+                },
+                onCancel = {
+                    showVideoNoteRecorder = false
+                    viewModel.videoNoteRecorderManager.reset()
+                }
+            )
+        }
     }
-}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -589,6 +688,7 @@ private fun ChannelPostItemWrapper(
     post: ChannelPost,
     viewModel: ChannelViewViewModel,
     isSelected: Boolean = false,
+    isHighlighted: Boolean = false,
     isInSelectionMode: Boolean = false,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
@@ -610,8 +710,11 @@ private fun ChannelPostItemWrapper(
                 onLongClick = onLongClick
             )
             .background(
-                if (isSelected) extendedColors.accent.copy(alpha = 0.15f)
-                else Color.Transparent
+                when {
+                    isSelected -> extendedColors.accent.copy(alpha = 0.15f)
+                    isHighlighted -> extendedColors.accent.copy(alpha = 0.3f)
+                    else -> Color.Transparent
+                }
             )
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
@@ -644,27 +747,54 @@ private fun ChannelPostItemWrapper(
                                 durationMs = durationSeconds * 1000L,
                                 isMyMessage = false,
                                 audioPlayerManager = viewModel.audioPlayerManager,
-                                amplitudes = post.amplitudes
+                                amplitudes = post.amplitudes,
+                                time = timeString
                             )
                         }
                         post.type == MessageType.IMAGE && post.mediaUrl != null -> {
+                            val imageCaption = post.content
+                                .removePrefix("🖼️ ")
+                                .trim()
+                                .let { if (it.startsWith("media_") || it.startsWith("edited_") || it.matches(Regex(".*\\.(jpg|jpeg|png|gif|webp|mp4|mov|avi|mkv|bmp|svg|heic|heif|3gp|webm)$", RegexOption.IGNORE_CASE))) null else it }
                             com.Kelasor.app.ui.components.ImageMessageBubble(
                                 mediaUrl = post.mediaUrl!!,
                                 isVideo = false,
                                 isMyMessage = false,
                                 time = timeString,
-                                onPreviewClick = { url, type -> onPreviewMedia(url, type) }
+                                onPreviewClick = { url, type -> onPreviewMedia(url, type) },
+                                caption = imageCaption
                             )
                         }
                         post.type == MessageType.VIDEO && post.mediaUrl != null -> {
+                            val videoCaption = post.content
+                                .removePrefix("🎬 ")
+                                .trim()
+                                .let { if (it.startsWith("media_") || it.startsWith("edited_") || it.matches(Regex(".*\\.(jpg|jpeg|png|gif|webp|mp4|mov|avi|mkv|bmp|svg|heic|heif|3gp|webm)$", RegexOption.IGNORE_CASE))) null else it }
                             com.Kelasor.app.ui.components.ImageMessageBubble(
                                 mediaUrl = post.mediaUrl!!,
                                 isVideo = true,
                                 isMyMessage = false,
                                 time = timeString,
-                                onPreviewClick = { url, type -> onPreviewMedia(url, type) }
+                                onPreviewClick = { url, type -> onPreviewMedia(url, type) },
+                                caption = videoCaption
                             )
                         }
+
+                        // Video note (circular video)
+                        post.type == MessageType.VIDEO_NOTE && post.mediaUrl != null -> {
+                            val durationText = post.content
+                                .substringAfter("(", "")
+                                .substringBefore("s)", "")
+                                .let { if (it.isNotBlank()) "${it}s" else null }
+                            VideoNoteBubble(
+                                mediaUrl = post.mediaUrl!!,
+                                isMyMessage = false,
+                                time = timeString,
+                                durationText = durationText,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
+                        }
+
                         post.type == MessageType.AUDIO && post.mediaUrl != null -> {
                             val fileName = post.content.removePrefix("🎵 ").trim()
                             com.Kelasor.app.ui.components.AudioFileBubble(
@@ -672,7 +802,8 @@ private fun ChannelPostItemWrapper(
                                 fileName = fileName,
                                 durationMs = 0L,
                                 isMyMessage = false,
-                                audioPlayerManager = viewModel.audioPlayerManager
+                                audioPlayerManager = viewModel.audioPlayerManager,
+                                time = timeString
                             )
                         }
                         post.type == MessageType.LOCATION && post.mediaUrl != null -> {
@@ -697,7 +828,8 @@ private fun ChannelPostItemWrapper(
                             com.Kelasor.app.ui.components.FileMessageBubble(
                                 mediaUrl = post.mediaUrl!!,
                                 fileName = fileName,
-                                isMyMessage = false
+                                isMyMessage = false,
+                                time = timeString
                             )
                         }
                         else -> {

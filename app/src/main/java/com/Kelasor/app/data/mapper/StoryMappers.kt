@@ -5,16 +5,21 @@ import com.Kelasor.app.data.remote.api.StoryUserDto
 import com.Kelasor.app.domain.model.Story
 import com.Kelasor.app.domain.model.StoryType
 import com.Kelasor.app.domain.model.StoryUser
+import com.Kelasor.app.util.Constants
 import java.time.Instant
 
-// Hardcoding BASE_URL matching NetworkModule for quick fix. Ideally inject it.
-private const val BASE_URL = "http://46.249.100.239"
+private val BASE_URL: String get() = Constants.BASE_URL.removeSuffix("/")
 
 fun StoryDto.toDomain(): Story {
+    val fullMediaUrl = when {
+        mediaUrl.startsWith("http") -> mediaUrl
+        mediaUrl.startsWith("/") -> "$BASE_URL$mediaUrl"
+        else -> "$BASE_URL/$mediaUrl"
+    }
     return Story(
         id = id,
         userId = userId,
-        mediaUrl = if (mediaUrl.startsWith("/")) "$BASE_URL$mediaUrl" else mediaUrl,
+        mediaUrl = fullMediaUrl,
         type = try {
             val typeStr = type.trim().uppercase()
             StoryType.valueOf(typeStr)

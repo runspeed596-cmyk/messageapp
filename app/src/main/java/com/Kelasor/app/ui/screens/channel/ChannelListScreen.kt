@@ -157,13 +157,13 @@ fun ChannelListScreen(
         viewModel.searchChannels(searchQuery)
     }
     
+    var deleteForAll by remember { mutableStateOf(false) }
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
         Column {
-            // ... (Selection Mode Header - Unchanged)
              AnimatedVisibility(
                 visible = inSelectionMode,
                 enter = fadeIn(),
@@ -174,14 +174,24 @@ fun ChannelListScreen(
                     onClearSelection = { viewModel.clearSelection() },
                     onLeaveSelected = { viewModel.requestDeleteSelection() },
                     onPinSelected = {
-                        viewModel.pinSelectedChannels(true)
-                        android.widget.Toast.makeText(context, "کانال‌ها سنجاق شدند", android.widget.Toast.LENGTH_SHORT).show()
+                        val allChannels = state.channels + state.pinnedChannels + state.archivedChannels
+                        val selectedChannels = allChannels.filter { it.id in state.selectedChannelIds }
+                        val anyPinned = selectedChannels.any { it.isPinned }
+                        val newPinState = !anyPinned
+                        viewModel.pinSelectedChannels(newPinState)
+                        val toastMessage = if (newPinState) "کانال‌ها سنجاق شدند" else "کانال‌ها از سنجاق خارج شدند"
+                        android.widget.Toast.makeText(context, toastMessage, android.widget.Toast.LENGTH_SHORT).show()
                     },
                     onArchiveSelected = {
+                        val allChannels = state.channels + state.pinnedChannels + state.archivedChannels
+                        val selectedChannels = allChannels.filter { it.id in state.selectedChannelIds }
+                        val anyArchived = selectedChannels.any { it.isArchived }
+                        val newArchiveState = !anyArchived
                         state.selectedChannelIds.forEach { channelId ->
-                            viewModel.archiveChannel(channelId, true)
+                            viewModel.archiveChannel(channelId, newArchiveState)
                         }
-                        android.widget.Toast.makeText(context, "کانال‌ها به آرشیو منتقل شدند", android.widget.Toast.LENGTH_SHORT).show()
+                        val toastMessage = if (newArchiveState) "کانال‌ها به آرشیو منتقل شدند" else "کانال‌ها از آرشیو خارج شدند"
+                        android.widget.Toast.makeText(context, toastMessage, android.widget.Toast.LENGTH_SHORT).show()
                         viewModel.clearSelection()
                     }
                 )
@@ -194,50 +204,24 @@ fun ChannelListScreen(
                 }
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    // Story Row (Always visible if not searching and not in selection mode)
-                    if (searchQuery.isEmpty() && !inSelectionMode) {
-                        item(contentType = { "story_row" }) {
-                            val storiesState = storyUiState
-                            if (storiesState is com.Kelasor.app.ui.viewmodel.StoriesUiState.Success || storiesState is com.Kelasor.app.ui.viewmodel.StoriesUiState.Loading) {
-                                val storyUsers = if (storiesState is com.Kelasor.app.ui.viewmodel.StoriesUiState.Success) {
-                                    storiesState.storyUsers
-                                } else {
-                                    emptyList()
-                                }
-                                com.Kelasor.app.ui.components.story.StoriesList(
-                                    currentUser = com.Kelasor.app.domain.model.StoryUser(
-                                        userId = "channel_add",
-                                        username = "",
-                                        displayName = "استوری کانال",
-                                        avatarUrl = null,
-                                        stories = emptyList(),
-                                        isCurrentUser = true
-                                    ),
-                                    storyUsers = storyUsers,
-                                    onStoryClick = { user ->
-                                        if (user.isCurrentUser) {
-                                            if (adminChannels.isNotEmpty()) {
-                                                showChannelSelectionSheet = true
-                                            } else {
-                                                android.widget.Toast.makeText(context, "شما ادمین هیچ کانالی نیستید", android.widget.Toast.LENGTH_SHORT).show()
-                                            }
-                                        } else {
-                                            storyViewModel.openStoryViewer(user)
-                                        }
-                                    },
-                                    onAddStoryClick = {
-                                        if (adminChannels.isNotEmpty()) {
-                                            showChannelSelectionSheet = true
-                                        } else {
-                                            android.widget.Toast.makeText(context, "شما ادمین هیچ کانالی نیستید", android.widget.Toast.LENGTH_SHORT).show()
-                                        }
-                                    },
-                                    excludeCurrentUserFromList = false
-                                )
+                    // Story Row for channel stories — show only when not searching
+                    if (searchQuery.isEmpty()) {
+                        item(key = "channel_stories_row", contentType = "stories") {
+                            val storyUsers = when (val uiState = storyUiState) {
+                                is com.Kelasor.app.ui.viewmodel.StoriesUiState.Success -> uiState.storyUsers
+                                else -> emptyList()
                             }
+                            val currentUser = storyUsers.firstOrNull { it.isCurrentUser }
+                            com.Kelasor.app.ui.components.story.StoriesList(
+                                currentUser = currentUser,
+                                storyUsers = storyUsers,
+                                onStoryClick = { storyUser ->
+                                    storyViewModel.openStoryViewer(storyUser)
+                                },
+                                onAddStoryClick = { showAddStorySheet = true }
+                            )
                         }
                     }
-
                     // Empty State
                     if (searchQuery.isEmpty() && state.channels.isEmpty()) {
                         item {
@@ -332,14 +316,46 @@ fun ChannelListScreen(
             }
 
         
-        // ... (Leave Dialog Unchanged)
         if (state.showDeleteConfirmation) {
+            val allChannels = state.channels + state.pinnedChannels + state.archivedChannels
+            val selectedChannels = allChannels.filter { it.id in state.selectedChannelIds }
+            val selectedName = if (selectedChannels.size == 1) selectedChannels.first().name else "${state.selectedChannelIds.size} کانال"
             AlertDialog(
-                onDismissRequest = { viewModel.cancelDeleteSelection() },
-                title = { Text("خروج از کانال‌ها") },
-                text = { Text("آیا از خروج از ${state.selectedChannelIds.size} کانال مطمئن هستید؟") },
-                confirmButton = { TextButton(onClick = { viewModel.confirmDeleteSelection() }) { Text("خروج", color = MaterialTheme.colorScheme.error) } },
-                dismissButton = { TextButton(onClick = { viewModel.cancelDeleteSelection() }) { Text("انصراف") } }
+                onDismissRequest = { 
+                    deleteForAll = false
+                    viewModel.cancelDeleteSelection() 
+                },
+                title = { Text("خروج از کانال") },
+                text = {
+                    Column {
+                        Text("آیا میخواهید از $selectedName خارج شوید؟")
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            androidx.compose.material3.Checkbox(
+                                checked = deleteForAll,
+                                onCheckedChange = { deleteForAll = it }
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(text = "حذف برای همه", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                },
+                confirmButton = { 
+                    TextButton(onClick = { 
+                        viewModel.confirmDeleteSelection()
+                        deleteForAll = false
+                    }) { 
+                        Text("خروج", color = MaterialTheme.colorScheme.error) 
+                    } 
+                },
+                dismissButton = { 
+                    TextButton(onClick = { 
+                        deleteForAll = false
+                        viewModel.cancelDeleteSelection() 
+                    }) { 
+                        Text("انصراف") 
+                    } 
+                }
             )
         }
 

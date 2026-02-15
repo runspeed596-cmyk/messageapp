@@ -3,6 +3,7 @@ package com.Kelasor.app.ui.navigation
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -44,6 +45,7 @@ import com.Kelasor.app.ui.screens.profile.ProfileScreen
 import com.Kelasor.app.ui.screens.profile.SettingsScreen
 import com.Kelasor.app.ui.screens.profile.UserProfileScreen
 import com.Kelasor.app.ui.screens.splash.SplashScreen
+import com.Kelasor.app.ui.screens.forward.ForwardTargetScreen
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🗺️ Main Navigation Graph
@@ -62,38 +64,40 @@ fun NavGraph(
         enterTransition = {
             slideIntoContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                animationSpec = androidx.compose.animation.core.tween(
-                    durationMillis = 300,
-                    easing = androidx.compose.animation.core.FastOutSlowInEasing
+                animationSpec = spring(
+                    dampingRatio = 0.86f,
+                    stiffness = Spring.StiffnessMediumLow
                 )
-            ) + fadeIn()
+            ) + fadeIn(animationSpec = androidx.compose.animation.core.tween(220))
         },
         exitTransition = {
             slideOutOfContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                animationSpec = androidx.compose.animation.core.tween(
-                    durationMillis = 300,
-                    easing = androidx.compose.animation.core.FastOutSlowInEasing
-                )
-            ) + fadeOut()
+                animationSpec = spring(
+                    dampingRatio = 0.86f,
+                    stiffness = Spring.StiffnessMediumLow
+                ),
+                targetOffset = { fullOffset -> fullOffset / 4 }
+            ) + fadeOut(animationSpec = androidx.compose.animation.core.tween(180), targetAlpha = 0.6f)
         },
         popEnterTransition = {
             slideIntoContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.End,
-                animationSpec = androidx.compose.animation.core.tween(
-                    durationMillis = 300,
-                    easing = androidx.compose.animation.core.FastOutSlowInEasing
-                )
-            ) + fadeIn()
+                animationSpec = spring(
+                    dampingRatio = 0.86f,
+                    stiffness = Spring.StiffnessMediumLow
+                ),
+                initialOffset = { fullOffset -> fullOffset / 4 }
+            ) + fadeIn(animationSpec = androidx.compose.animation.core.tween(180))
         },
         popExitTransition = {
             slideOutOfContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.End,
-                animationSpec = androidx.compose.animation.core.tween(
-                    durationMillis = 300,
-                    easing = androidx.compose.animation.core.FastOutSlowInEasing
+                animationSpec = spring(
+                    dampingRatio = 0.86f,
+                    stiffness = Spring.StiffnessMediumLow
                 )
-            ) + fadeOut()
+            ) + fadeOut(animationSpec = androidx.compose.animation.core.tween(180), targetAlpha = 0.6f)
         }
     ) {
         // ─────────────────────────────────────────────────────────────────────────
@@ -169,7 +173,7 @@ fun NavGraph(
                 onNavigateToChannelStories = { id, name -> 
                     navController.navigate("channelStories/$id/${java.net.URLEncoder.encode(name, "UTF-8")}")
                 },
-                onNavigateToGroupChat = { groupId -> navController.navigate("groupChat/$groupId") },
+                onNavigateToGroupChat = { groupId -> navController.navigate(Routes.GroupConversation.createRoute(groupId)) },
                 onNavigateToChannelView = { channelId -> navController.navigate("channelView/$channelId") },
                 onNavigateToProfile = { navController.navigate(Routes.Profile.route) },
                 onNavigateToSettings = { navController.navigate(Routes.Settings.route) },
@@ -246,15 +250,65 @@ fun NavGraph(
         // Chat Screens
         // ─────────────────────────────────────────────────────────────────────────
         composable(
-            route = Routes.Conversation.route,
-            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
+            route = Routes.Conversation.route + "?messageId={messageId}",
+            arguments = listOf(
+                navArgument("chatId") { type = NavType.StringType },
+                navArgument("messageId") { 
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null 
+                }
+            ),
+            enterTransition = {
+                slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                    animationSpec = spring(
+                        dampingRatio = 0.82f,
+                        stiffness = Spring.StiffnessMedium
+                    )
+                ) + fadeIn(animationSpec = tween(200))
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                    animationSpec = spring(
+                        dampingRatio = 0.86f,
+                        stiffness = Spring.StiffnessMedium
+                    ),
+                    targetOffset = { fullOffset -> fullOffset / 5 }
+                ) + fadeOut(animationSpec = tween(150), targetAlpha = 0.5f)
+            },
+            popEnterTransition = {
+                slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.End,
+                    animationSpec = spring(
+                        dampingRatio = 0.82f,
+                        stiffness = Spring.StiffnessMedium
+                    ),
+                    initialOffset = { fullOffset -> fullOffset / 5 }
+                ) + fadeIn(animationSpec = tween(180))
+            },
+            popExitTransition = {
+                slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.End,
+                    animationSpec = spring(
+                        dampingRatio = 0.82f,
+                        stiffness = Spring.StiffnessMedium
+                    )
+                ) + fadeOut(animationSpec = tween(150), targetAlpha = 0.5f)
+            }
         ) { backStackEntry ->
             val chatId = backStackEntry.arguments?.getString("chatId") ?: ""
+            val messageId = backStackEntry.arguments?.getString("messageId")
             ConversationScreen(
                 chatId = chatId,
+                initialMessageId = messageId,
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToProfile = { userId ->
                     navController.navigate(Routes.UserProfile.createRoute(userId, fromChat = true))
+                },
+                onNavigateToForward = { messageIds, sourceType, sourceId ->
+                    navController.navigate(Routes.ForwardTarget.createRoute(messageIds, sourceType, sourceId))
                 }
             )
         }
@@ -265,6 +319,18 @@ fun NavGraph(
                     navController.navigate(Routes.Conversation.createRoute(userId)) {
                         popUpTo(Routes.NewChat.route) { inclusive = true }
                     }
+                },
+                onNavigateToCreateGroup = { navController.navigate(Routes.CreateGroup.route) },
+                onNavigateToCreateChannel = { navController.navigate(Routes.CreateChannel.route) },
+                onNavigateToCreateCourse = { navController.navigate(Routes.CreateCourse.route) }
+            )
+        }
+        composable(Routes.CreateCourse.route) {
+            com.Kelasor.app.ui.screens.course.CreateCourseScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onCourseCreated = { _ ->
+                    // Navigate to course/channel view or just pop back
+                    navController.popBackStack() 
                 }
             )
         }
@@ -282,12 +348,21 @@ fun NavGraph(
             )
         }
         composable(
-            route = Routes.GroupConversation.route,
-            arguments = listOf(navArgument("groupId") { type = NavType.StringType })
+            route = Routes.GroupConversation.route + "?messageId={messageId}",
+            arguments = listOf(
+                navArgument("groupId") { type = NavType.StringType },
+                navArgument("messageId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
         ) { backStackEntry ->
             val groupId = backStackEntry.arguments?.getString("groupId") ?: ""
+            val messageId = backStackEntry.arguments?.getString("messageId")
             com.Kelasor.app.ui.screens.group.GroupConversationScreen(
                 groupId = groupId,
+                initialMessageId = messageId,
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToGroupDetail = { id ->
                     navController.navigate(Routes.GroupDetail.createRoute(id))
@@ -297,6 +372,9 @@ fun NavGraph(
                 },
                 onNavigateToUserProfile = { userId ->
                     navController.navigate(Routes.UserProfile.createRoute(userId))
+                },
+                onNavigateToForward = { messageIds, sourceType, sourceId ->
+                    navController.navigate(Routes.ForwardTarget.createRoute(messageIds, sourceType, sourceId))
                 }
             )
         }
@@ -313,6 +391,11 @@ fun NavGraph(
                 },
                 onGroupDeleted = {
                     navController.popBackStack(Routes.Main.route, inclusive = false)
+                },
+                onNavigateToMessage = { gId, msgId ->
+                    navController.navigate(Routes.GroupConversation.createRoute(gId, msgId)) {
+                        popUpTo(Routes.Main.route) { inclusive = false }
+                    }
                 }
             )
         }
@@ -346,12 +429,21 @@ fun NavGraph(
             )
         }
         composable(
-            route = Routes.ChannelView.route,
-            arguments = listOf(navArgument("channelId") { type = NavType.StringType })
+            route = Routes.ChannelView.route + "?messageId={messageId}",
+            arguments = listOf(
+                navArgument("channelId") { type = NavType.StringType },
+                navArgument("messageId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
         ) { backStackEntry ->
             val channelId = backStackEntry.arguments?.getString("channelId") ?: ""
+            val messageId = backStackEntry.arguments?.getString("messageId")
             ChannelViewScreen(
                 channelId = channelId,
+                initialMessageId = messageId,
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToChannelSettings = {
                     navController.navigate(Routes.ChannelSettings.createRoute(channelId))
@@ -368,7 +460,27 @@ fun NavGraph(
                 onNavigateBack = { navController.popBackStack() },
                 onChannelDeleted = {
                     navController.popBackStack(Routes.Main.route, inclusive = false)
+                },
+                onNavigateToMessage = { cId, msgId ->
+                    navController.navigate(Routes.ChannelView.createRoute(cId, msgId)) {
+                        popUpTo(Routes.Main.route) { inclusive = false }
+                    }
                 }
+            )
+        }
+        // ─────────────────────────────────────────────────────────────────────────
+        // Forward Target Selection Screen
+        // ─────────────────────────────────────────────────────────────────────────
+        composable(
+            route = Routes.ForwardTarget.route,
+            arguments = listOf(
+                navArgument("messageIds") { type = NavType.StringType },
+                navArgument("sourceType") { type = NavType.StringType; defaultValue = "CHAT" },
+                navArgument("sourceId") { type = NavType.StringType; defaultValue = "" }
+            )
+        ) {
+            ForwardTargetScreen(
+                onBackPress = { navController.popBackStack() }
             )
         }
         // ─────────────────────────────────────────────────────────────────────────
@@ -418,8 +530,8 @@ fun NavGraph(
                 userId = userId,
                 fromChat = fromChat,
                 onNavigateBack = { navController.popBackStack() },
-                onStartChat = { targetUserId ->
-                    navController.navigate(Routes.Conversation.createRoute(targetUserId)) {
+                onStartChat = { targetUserId, messageId ->
+                    navController.navigate(Routes.Conversation.createRoute(targetUserId, messageId)) {
                         popUpTo(Routes.UserProfile.route) { inclusive = true }
                         launchSingleTop = true
                     }

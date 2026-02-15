@@ -75,12 +75,20 @@ fun SearchBar(
     val focusRequester = remember { FocusRequester() }
     
     val scale by animateFloatAsState(
-        targetValue = if (isFocused) 1.01f else 1f,
+        targetValue = if (isFocused) 1.02f else 1f,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
+            dampingRatio = 0.7f,
+            stiffness = Spring.StiffnessMediumLow
         ),
         label = "searchScale"
+    )
+    val glowIntensity by animateFloatAsState(
+        targetValue = if (isFocused) 1f else 0f,
+        animationSpec = spring(
+            dampingRatio = 0.8f,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "searchGlow"
     )
     
     Row(
@@ -88,9 +96,9 @@ fun SearchBar(
             .fillMaxWidth()
             .height(52.dp)
             .shadow(
-                elevation = if (isFocused) 12.dp else 6.dp,
+                elevation = if (isFocused) 14.dp else 6.dp,
                 shape = CardShapes.searchBar,
-                ambientColor = if (isFocused) extendedColors.accentGlow else androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.2f)
+                ambientColor = if (isFocused) extendedColors.accentGlow.copy(alpha = glowIntensity * 0.4f) else androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.2f)
             )
             .clip(CardShapes.searchBar)
             .background(extendedColors.inputBackground)

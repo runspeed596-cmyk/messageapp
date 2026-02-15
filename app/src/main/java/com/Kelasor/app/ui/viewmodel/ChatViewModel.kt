@@ -160,27 +160,20 @@ class ChatListViewModel @Inject constructor(
         viewModelScope.launch {
             Log.d("ChatListViewModel", "🔄 Starting to observe chats...")
             combine(
-                chatRepository.observeChats(),
-                groupRepository.observeGroups(),
-                channelRepository.observeSubscribedChannels(),
+                chatRepository.observeChats().distinctUntilChanged(),
+                groupRepository.observeGroups().distinctUntilChanged(),
+                channelRepository.observeSubscribedChannels().distinctUntilChanged(),
                 phoneToName,
                 sessionManager.userId
             ) { chats, groups, channels, contactMap, userId ->
                 val groupChats = groups.map { group -> group.toChat() }
                 val channelChats = channels.map { channel -> channel.toChat() }
-                
-                // Filter: Main chats screen should only show private chats. 
-                // Groups and Channels are in separate screens.
-                // We collect ALL here, but will separate them in the collect block.
-                // val privateChats = chats.filter { it.type == ChatType.PRIVATE }
                 val allChats = chats + groupChats + channelChats
-                // Sort by last activity (lastMessage time or updatedAt/createdAt)
                 val sortedChats = allChats.sortedByDescending { chat ->
                     chat.lastMessage?.createdAt ?: chat.updatedAt
                 }
-
                 Triple(sortedChats, contactMap, userId)
-            }.collect { (chats, contactMap, userId) ->
+            }.flowOn(kotlinx.coroutines.Dispatchers.Default).collect { (chats, contactMap, userId) ->
                 Log.d("ChatListViewModel", "📥 Received ${chats.size} chats from Flow, first chat lastMessage='${chats.firstOrNull()?.lastMessage?.content}'")
                 val chatsWithContactNames = chats.map { chat -> 
                     // Only apply contact name logic to PRIVATE chats
@@ -476,7 +469,8 @@ class ConversationViewModel @Inject constructor(
     val locationManager: LocationManager,
     private val pollRepository: com.Kelasor.app.data.repository.PollRepository,
     private val soundPlayer: com.Kelasor.app.data.media.SoundPlayer,
-    private val currentChatManager: com.Kelasor.app.data.session.CurrentChatManager
+    private val currentChatManager: com.Kelasor.app.data.session.CurrentChatManager,
+    val videoNoteRecorderManager: com.Kelasor.app.data.video.VideoNoteRecorderManager
 ) : ViewModel() {
 
     fun setActiveChat(id: String) {
@@ -854,6 +848,130 @@ class ConversationViewModel @Inject constructor(
             )
         }
     }
+
+    fun reactToMultipleMessages(messageIds: Set<String>, reaction: String) {
+        viewModelScope.launch {
+            messageIds.forEach { messageId ->
+                val chat = _state.value.chat ?: return@launch
+                val isGroup = chat.type == ChatType.GROUP
+                if (chat.type == ChatType.CHANNEL) return@launch
+                messageRepository.reactToMessage(
+                    messageId = messageId,
+                    reaction = reaction,
+                    isGroup = isGroup,
+                    groupId = if (isGroup) chat.id else null
+                )
+            }
+            clearSelection()
+        }
+    }
+
+    fun pinMessage(messageId: String, isPinned: Boolean) {
+        viewModelScope.launch {
+            try {
+                val response = chatRepository.pinMessage(messageId, isPinned)
+                response.fold(
+                    onSuccess = {
+                        Log.d(TAG, "Message $messageId pin state set to $isPinned")
+                        _state.update { currentState ->
+                            currentState.copy(
+                                messages = currentState.messages.map { msg ->
+                                    if (msg.id == messageId) msg.copy(isPinned = isPinned, pinnedAt = if (isPinned) java.time.Instant.now() else null) else msg
+                                }
+                            )
+                        }
+                    },
+                    onFailure = { e ->
+                        Log.e(TAG, "Failed to pin message", e)
+                        _events.emit(ConversationEvent.Error("خطا در سنجاق کردن پیام"))
+                    }
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "pinMessage failed", e)
+                _events.emit(ConversationEvent.Error("خطا در سنجاق کردن پیام"))
+            }
+        }
+    }
+
+    fun forwardMessage(messageId: String, targetChatId: String?, targetGroupId: String?, targetChannelId: String?) {
+        viewModelScope.launch {
+            try {
+                val response = chatRepository.forwardMessage(messageId, targetChatId, targetGroupId, targetChannelId)
+                response.fold(
+                    onSuccess = {
+                        Log.d(TAG, "Message $messageId forwarded successfully")
+                        _events.emit(ConversationEvent.MessageSent)
+                    },
+                    onFailure = { e ->
+                        Log.e(TAG, "Failed to forward message", e)
+                        _events.emit(ConversationEvent.Error("خطا در ارسال مجدد پیام"))
+                    }
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "forwardMessage failed", e)
+                _events.emit(ConversationEvent.Error("خطا در ارسال مجدد پیام"))
+            }
+        }
+    }
+
+    fun scheduleMessage(content: String, scheduledAt: String, type: String = "TEXT", mediaUrl: String? = null) {
+        val chatId = currentChatId ?: return
+        viewModelScope.launch {
+            try {
+                val response = chatRepository.scheduleMessage(chatId, content, type, mediaUrl, scheduledAt)
+                response.fold(
+                    onSuccess = {
+                        Log.d(TAG, "Message scheduled for $scheduledAt")
+                        _events.emit(ConversationEvent.MessageSent)
+                    },
+                    onFailure = { e ->
+                        Log.e(TAG, "Failed to schedule message", e)
+                        _events.emit(ConversationEvent.Error("خطا در زمانبندی پیام"))
+                    }
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "scheduleMessage failed", e)
+                _events.emit(ConversationEvent.Error("خطا در زمانبندی پیام"))
+            }
+        }
+    }
+
+    fun updateScheduledTime(messageId: String, newScheduledAt: String) {
+        viewModelScope.launch {
+            try {
+                // Find the message in current state
+                val msg = _state.value.messages.find { it.id == messageId }
+                if (msg == null) {
+                    Log.e(TAG, "updateScheduledTime: message $messageId not found")
+                    return@launch
+                }
+                val chatId = currentChatId ?: return@launch
+                val response = chatRepository.scheduleMessage(
+                    chatId = chatId,
+                    content = msg.content,
+                    type = msg.type.name,
+                    mediaUrl = msg.mediaUrl,
+                    scheduledAt = newScheduledAt
+                )
+                response.fold(
+                    onSuccess = {
+                        Log.d(TAG, "Message $messageId rescheduled to $newScheduledAt")
+                        // Delete old scheduled message
+                        messageRepository.deleteMessage(messageId)
+                        // Refresh messages from server
+                        messageRepository.requestMessageSync(chatId)
+                    },
+                    onFailure = { e ->
+                        Log.e(TAG, "Failed to reschedule message", e)
+                        _events.emit(ConversationEvent.Error("خطا در ویرایش زمان"))
+                    }
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "updateScheduledTime failed", e)
+                _events.emit(ConversationEvent.Error("خطا در ویرایش زمان"))
+            }
+        }
+    }
     
     fun toggleMessageSelection(messageId: String) {
         _state.update { 
@@ -874,14 +992,9 @@ class ConversationViewModel @Inject constructor(
     fun deleteSelectedMessages(deleteForEveryone: Boolean = false) {
         val selected = _state.value.selectedMessageIds
         if (selected.isEmpty()) return
-        
         viewModelScope.launch {
             selected.forEach { messageId ->
-                if (deleteForEveryone) {
-                    // Delete from server and locally
-                    messageRepository.deleteMessage(messageId)
-                } else {
-                }
+                messageRepository.deleteMessage(messageId)
             }
             clearSelection()
         }
@@ -933,7 +1046,7 @@ class ConversationViewModel @Inject constructor(
         }
     }
 
-    fun deleteMessage(messageId: String) {
+    fun deleteMessage(messageId: String, deleteForEveryone: Boolean = true) {
         viewModelScope.launch {
             messageRepository.deleteMessage(messageId)
         }
@@ -1079,6 +1192,39 @@ class ConversationViewModel @Inject constructor(
             }
         }
     }
+
+    /**
+     * Send a circular video note message.
+     * Uploads the recorded video file and sends as a VIDEO_NOTE message.
+     */
+    fun sendVideoNote(videoFile: java.io.File, durationMs: Long) {
+        val chatId = currentChatId ?: return
+        viewModelScope.launch {
+            _state.update { it.copy(isSending = true, isUploading = true, uploadProgress = 0f) }
+            try {
+                val requestBody = videoFile.asRequestBody("video/mp4".toMediaTypeOrNull())
+                val part = okhttp3.MultipartBody.Part.createFormData("file", videoFile.name, requestBody)
+                val response = chatRepository.uploadFile(part)
+                response.fold(
+                    onSuccess = { fileUrl ->
+                        val durationSeconds = durationMs / 1000
+                        sendMessage("🎥 ویدیو نوت (${durationSeconds}s)", "VIDEO_NOTE", fileUrl)
+                        Log.d(TAG, "Video note uploaded and sent: $fileUrl")
+                    },
+                    onFailure = { e ->
+                        Log.e(TAG, "Video note upload failed: ${e.message}")
+                        _events.emit(ConversationEvent.Error("خطا در آپلود ویدیو نوت: ${e.message}"))
+                    }
+                )
+                videoFile.delete()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error uploading video note: ${e.message}")
+                _events.emit(ConversationEvent.Error("خطا در آپلود ویدیو نوت: ${e.message}"))
+            } finally {
+                _state.update { it.copy(isSending = false, isUploading = false, uploadProgress = 0f) }
+            }
+        }
+    }
     
     /**
      * Send a location message.
@@ -1126,7 +1272,7 @@ class ConversationViewModel @Inject constructor(
      * Upload and send media (image/video) from gallery.
      * Sends as IMAGE or VIDEO message type.
      */
-    fun uploadAndSendMedia(chatId: String, uri: android.net.Uri, context: android.content.Context, isVideo: Boolean) {
+    fun uploadAndSendMedia(chatId: String, uri: android.net.Uri, context: android.content.Context, isVideo: Boolean, caption: String? = null) {
         val chatId = currentChatId ?: return
         
         viewModelScope.launch {
@@ -1151,8 +1297,13 @@ class ConversationViewModel @Inject constructor(
                 response.fold(
                     onSuccess = { fileUrl ->
                         val messageType = if (isVideoFile) "VIDEO" else "IMAGE"
-                        val emojiPrefix = if (isVideoFile) "🎬" else "🖼️"
-                        sendMessage("$emojiPrefix $fileName", messageType, fileUrl)
+                        val content = if (!caption.isNullOrBlank()) {
+                            caption
+                        } else {
+                            val emojiPrefix = if (isVideoFile) "🎬" else "🖼️"
+                            "$emojiPrefix $fileName"
+                        }
+                        sendMessage(content, messageType, fileUrl)
                         Log.d(TAG, "Media uploaded and sent: $fileUrl (type: $messageType)")
                     },
                     onFailure = { e ->

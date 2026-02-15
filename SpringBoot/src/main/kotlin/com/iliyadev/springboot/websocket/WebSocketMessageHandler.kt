@@ -229,16 +229,11 @@ class WebSocketMessageHandler(
     
     /**
      * Broadcast a message to all participants in a chat except the sender.
-     * Uses MULTIPLE delivery methods for maximum reliability:
-     * 
-     * 1. User queue: /user/{userId}/queue/messages (direct delivery)
-     * 2. User topic: /topic/user/{userId}/messages (fallback for user queue issues)
-     * 3. Chat topic: /topic/chat/{chatId}/messages (for users viewing the chat)
+     * Uses user queue for reliable, deduplicated delivery.
      */
     fun broadcastMessageToChat(chatId: UUID, message: WsMessage, recipientIds: List<UUID>) {
         logger.info("📤 Broadcasting message ${message.id} to ${recipientIds.size} recipients in chat $chatId")
         
-        // Method 1: User Queue (primary) - works even when not viewing the chat
         recipientIds.forEach { recipientId ->
             logger.info("   → Sending to user queue: /user/$recipientId/queue/messages")
             messagingTemplate.convertAndSendToUser(
@@ -246,15 +241,7 @@ class WebSocketMessageHandler(
                 "/queue/messages",
                 message
             )
-            
-            // Method 2: User Topic (fallback) - more reliable for some STOMP implementations
-            logger.info("   → Sending to user topic fallback: /topic/user/$recipientId/messages")
-            messagingTemplate.convertAndSend("/topic/user/$recipientId/messages", message)
         }
-        
-        // Method 3: Chat Topic Broadcast - for users actively viewing the chat
-        logger.info("   → Also broadcasting to chat topic: /topic/chat/$chatId/messages")
-        messagingTemplate.convertAndSend("/topic/chat/$chatId/messages", message)
         
         logger.info("✅ Broadcast complete for message ${message.id}")
     }
@@ -270,7 +257,6 @@ class WebSocketMessageHandler(
     fun broadcastGroupMessage(groupId: UUID, message: WsMessage, memberIds: List<UUID>) {
         logger.info("📤 Broadcasting group message ${message.id} to ${memberIds.size} members in group $groupId")
         
-        // Method 1: User Queue (primary)
         memberIds.forEach { memberId ->
             logger.info("   → Sending group message to user: $memberId")
             messagingTemplate.convertAndSendToUser(
@@ -279,10 +265,6 @@ class WebSocketMessageHandler(
                 message
             )
         }
-        
-        // Method 2: Topic Broadcast (fallback/primary for active viewers)
-        logger.info("   → Also broadcasting to topic: /topic/group/$groupId/messages")
-        messagingTemplate.convertAndSend("/topic/group/$groupId/messages", message)
         
         logger.info("✅ Group message broadcast complete for ${message.id}")
     }
@@ -294,7 +276,6 @@ class WebSocketMessageHandler(
     fun broadcastChannelPost(channelId: UUID, post: ChannelPostDto, subscriberIds: List<UUID>) {
         logger.info("📤 Broadcasting channel post ${post.id} to ${subscriberIds.size} subscribers in channel $channelId")
         
-        // Method 1: User Queue
         subscriberIds.forEach { subscriberId ->
             logger.info("   → Sending channel post to user: $subscriberId")
             messagingTemplate.convertAndSendToUser(
@@ -303,10 +284,6 @@ class WebSocketMessageHandler(
                 post
             )
         }
-        
-        // Method 2: Topic Broadcast
-        logger.info("   → Also broadcasting to topic: /topic/channel/$channelId/posts")
-        messagingTemplate.convertAndSend("/topic/channel/$channelId/posts", post)
         
         logger.info("✅ Channel post broadcast complete for ${post.id}")
     }

@@ -143,6 +143,13 @@ data class ExtendedColors(
     val storyRingStart: Color,
     val storyRingEnd: Color,
 
+    // Tab Bar (Glassmorphism)
+    val tabBarGlass: Color,
+    val tabBarGlassBorder: Color,
+    val tabIndicator: Color,
+    val tabActiveText: Color,
+    val tabInactiveText: Color,
+
     // Text (Fallback)
     val textSecondary: Color
 )
@@ -208,6 +215,13 @@ val LightExtendedColors = ExtendedColors(
     storyRingStart = GradientPurple,
     storyRingEnd = GradientCoral,
     
+    // Tab Bar
+    tabBarGlass = Color.White.copy(alpha = 0.85f),
+    tabBarGlassBorder = Color.Black.copy(alpha = 0.06f),
+    tabIndicator = Color.White,
+    tabActiveText = AccentPink,
+    tabInactiveText = LightTextSecondary,
+    
     // Text
     textSecondary = LightTextSecondary
 )
@@ -272,6 +286,13 @@ val DarkExtendedColors = ExtendedColors(
     // Story Ring
     storyRingStart = GradientPurple,
     storyRingEnd = AccentCoral,
+    
+    // Tab Bar
+    tabBarGlass = Color.White.copy(alpha = 0.08f),
+    tabBarGlassBorder = Color.White.copy(alpha = 0.12f),
+    tabIndicator = Color.White.copy(alpha = 0.15f),
+    tabActiveText = Color.White,
+    tabInactiveText = TextSecondary,
     
     // Text
     textSecondary = TextSecondary

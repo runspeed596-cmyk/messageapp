@@ -21,7 +21,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Contacts
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -70,6 +73,9 @@ import com.Kelasor.app.ui.viewmodel.NewChatViewModel
 fun NewChatScreen(
     onNavigateBack: () -> Unit,
     onStartChat: (String) -> Unit,
+    onNavigateToCreateGroup: () -> Unit,
+    onNavigateToCreateChannel: () -> Unit,
+    onNavigateToCreateCourse: () -> Unit,
     viewModel: NewChatViewModel = hiltViewModel()
 ) {
     val extendedColors = MessageAppTheme.extendedColors
@@ -135,6 +141,30 @@ fun NewChatScreen(
                     containerColor = Color.Transparent
                 )
             )
+            // Create Options Row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceEvenly
+            ) {
+                CreateOptionItem(
+                    icon = Icons.Default.People,
+                    label = "گروه جدید",
+                    onClick = onNavigateToCreateGroup
+                )
+                CreateOptionItem(
+                    icon = Icons.Default.Campaign,
+                    label = "کانال جدید",
+                    onClick = onNavigateToCreateChannel
+                )
+                CreateOptionItem(
+                    icon = Icons.Default.School,
+                    label = "دوره جدید",
+                    onClick = onNavigateToCreateCourse
+                )
+            }
+            
             // Search
             SearchBar(
                 query = state.searchQuery,

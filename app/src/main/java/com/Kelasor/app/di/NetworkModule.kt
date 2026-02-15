@@ -21,7 +21,7 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
-    private const val BASE_URL = "http://46.249.100.239/"
+    private const val BASE_URL = com.Kelasor.app.util.Constants.BASE_URL
     @Provides
     @Singleton
     fun provideSessionManager(

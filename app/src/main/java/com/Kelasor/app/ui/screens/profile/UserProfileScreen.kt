@@ -37,6 +37,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -73,7 +76,7 @@ fun UserProfileScreen(
     userId: String,
     fromChat: Boolean = false,
     onNavigateBack: () -> Unit,
-    onStartChat: (String) -> Unit,
+    onStartChat: (String, String?) -> Unit, // Updated signature
     onNavigateToFollowList: (userId: String, tab: Int) -> Unit = { _, _ -> },
     onNavigateToChannel: (String) -> Unit,
     viewModel: UserProfileViewModel = hiltViewModel()
@@ -91,6 +94,59 @@ fun UserProfileScreen(
             viewModel.clearError()
         }
     }
+    
+    // Shared Media Action State
+    var selectedSharedContent by remember { mutableStateOf<com.Kelasor.app.domain.model.SharedContent?>(null) }
+    
+    // Media Preview State
+    var previewMediaUrl by remember { mutableStateOf<String?>(null) }
+    var previewMediaType by remember { mutableStateOf(com.Kelasor.app.ui.components.MediaType.IMAGE) }
+
+    // Media Preview Dialog
+    previewMediaUrl?.let { url ->
+        com.Kelasor.app.ui.components.MediaPreviewDialog(
+            mediaUrl = url,
+            mediaType = previewMediaType,
+            onDismiss = { previewMediaUrl = null }
+        )
+    }
+    
+    // Shared Media Action Sheet
+    com.Kelasor.app.ui.components.SharedMediaActionSheet(
+        content = selectedSharedContent,
+        onDismissRequest = { selectedSharedContent = null },
+        onView = {
+            selectedSharedContent?.let { item ->
+                when (item.type) {
+                    com.Kelasor.app.domain.model.MessageType.IMAGE,
+                    com.Kelasor.app.domain.model.MessageType.VIDEO -> {
+                        previewMediaUrl = item.url
+                        previewMediaType = if (item.type == com.Kelasor.app.domain.model.MessageType.VIDEO) 
+                            com.Kelasor.app.ui.components.MediaType.VIDEO 
+                        else 
+                            com.Kelasor.app.ui.components.MediaType.IMAGE
+                    }
+                    com.Kelasor.app.domain.model.MessageType.LINK -> {
+                        try {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(item.url))
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            android.widget.Toast.makeText(context, "خطا در باز کردن لینک", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    else -> {
+                        android.widget.Toast.makeText(context, "قابلیت نمایش این فایل هنوز پیاده‌سازی نشده است", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        },
+        onShowInChat = {
+            selectedSharedContent?.let { item ->
+                onStartChat(userId, item.messageId)
+            }
+        }
+    )
+
     // Collaboration Request Dialog
     if (state.showCollaborationDialog) {
         CollaborationRequestDialog(
@@ -103,6 +159,7 @@ fun UserProfileScreen(
                     message = message,
                     onSuccess = {
                         // Show success toast or feedback
+                        android.widget.Toast.makeText(context, "درخواست ارسال شد", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 )
             }
@@ -128,14 +185,6 @@ fun UserProfileScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.back)
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { }) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.more_options)
                         )
                     }
                 },
@@ -234,7 +283,7 @@ fun UserProfileScreen(
                                     if (fromChat) {
                                         onNavigateBack()
                                     } else {
-                                        onStartChat(userId)
+                                        onStartChat(userId, null)
                                     }
                                 },
                                 // Take full width if call button is hidden
@@ -256,7 +305,7 @@ fun UserProfileScreen(
                             }
                         }
                     }
-                    // Follow and Collaboration Buttons
+                    // Collaboration Request Button
                     item {
                         Spacer(modifier = Modifier.height(12.dp))
                         Row(
@@ -265,47 +314,9 @@ fun UserProfileScreen(
                                 .padding(horizontal = 24.dp),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            // Follow Button
-                            val isFollowing = state.isFollowing
                             androidx.compose.foundation.layout.Box(
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .clip(CardShapes.button)
-                                    .background(
-                                        if (isFollowing) MaterialTheme.colorScheme.surfaceVariant
-                                        else extendedColors.accent
-                                    )
-                                    .clickable { viewModel.toggleFollow(userId) }
-                                    .padding(vertical = 12.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center
-                                ) {
-                                    Icon(
-                                        imageVector = if (isFollowing) 
-                                            androidx.compose.material.icons.Icons.Default.PersonRemove 
-                                        else 
-                                            androidx.compose.material.icons.Icons.Default.PersonAdd,
-                                        contentDescription = null,
-                                        tint = if (isFollowing) MaterialTheme.colorScheme.onSurfaceVariant else Color.White,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = if (isFollowing) "دنبال شده" else "دنبال کردن",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontFamily = VazirFontFamily,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = if (isFollowing) MaterialTheme.colorScheme.onSurfaceVariant else Color.White
-                                    )
-                                }
-                            }
-                            // Collaboration Request Button
-                            androidx.compose.foundation.layout.Box(
-                                modifier = Modifier
-                                    .weight(1f)
+                                    .fillMaxWidth()
                                     .clip(CardShapes.button)
                                     .background(MaterialTheme.colorScheme.secondaryContainer)
                                     .clickable { viewModel.showCollaborationDialog() }
@@ -334,54 +345,24 @@ fun UserProfileScreen(
                             }
                         }
                     }
-                    // Follower/Following Counts
+                    // Media Filter
                     item {
                         Spacer(modifier = Modifier.height(16.dp))
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 24.dp)
-                                .background(
-                                    MaterialTheme.colorScheme.surface,
-                                    shape = CardShapes.glassCard
-                                )
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.clickable { onNavigateToFollowList(userId, 0) }
-                            ) {
-                                Text(
-                                    text = state.followerCount.toString(),
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = extendedColors.accent
-                                )
-                                Text(
-                                    text = "دنبال‌کننده",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontFamily = VazirFontFamily,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.clickable { onNavigateToFollowList(userId, 1) }
-                            ) {
-                                Text(
-                                    text = state.followingCount.toString(),
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = extendedColors.accent
-                                )
-                                Text(
-                                    text = "دنبال‌شده",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontFamily = VazirFontFamily,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                        
+                        com.Kelasor.app.ui.components.ContentFilter(
+                            selectedType = state.selectedContentType,
+                            onTypeSelected = { viewModel.onFilterSelected(it) }
+                        )
+                        
+                        if (state.selectedContentType != null) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            com.Kelasor.app.ui.components.SharedMediaGrid(
+                                content = state.sharedContent,
+                                isLoading = state.isMediaLoading,
+                                onItemClick = { item ->
+                                    selectedSharedContent = item
+                                }
+                            )
                         }
                     }
                     // Info section

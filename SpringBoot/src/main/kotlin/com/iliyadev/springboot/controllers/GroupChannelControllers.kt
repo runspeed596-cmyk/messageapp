@@ -265,6 +265,43 @@ class GroupController(
             ResponseEntity.badRequest().body(ApiResponse(false, "لینک نامعتبر یا غیرفعال است"))
         }
     }
+    // ═══ PIN GROUP MESSAGE ═══
+    @PutMapping("/{id}/messages/{messageId}/pin")
+    fun pinGroupMessage(
+        @RequestAttribute("userId") userId: UUID,
+        @PathVariable id: UUID,
+        @PathVariable messageId: UUID,
+        @RequestParam pinned: Boolean
+    ): ResponseEntity<ApiResponse<GroupMessageDto>> {
+        val message = groupService.pinGroupMessage(id, messageId, userId, pinned)
+        return if (message != null) {
+            ResponseEntity.ok(ApiResponse(true, if (pinned) "پیام سنجاق شد" else "سنجاق برداشته شد", message))
+        } else {
+            ResponseEntity.badRequest().body(ApiResponse(false, "خطا یا دسترسی ندارید"))
+        }
+    }
+    @GetMapping("/{id}/messages/pinned")
+    fun getPinnedGroupMessages(
+        @RequestAttribute("userId") userId: UUID,
+        @PathVariable id: UUID
+    ): ResponseEntity<ApiResponse<List<GroupMessageDto>>> {
+        val messages = groupService.getPinnedGroupMessages(id, userId)
+        return ResponseEntity.ok(ApiResponse(true, "موفق", messages))
+    }
+    // ═══ SCHEDULE GROUP MESSAGE ═══
+    @PostMapping("/{id}/messages/schedule")
+    fun scheduleGroupMessage(
+        @RequestAttribute("userId") userId: UUID,
+        @PathVariable id: UUID,
+        @RequestBody request: ScheduleMessageRequest
+    ): ResponseEntity<ApiResponse<GroupMessageDto>> {
+        val message = groupService.scheduleGroupMessage(id, userId, request)
+        return if (message != null) {
+            ResponseEntity.ok(ApiResponse(true, "پیام زمان‌بندی شد", message))
+        } else {
+            ResponseEntity.badRequest().body(ApiResponse(false, "خطا در زمان‌بندی"))
+        }
+    }
     // ═══════════════════════════════════════════════════════════════════════════════
     // 🔔 Mute/Pin/Archive Settings
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -625,6 +662,43 @@ class ChannelController(
             ResponseEntity.badRequest().body(ApiResponse(false, "لینک نامعتبر یا غیرفعال است"))
         }
     }
+    // ═══ PIN CHANNEL POST ═══
+    @PutMapping("/{id}/posts/{postId}/pin")
+    fun pinChannelPost(
+        @RequestAttribute("userId") userId: UUID,
+        @PathVariable id: UUID,
+        @PathVariable postId: UUID,
+        @RequestParam pinned: Boolean
+    ): ResponseEntity<ApiResponse<ChannelPostDto>> {
+        val post = channelService.pinChannelPost(id, postId, userId, pinned)
+        return if (post != null) {
+            ResponseEntity.ok(ApiResponse(true, if (pinned) "پست سنجاق شد" else "سنجاق برداشته شد", post))
+        } else {
+            ResponseEntity.badRequest().body(ApiResponse(false, "خطا یا دسترسی ندارید"))
+        }
+    }
+    @GetMapping("/{id}/posts/pinned")
+    fun getPinnedChannelPosts(
+        @RequestAttribute("userId") userId: UUID,
+        @PathVariable id: UUID
+    ): ResponseEntity<ApiResponse<List<ChannelPostDto>>> {
+        val posts = channelService.getPinnedChannelPosts(id, userId)
+        return ResponseEntity.ok(ApiResponse(true, "موفق", posts))
+    }
+    // ═══ SCHEDULE CHANNEL POST ═══
+    @PostMapping("/{id}/posts/schedule")
+    fun scheduleChannelPost(
+        @RequestAttribute("userId") userId: UUID,
+        @PathVariable id: UUID,
+        @RequestBody request: ScheduleMessageRequest
+    ): ResponseEntity<ApiResponse<ChannelPostDto>> {
+        val post = channelService.scheduleChannelPost(id, userId, request)
+        return if (post != null) {
+            ResponseEntity.ok(ApiResponse(true, "پست زمان‌بندی شد", post))
+        } else {
+            ResponseEntity.badRequest().body(ApiResponse(false, "خطا در زمان‌بندی"))
+        }
+    }
     // ═══════════════════════════════════════════════════════════════════════════════
     // 🔔 Mute/Pin/Archive Settings
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -676,7 +750,8 @@ class ChannelController(
 @RestController
 @RequestMapping("/api/files")
 class FileUploadController(
-    private val fileUploadService: FileUploadService
+    private val fileUploadService: FileUploadService,
+    private val thumbnailService: ThumbnailService
 ) {
     @PostMapping("/upload")
     fun uploadFile(
@@ -689,5 +764,23 @@ class FileUploadController(
             file.contentType ?: "application/octet-stream"
         )
         return ResponseEntity.ok(ApiResponse(true, "فایل آپلود شد", url))
+    }
+
+    /**
+     * Serve a resized thumbnail of an uploaded image.
+     * Falls back to 404 if file is not found or not a valid image.
+     */
+    @GetMapping("/thumbnail/{filename}")
+    fun getThumbnail(
+        @PathVariable filename: String,
+        @RequestParam(defaultValue = "200") w: Int,
+        @RequestParam(defaultValue = "60") q: Int
+    ): ResponseEntity<ByteArray> {
+        val thumbBytes = thumbnailService.getThumbnail(filename, w, q)
+            ?: return ResponseEntity.notFound().build()
+        return ResponseEntity.ok()
+            .header("Content-Type", "image/jpeg")
+            .header("Cache-Control", "public, max-age=31536000, immutable")
+            .body(thumbBytes)
     }
 }

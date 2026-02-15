@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -46,6 +47,7 @@ import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.theme.VazirFontFamily
 import com.Kelasor.app.ui.viewmodel.AuthViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ✨ Animated Splash Screen
@@ -64,6 +66,24 @@ fun SplashScreen(
     val logoScale = remember { Animatable(0f) }
     val logoAlpha = remember { Animatable(0f) }
     val textAlpha = remember { Animatable(0f) }
+    // Expanding ring animation
+    val ringScale = remember { Animatable(0.5f) }
+    val ringAlpha = remember { Animatable(0f) }
+    // Second expanding ring (delayed)
+    val ring2Scale = remember { Animatable(0.5f) }
+    val ring2Alpha = remember { Animatable(0f) }
+    // Exit animation
+    var isExiting by remember { mutableStateOf(false) }
+    val exitScale by animateFloatAsState(
+        targetValue = if (isExiting) 1.15f else 1f,
+        animationSpec = tween(400, easing = FastOutSlowInEasing),
+        label = "exitScale"
+    )
+    val exitAlpha by animateFloatAsState(
+        targetValue = if (isExiting) 0f else 1f,
+        animationSpec = tween(350),
+        label = "exitAlpha"
+    )
     // Pulse animation for glow effect
     val infiniteTransition = rememberInfiniteTransition(label = "splash_pulse")
     val glowScale by infiniteTransition.animateFloat(
@@ -84,33 +104,64 @@ fun SplashScreen(
         ),
         label = "glowAlpha"
     )
+    // Background gradient shift
+    val gradientOffset by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "gradientShift"
+    )
     // Start animations
     LaunchedEffect(Unit) {
         isAnimationStarted = true
-        // Logo scale animation
+        // Logo scale with spring overshoot
         logoScale.animateTo(
             targetValue = 1f,
             animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
+                dampingRatio = 0.55f,
                 stiffness = Spring.StiffnessLow
             )
         )
     }
-    var isAnimationFinished by remember { mutableStateOf(false) }
-
+    // Expanding rings sequence
     LaunchedEffect(isAnimationStarted) {
         if (isAnimationStarted) {
+            // Logo fade in
             logoAlpha.animateTo(1f, animationSpec = tween(200))
-            delay(100)
-            textAlpha.animateTo(1f, animationSpec = tween(200))
-            delay(200)
+            // First ring expands outward
+            launch {
+                ringAlpha.animateTo(0.5f, animationSpec = tween(200))
+                ringScale.animateTo(2.5f, animationSpec = tween(800, easing = FastOutSlowInEasing))
+                ringAlpha.animateTo(0f, animationSpec = tween(300))
+            }
+            delay(250)
+            // Second ring expands (staggered)
+            launch {
+                ring2Alpha.animateTo(0.35f, animationSpec = tween(200))
+                ring2Scale.animateTo(2.5f, animationSpec = tween(800, easing = FastOutSlowInEasing))
+                ring2Alpha.animateTo(0f, animationSpec = tween(300))
+            }
+            delay(150)
+            // Text fades in
+            textAlpha.animateTo(1f, animationSpec = tween(300))
+            delay(300)
+        }
+    }
+    var isAnimationFinished by remember { mutableStateOf(false) }
+    LaunchedEffect(textAlpha.value) {
+        if (textAlpha.value >= 0.95f) {
             isAnimationFinished = true
         }
     }
-
     LaunchedEffect(isAnimationFinished, authState.isLoggedIn) {
         if (isAnimationFinished && authState.isLoggedIn != null && !hasNavigated) {
             hasNavigated = true
+            // Cinematic exit
+            isExiting = true
+            delay(350)
             if (authState.isLoggedIn == true) {
                 onNavigateToMain()
             } else {
@@ -125,25 +176,66 @@ fun SplashScreen(
                 brush = Brush.verticalGradient(
                     colors = listOf(
                         MaterialTheme.colorScheme.background,
-                        extendedColors.gradientStart.copy(alpha = 0.1f),
+                        extendedColors.gradientStart.copy(alpha = 0.05f + gradientOffset * 0.08f),
+                        extendedColors.gradientEnd.copy(alpha = 0.03f + gradientOffset * 0.05f),
                         MaterialTheme.colorScheme.background
                     )
                 )
-            ),
+            )
+            .alpha(exitAlpha),
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.scale(exitScale)
         ) {
-            // Logo with glow effect
+            // Logo with glow effect and expanding rings
             Box(contentAlignment = Alignment.Center) {
+                // Expanding ring 1
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .scale(ringScale.value)
+                        .alpha(ringAlpha.value)
+                        .clip(CircleShape)
+                        .background(Color.Transparent)
+                        .then(
+                            Modifier.drawWithContent {
+                                drawContent()
+                                drawCircle(
+                                    color = extendedColors.accent,
+                                    radius = size.minDimension / 2,
+                                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3f)
+                                )
+                            }
+                        )
+                )
+                // Expanding ring 2
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .scale(ring2Scale.value)
+                        .alpha(ring2Alpha.value)
+                        .clip(CircleShape)
+                        .background(Color.Transparent)
+                        .then(
+                            Modifier.drawWithContent {
+                                drawContent()
+                                drawCircle(
+                                    color = extendedColors.gradientEnd,
+                                    radius = size.minDimension / 2,
+                                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2f)
+                                )
+                            }
+                        )
+                )
                 // Outer glow
                 Box(
                     modifier = Modifier
                         .size(160.dp)
                         .scale(glowScale)
-                        .alpha(glowAlpha)
+                        .alpha(glowAlpha * logoAlpha.value)
                         .clip(CircleShape)
                         .background(
                             brush = Brush.radialGradient(
@@ -222,7 +314,7 @@ fun SplashScreen(
                 .padding(bottom = 48.dp)
         ) {
             LoadingDots(
-                modifier = Modifier.alpha(textAlpha.value)
+                modifier = Modifier.alpha(textAlpha.value * exitAlpha)
             )
         }
     }

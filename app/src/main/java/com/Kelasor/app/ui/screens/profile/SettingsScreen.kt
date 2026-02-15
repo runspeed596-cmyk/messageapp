@@ -1,5 +1,8 @@
 package com.Kelasor.app.ui.screens.profile
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -55,46 +58,50 @@ fun SettingsScreen(
     val settingsState by viewModel.state.collectAsState()
     val profileState by profileViewModel.state.collectAsState()
     val user = profileState.user
-    
     val context = LocalContext.current
-    var showAboutDialog by remember { mutableStateOf(false) }
-    var showThemeDialog by remember { mutableStateOf(false) }
-    var showProfileVisibilityDialog by remember { mutableStateOf(false) }
-    var showOnlineVisibilityDialog by remember { mutableStateOf(false) }
-    var showPhoneVisibilityDialog by remember { mutableStateOf(false) }
     var showPinSetupDialog by remember { mutableStateOf(false) }
     var pinInput by remember { mutableStateOf("") }
-    var showColorPaletteDialog by remember { mutableStateOf(false) }
-    
+    // Expandable section states
+    var isAccountExpanded by remember { mutableStateOf(false) }
+    var isAppearanceExpanded by remember { mutableStateOf(false) }
+    var isPrivacyExpanded by remember { mutableStateOf(false) }
     val currentLayoutDirection = LocalLayoutDirection.current
     val fontFamily = VazirFontFamily
-    
+
     CompositionLocalProvider(LocalLayoutDirection provides currentLayoutDirection) {
-        Column(
+        Scaffold(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-        ) {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.settings_title),
-                        fontFamily = fontFamily,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back)
+                .background(MaterialTheme.colorScheme.background),
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = stringResource(R.string.settings_title),
+                            fontFamily = fontFamily,
+                            fontWeight = FontWeight.Bold
                         )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-            )
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.back)
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        scrolledContainerColor = Color.Transparent
+                    )
+                )
+            }
+        ) { paddingValues ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
                 // 1. User Profile Header
                 item {
                     if (user != null) {
@@ -133,156 +140,290 @@ fun SettingsScreen(
                             )
                         }
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    }
-                }
-                
-                // 2. Account Actions
-                item {
-                    SectionTitle("حساب کاربری", fontFamily)
-                    if (user != null) {
-                        SettingsItem(
-                            icon = Icons.Default.Bookmark,
-                            title = "پیام‌های ذخیره شده",
-                            subtitle = "باز کردن چت شخصی",
-                            onClick = { onSavedMessagesClick(user.id) },
-                            fontFamily = fontFamily
-                        )
-                    }
-                    SettingsItem(
-                        icon = Icons.Default.Archive,
-                        title = "چت‌های آرشیو شده",
-                        subtitle = "مشاهده آرشیو",
-                        onClick = onArchivedChatsClick,
-                        fontFamily = fontFamily
-                    )
-                }
-
-                // 3. Appearance section
-                item {
-                    SectionTitle(stringResource(R.string.appearance), fontFamily)
-                    SettingsItem(
-                        icon = Icons.Default.DarkMode,
-                        title = "تم",
-                        subtitle = when (settingsState.themeMode) {
-                            SettingsRepository.THEME_MODE_LIGHT -> "روشن"
-                            SettingsRepository.THEME_MODE_DARK -> "تاریک"
-                            else -> "سیستم"
-                        },
-                        onClick = { showThemeDialog = true },
-                        fontFamily = fontFamily
-                    )
-                }
-
-                // 4. Privacy & Security section
-                item {
-                    SectionTitle(stringResource(R.string.privacy_security), fontFamily)
-                    SettingsItem(
-                        icon = Icons.Default.Person,
-                        title = stringResource(R.string.profile_visibility),
-                        subtitle = when (settingsState.profileVisibility) {
-                            "everyone" -> stringResource(R.string.everyone)
-                            "contacts" -> stringResource(R.string.my_contacts)
-                            else -> stringResource(R.string.nobody)
-                        },
-                        onClick = { showProfileVisibilityDialog = true },
-                        fontFamily = fontFamily
-                    )
-                    SettingsItem(
-                        icon = Icons.Default.Circle,
-                        title = stringResource(R.string.online_visibility),
-                        subtitle = when (settingsState.onlineVisibility) {
-                            "everyone" -> stringResource(R.string.everyone)
-                            "contacts" -> stringResource(R.string.my_contacts)
-                            else -> stringResource(R.string.nobody)
-                        },
-                        onClick = { showOnlineVisibilityDialog = true },
-                        fontFamily = fontFamily
-                    )
-                    SettingsItem(
-                        icon = Icons.Default.Phone,
-                        title = stringResource(R.string.phone_visibility),
-                        subtitle = when (settingsState.phoneVisibility) {
-                            "everyone" -> stringResource(R.string.everyone)
-                            else -> stringResource(R.string.my_contacts)
-                        },
-                        onClick = { showPhoneVisibilityDialog = true },
-                        fontFamily = fontFamily
-                    )
-                    
-                    // PIN Lock Toggle
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Lock,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp)
+                    } else {
+                        // Loading placeholder
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
                             )
                             Spacer(modifier = Modifier.width(16.dp))
-                            Column {
-                                Text(
-                                    text = "قفل امنیتی (PIN)",
-                                    fontFamily = fontFamily,
-                                    style = MaterialTheme.typography.bodyLarge
+                            Column(modifier = Modifier.weight(1f)) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth(0.5f)
+                                        .height(16.dp)
+                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant)
                                 )
-                                Text(
-                                    text = if (settingsState.isPinLockEnabled) "فعال" else "غیرفعال",
-                                    fontFamily = fontFamily,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth(0.3f)
+                                        .height(12.dp)
+                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant)
                                 )
                             }
                         }
-                        Switch(
-                            checked = settingsState.isPinLockEnabled,
-                            onCheckedChange = { enabled ->
-                                if (enabled) {
-                                    showPinSetupDialog = true
-                                } else {
-                                    viewModel.setPinLockEnabled(false)
-                                }
-                            }
-                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     }
                 }
-                
-                // 5. Appearance section (Color Palettes)
+
+                // ══════════════════════════════════════════════════════
+                // 2. حساب کاربری (Account) — Expandable
+                // ══════════════════════════════════════════════════════
                 item {
-                    SectionTitle("ظاهر برنامه", fontFamily)
-                    SettingsItem(
+                    ExpandableSectionHeader(
+                        icon = Icons.Default.Person,
+                        title = "حساب کاربری",
+                        isExpanded = isAccountExpanded,
+                        onClick = { isAccountExpanded = !isAccountExpanded },
+                        fontFamily = fontFamily,
+                        accentColor = extendedColors.accent
+                    )
+                    AnimatedVisibility(
+                        visible = isAccountExpanded,
+                        enter = expandVertically(),
+                        exit = shrinkVertically()
+                    ) {
+                        Column(modifier = Modifier.padding(start = 24.dp)) {
+                            if (user != null) {
+                                SettingsItem(
+                                    icon = Icons.Default.Bookmark,
+                                    title = "پیام‌های ذخیره شده",
+                                    subtitle = "باز کردن چت شخصی",
+                                    onClick = { onSavedMessagesClick(user.id) },
+                                    fontFamily = fontFamily
+                                )
+                            }
+                            SettingsItem(
+                                icon = Icons.Default.Archive,
+                                title = "چت‌های آرشیو شده",
+                                subtitle = "مشاهده آرشیو",
+                                onClick = onArchivedChatsClick,
+                                fontFamily = fontFamily
+                            )
+                        }
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                }
+
+                // ══════════════════════════════════════════════════════
+                // 3. ظاهر (Appearance) — Expandable with inline theme + palette
+                // ══════════════════════════════════════════════════════
+                item {
+                    ExpandableSectionHeader(
                         icon = Icons.Default.Palette,
-                        title = "پالت رنگی",
-                        subtitle = when (settingsState.colorPalette) {
-                            SettingsRepository.PALETTE_OCEAN -> "اقیانوس"
-                            SettingsRepository.PALETTE_SUNSET -> "غروب"
-                            SettingsRepository.PALETTE_FOREST -> "جنگل"
-                            SettingsRepository.PALETTE_LAVENDER -> "اسطوخودوس"
-                            else -> "پیش‌فرض"
-                        },
-                        onClick = { showColorPaletteDialog = true },
-                        fontFamily = fontFamily
+                        title = "ظاهر",
+                        isExpanded = isAppearanceExpanded,
+                        onClick = { isAppearanceExpanded = !isAppearanceExpanded },
+                        fontFamily = fontFamily,
+                        accentColor = extendedColors.accent
                     )
+                    AnimatedVisibility(
+                        visible = isAppearanceExpanded,
+                        enter = expandVertically(),
+                        exit = shrinkVertically()
+                    ) {
+                        Column(modifier = Modifier.padding(start = 24.dp)) {
+                            // Theme selection — inline radio buttons
+                            Text(
+                                text = "تم",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontFamily = fontFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                            val themeOptions = listOf(
+                                SettingsRepository.THEME_MODE_SYSTEM to "سیستم",
+                                SettingsRepository.THEME_MODE_LIGHT to "روشن",
+                                SettingsRepository.THEME_MODE_DARK to "تاریک"
+                            )
+                            themeOptions.forEach { (key, label) ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { viewModel.setThemeMode(key) }
+                                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = settingsState.themeMode == key,
+                                        onClick = { viewModel.setThemeMode(key) },
+                                        colors = RadioButtonDefaults.colors(selectedColor = extendedColors.accent)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = label,
+                                        fontFamily = fontFamily,
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
+                            // Color palette selection — inline radio buttons
+                            Text(
+                                text = "پالت رنگی",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontFamily = fontFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                            val paletteOptions = listOf(
+                                SettingsRepository.PALETTE_DEFAULT to "پیش‌فرض",
+                                SettingsRepository.PALETTE_OCEAN to "اقیانوس",
+                                SettingsRepository.PALETTE_SUNSET to "غروب",
+                                SettingsRepository.PALETTE_FOREST to "جنگل",
+                                SettingsRepository.PALETTE_LAVENDER to "اسطوخودوس"
+                            )
+                            paletteOptions.forEach { (key, label) ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { viewModel.setColorPalette(key) }
+                                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = settingsState.colorPalette == key,
+                                        onClick = { viewModel.setColorPalette(key) },
+                                        colors = RadioButtonDefaults.colors(selectedColor = extendedColors.accent)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = label,
+                                        fontFamily = fontFamily,
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 }
-                
-                // 6. About section
+
+                // ══════════════════════════════════════════════════════
+                // 4. حریم خصوصی و امنیت (Privacy & Security) — Expandable
+                // ══════════════════════════════════════════════════════
                 item {
-                    SectionTitle(stringResource(R.string.about), fontFamily)
-                    SettingsItem(
-                        icon = Icons.Default.Info,
-                        title = stringResource(R.string.about_app),
-                        subtitle = stringResource(R.string.about_app_subtitle),
-                        onClick = { showAboutDialog = true },
-                        fontFamily = fontFamily
+                    ExpandableSectionHeader(
+                        icon = Icons.Default.Lock,
+                        title = "حریم خصوصی و امنیت",
+                        isExpanded = isPrivacyExpanded,
+                        onClick = { isPrivacyExpanded = !isPrivacyExpanded },
+                        fontFamily = fontFamily,
+                        accentColor = extendedColors.accent
                     )
+                    AnimatedVisibility(
+                        visible = isPrivacyExpanded,
+                        enter = expandVertically(),
+                        exit = shrinkVertically()
+                    ) {
+                        Column(modifier = Modifier.padding(start = 24.dp)) {
+                            // Profile Visibility
+                            PrivacyOptionRow(
+                                title = stringResource(R.string.profile_visibility),
+                                selectedOption = settingsState.profileVisibility,
+                                options = listOf(
+                                    "everyone" to stringResource(R.string.everyone),
+                                    "contacts" to stringResource(R.string.my_contacts),
+                                    "nobody" to stringResource(R.string.nobody)
+                                ),
+                                onOptionSelected = { viewModel.setProfileVisibility(it) },
+                                fontFamily = fontFamily,
+                                accentColor = extendedColors.accent
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            // Online Visibility
+                            PrivacyOptionRow(
+                                title = stringResource(R.string.online_visibility),
+                                selectedOption = settingsState.onlineVisibility,
+                                options = listOf(
+                                    "everyone" to stringResource(R.string.everyone),
+                                    "contacts" to stringResource(R.string.my_contacts),
+                                    "nobody" to stringResource(R.string.nobody)
+                                ),
+                                onOptionSelected = { viewModel.setOnlineVisibility(it) },
+                                fontFamily = fontFamily,
+                                accentColor = extendedColors.accent
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            // Phone Visibility
+                            PrivacyOptionRow(
+                                title = stringResource(R.string.phone_visibility),
+                                selectedOption = settingsState.phoneVisibility,
+                                options = listOf(
+                                    "everyone" to stringResource(R.string.everyone),
+                                    "contacts" to stringResource(R.string.my_contacts)
+                                ),
+                                onOptionSelected = { viewModel.setPhoneVisibility(it) },
+                                fontFamily = fontFamily,
+                                accentColor = extendedColors.accent
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            // PIN Lock Toggle
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Lock,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Column {
+                                        Text(
+                                            text = "قفل امنیتی (PIN)",
+                                            fontFamily = fontFamily,
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                        Text(
+                                            text = if (settingsState.isPinLockEnabled) "فعال" else "غیرفعال",
+                                            fontFamily = fontFamily,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                Switch(
+                                    checked = settingsState.isPinLockEnabled,
+                                    onCheckedChange = { enabled ->
+                                        if (enabled) {
+                                            showPinSetupDialog = true
+                                        } else {
+                                            viewModel.setPinLockEnabled(false)
+                                        }
+                                    }
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 }
-                
-                // 6. Logout
+
+                // ══════════════════════════════════════════════════════
+                // 5. Logout
+                // ══════════════════════════════════════════════════════
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     SettingsItem(
@@ -300,137 +441,15 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(32.dp))
                 }
             }
+
+            com.Kelasor.app.ui.components.SystemBarBackdrop()
         }
     }
-    
-    // Theme Dialog
-    if (showThemeDialog) {
-        VisibilitySelectionDialog(
-            title = "تم",
-            selectedOption = settingsState.themeMode,
-            options = listOf(
-                SettingsRepository.THEME_MODE_LIGHT to "روشن",
-                SettingsRepository.THEME_MODE_DARK to "تاریک",
-                SettingsRepository.THEME_MODE_SYSTEM to "سیستم"
-            ),
-            onOptionSelected = {
-                viewModel.setThemeMode(it)
-                showThemeDialog = false
-            },
-            onDismiss = { showThemeDialog = false },
-            fontFamily = fontFamily,
-            accentColor = extendedColors.accent
-        )
-    }
-    
-    // About Dialog
-    if (showAboutDialog) {
-        AlertDialog(
-            onDismissRequest = { showAboutDialog = false },
-            title = {
-                Text(
-                    text = stringResource(R.string.about_dialog_title),
-                    fontFamily = fontFamily,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column {
-                    Text(
-                        text = stringResource(R.string.about_app_name),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontFamily = fontFamily,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = stringResource(R.string.about_version),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontFamily = fontFamily
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(R.string.about_description),
-                        style = MaterialTheme.typography.bodySmall,
-                        fontFamily = fontFamily,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showAboutDialog = false }) {
-                    Text(
-                        text = stringResource(R.string.close),
-                        fontFamily = fontFamily
-                    )
-                }
-            }
-        )
-    }
-    
-    // Profile Visibility Dialog
-    if (showProfileVisibilityDialog) {
-        VisibilitySelectionDialog(
-            title = stringResource(R.string.profile_visibility),
-            selectedOption = settingsState.profileVisibility,
-            options = listOf(
-                "everyone" to stringResource(R.string.everyone),
-                "contacts" to stringResource(R.string.my_contacts),
-                "nobody" to stringResource(R.string.nobody)
-            ),
-            onOptionSelected = {
-                viewModel.setProfileVisibility(it)
-                showProfileVisibilityDialog = false
-            },
-            onDismiss = { showProfileVisibilityDialog = false },
-            fontFamily = fontFamily,
-            accentColor = extendedColors.accent
-        )
-    }
-    
-    // Online Visibility Dialog
-    if (showOnlineVisibilityDialog) {
-        VisibilitySelectionDialog(
-            title = stringResource(R.string.online_visibility),
-            selectedOption = settingsState.onlineVisibility,
-            options = listOf(
-                "everyone" to stringResource(R.string.everyone),
-                "contacts" to stringResource(R.string.my_contacts),
-                "nobody" to stringResource(R.string.nobody)
-            ),
-            onOptionSelected = {
-                viewModel.setOnlineVisibility(it)
-                showOnlineVisibilityDialog = false
-            },
-            onDismiss = { showOnlineVisibilityDialog = false },
-            fontFamily = fontFamily,
-            accentColor = extendedColors.accent
-        )
-    }
-    
-    // Phone Visibility Dialog
-    if (showPhoneVisibilityDialog) {
-        VisibilitySelectionDialog(
-            title = stringResource(R.string.phone_visibility),
-            selectedOption = settingsState.phoneVisibility,
-            options = listOf(
-                "everyone" to stringResource(R.string.everyone),
-                "contacts" to stringResource(R.string.my_contacts)
-            ),
-            onOptionSelected = {
-                viewModel.setPhoneVisibility(it)
-                showPhoneVisibilityDialog = false
-            },
-            onDismiss = { showPhoneVisibilityDialog = false },
-            fontFamily = fontFamily,
-            accentColor = extendedColors.accent
-        )
-    }
-    
+
     // PIN Setup Dialog
     if (showPinSetupDialog) {
         AlertDialog(
-            onDismissRequest = { 
+            onDismissRequest = {
                 showPinSetupDialog = false
                 pinInput = ""
             },
@@ -476,7 +495,7 @@ fun SettingsScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { 
+                TextButton(onClick = {
                     showPinSetupDialog = false
                     pinInput = ""
                 }) {
@@ -485,76 +504,108 @@ fun SettingsScreen(
             }
         )
     }
-    
-    // Color Palette Dialog
-    if (showColorPaletteDialog) {
-        val paletteOptions = listOf(
-            SettingsRepository.PALETTE_DEFAULT to "پیش‌فرض",
-            SettingsRepository.PALETTE_OCEAN to "اقیانوس",
-            SettingsRepository.PALETTE_SUNSET to "غروب",
-            SettingsRepository.PALETTE_FOREST to "جنگل",
-            SettingsRepository.PALETTE_LAVENDER to "اسطوخودوس"
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Expandable Section Header
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun ExpandableSectionHeader(
+    icon: ImageVector,
+    title: String,
+    isExpanded: Boolean,
+    onClick: () -> Unit,
+    fontFamily: androidx.compose.ui.text.font.FontFamily?,
+    accentColor: Color
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(accentColor.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = accentColor,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = title,
+            style = MessageAppTypography.chatName.copy(fontFamily = fontFamily),
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.weight(1f)
         )
-        AlertDialog(
-            onDismissRequest = { showColorPaletteDialog = false },
-            title = {
-                Text(
-                    text = "انتخاب پالت رنگی",
-                    fontFamily = fontFamily,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column {
-                    paletteOptions.forEach { (key, label) ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    viewModel.setColorPalette(key)
-                                    showColorPaletteDialog = false
-                                }
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = settingsState.colorPalette == key,
-                                onClick = {
-                                    viewModel.setColorPalette(key)
-                                    showColorPaletteDialog = false
-                                },
-                                colors = RadioButtonDefaults.colors(
-                                    selectedColor = extendedColors.accent
-                                )
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = label,
-                                fontFamily = fontFamily,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showColorPaletteDialog = false }) {
-                    Text("بستن", fontFamily = fontFamily)
-                }
-            }
+        Icon(
+            imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+            contentDescription = if (isExpanded) "Collapse" else "Expand",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(24.dp)
         )
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Privacy Option Row — inline radio buttons with title
+// ═══════════════════════════════════════════════════════════════════════════════
+
 @Composable
-private fun SectionTitle(title: String, fontFamily: androidx.compose.ui.text.font.FontFamily?) {
-    Text(
-        text = title,
-        style = MessageAppTypography.sectionTitle.copy(fontFamily = fontFamily),
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-    )
+private fun PrivacyOptionRow(
+    title: String,
+    selectedOption: String,
+    options: List<Pair<String, String>>,
+    onOptionSelected: (String) -> Unit,
+    fontFamily: androidx.compose.ui.text.font.FontFamily?,
+    accentColor: Color
+) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            fontFamily = fontFamily,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        options.forEach { (key, label) ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onOptionSelected(key) }
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = selectedOption == key,
+                    onClick = { onOptionSelected(key) },
+                    colors = RadioButtonDefaults.colors(selectedColor = accentColor)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = label,
+                    fontFamily = fontFamily,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+        }
+    }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Settings Item (reused for sub-items)
+// ═══════════════════════════════════════════════════════════════════════════════
 
 @Composable
 private fun SettingsItem(
@@ -610,61 +661,4 @@ private fun SettingsItem(
             modifier = Modifier.size(24.dp)
         )
     }
-}
-
-@Composable
-private fun VisibilitySelectionDialog(
-    title: String,
-    selectedOption: String,
-    options: List<Pair<String, String>>, // key to display label
-    onOptionSelected: (String) -> Unit,
-    onDismiss: () -> Unit,
-    fontFamily: androidx.compose.ui.text.font.FontFamily?,
-    accentColor: Color
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = title,
-                fontFamily = fontFamily,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column {
-                options.forEach { (key, label) ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onOptionSelected(key) }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = selectedOption == key,
-                            onClick = { onOptionSelected(key) },
-                            colors = RadioButtonDefaults.colors(
-                                selectedColor = accentColor
-                            )
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontFamily = fontFamily
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(
-                    text = stringResource(R.string.close),
-                    fontFamily = fontFamily
-                )
-            }
-        }
-    )
 }

@@ -15,6 +15,9 @@ import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Forward
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,19 +47,22 @@ import com.Kelasor.app.ui.theme.MessageAppTheme
 fun MessageActionSheet(
     message: Message? = null,
     isOwner: Boolean,
-    showDeleteForEveryone: Boolean = true, // Show checkbox for admins/owners
-    replyLabel: String = "پاسخ", // Can be "نظر" for channels
+    showDeleteForEveryone: Boolean = true,
+    replyLabel: String = "پاسخ",
     onDismissRequest: () -> Unit,
     onReactionClick: (String) -> Unit,
     onReplyClick: (() -> Unit)? = null,
     onCopyClick: (() -> Unit)? = null,
     onEditClick: (() -> Unit)? = null,
-    onDeleteClick: ((deleteForEveryone: Boolean) -> Unit)? = null
+    onDeleteClick: ((deleteForEveryone: Boolean) -> Unit)? = null,
+    onPinClick: (() -> Unit)? = null,
+    onForwardClick: (() -> Unit)? = null
 ) {
     val sheetState = rememberModalBottomSheetState()
     val extendedColors = MessageAppTheme.extendedColors
     var showDeleteDialog by remember { mutableStateOf(false) }
     var deleteForEveryone by remember { mutableStateOf(true) }
+    val isPinned = message?.isPinned ?: false
 
     // Delete Confirmation Dialog
     if (showDeleteDialog && onDeleteClick != null) {
@@ -140,7 +146,23 @@ fun MessageActionSheet(
                     onClick = onReplyClick
                 )
             }
-            
+
+            if (onForwardClick != null) {
+                ActionItem(
+                    icon = Icons.Default.Forward,
+                    text = "ارسال مجدد",
+                    onClick = onForwardClick
+                )
+            }
+
+            if (onPinClick != null) {
+                ActionItem(
+                    icon = Icons.Default.PushPin,
+                    text = if (isPinned) "برداشتن پین" else "سنجاق کردن",
+                    onClick = onPinClick
+                )
+            }
+
             if (onCopyClick != null) {
                 ActionItem(
                     icon = Icons.Default.ContentCopy,
@@ -156,7 +178,7 @@ fun MessageActionSheet(
                     onClick = onEditClick
                 )
             }
-            
+
             if (onDeleteClick != null) {
                 ActionItem(
                     icon = Icons.Default.Delete,

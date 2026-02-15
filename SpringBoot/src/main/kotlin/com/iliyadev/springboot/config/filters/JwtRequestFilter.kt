@@ -26,7 +26,9 @@ class JwtRequestFilter(
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             val token = authHeader.substring(7)
             try {
-                if (jwtTokenUtils.validateToken(token)) {
+                val isValid = jwtTokenUtils.validateToken(token)
+                println("JWT_FILTER: Token validation result = $isValid for ${request.method} ${request.requestURI}")
+                if (isValid) {
                     val userId = jwtTokenUtils.getUserIdFromToken(token)
                     val uuid = UUID.fromString(userId)
                     
@@ -41,11 +43,15 @@ class JwtRequestFilter(
                     
                     // Keep compatibility for any legacy code using request attribute
                     request.setAttribute("userId", uuid)
+                    println("JWT_FILTER: Authentication set for user $userId")
+                } else {
+                    println("JWT_FILTER: Token is INVALID or EXPIRED")
                 }
             } catch (e: Exception) {
-                // Just log it. Spring Security will block unauthorized requests based on config.
-                println("JWT_FILTER_ERROR: ${e.message}")
+                println("JWT_FILTER_ERROR: ${e.javaClass.simpleName}: ${e.message}")
             }
+        } else {
+            println("JWT_FILTER: No Bearer token for ${request.method} ${request.requestURI}")
         }
 
         filterChain.doFilter(request, response)

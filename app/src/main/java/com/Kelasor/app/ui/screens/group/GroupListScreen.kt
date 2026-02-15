@@ -159,13 +159,13 @@ fun GroupListScreen(
         else baseList.filter { it.name.contains(searchQuery, ignoreCase = true) }
     }
 
+    var deleteForAll by remember { mutableStateOf(false) }
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
         Column {
-            // ... (Selection Mode Header - Unchanged)
             AnimatedVisibility(
                 visible = inSelectionMode,
                 enter = fadeIn(),
@@ -176,14 +176,24 @@ fun GroupListScreen(
                     onClearSelection = { viewModel.clearSelection() },
                     onDeleteSelected = { viewModel.requestDeleteSelection() },
                     onPinSelected = {
-                        viewModel.pinSelectedGroups(true)
-                        android.widget.Toast.makeText(context, "گروه‌ها سنجاق شدند", android.widget.Toast.LENGTH_SHORT).show()
+                        val allGroups = state.groups + state.pinnedGroups + state.archivedGroups
+                        val selectedGroups = allGroups.filter { it.id in state.selectedGroupIds }
+                        val anyPinned = selectedGroups.any { it.isPinned }
+                        val newPinState = !anyPinned
+                        viewModel.pinSelectedGroups(newPinState)
+                        val toastMessage = if (newPinState) "گروه‌ها سنجاق شدند" else "گروه‌ها از سنجاق خارج شدند"
+                        android.widget.Toast.makeText(context, toastMessage, android.widget.Toast.LENGTH_SHORT).show()
                     },
                     onArchiveSelected = {
+                        val allGroups = state.groups + state.pinnedGroups + state.archivedGroups
+                        val selectedGroups = allGroups.filter { it.id in state.selectedGroupIds }
+                        val anyArchived = selectedGroups.any { it.isArchived }
+                        val newArchiveState = !anyArchived
                         state.selectedGroupIds.forEach { groupId ->
-                            viewModel.archiveGroup(groupId, true)
+                            viewModel.archiveGroup(groupId, newArchiveState)
                         }
-                        android.widget.Toast.makeText(context, "گروه‌ها به آرشیو منتقل شدند", android.widget.Toast.LENGTH_SHORT).show()
+                        val toastMessage = if (newArchiveState) "گروه‌ها به آرشیو منتقل شدند" else "گروه‌ها از آرشیو خارج شدند"
+                        android.widget.Toast.makeText(context, toastMessage, android.widget.Toast.LENGTH_SHORT).show()
                         viewModel.clearSelection()
                     }
                 )
@@ -196,49 +206,24 @@ fun GroupListScreen(
                 }
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    if (searchQuery.isEmpty() && !inSelectionMode) {
-                        item(contentType = { "story_row" }) {
-                            val storiesState = storyUiState
-                            if (storiesState is com.Kelasor.app.ui.viewmodel.StoriesUiState.Success || storiesState is com.Kelasor.app.ui.viewmodel.StoriesUiState.Loading) {
-                                val storyUsers = if (storiesState is com.Kelasor.app.ui.viewmodel.StoriesUiState.Success) {
-                                    storiesState.storyUsers
-                                } else {
-                                    emptyList()
-                                }
-                                com.Kelasor.app.ui.components.story.StoriesList(
-                                    currentUser = com.Kelasor.app.domain.model.StoryUser(
-                                        userId = "group_add", 
-                                        username = "", 
-                                        displayName = "استوری گروه", 
-                                        avatarUrl = null, 
-                                        stories = emptyList(), 
-                                        isCurrentUser = true 
-                                    ),
-                                    storyUsers = storyUsers,
-                                    onStoryClick = { user ->
-                                         if (user.isCurrentUser) {
-                                             if (adminGroups.isNotEmpty()) {
-                                                 showGroupSelectionSheet = true
-                                             } else {
-                                                 android.widget.Toast.makeText(context, "شما ادمین هیچ گروهی نیستید", android.widget.Toast.LENGTH_SHORT).show()
-                                             }
-                                         } else {
-                                             storyViewModel.openStoryViewer(user)
-                                         }
-                                    },
-                                    onAddStoryClick = { 
-                                         if (adminGroups.isNotEmpty()) {
-                                             showGroupSelectionSheet = true
-                                         } else {
-                                             android.widget.Toast.makeText(context, "شما ادمین هیچ گروهی نیستید", android.widget.Toast.LENGTH_SHORT).show()
-                                         }
-                                    },
-                                    excludeCurrentUserFromList = false
-                                )
+                    // Story Row for group stories — show only when not searching
+                    if (searchQuery.isEmpty()) {
+                        item(key = "group_stories_row", contentType = "stories") {
+                            val storyUsers = when (val uiState = storyUiState) {
+                                is com.Kelasor.app.ui.viewmodel.StoriesUiState.Success -> uiState.storyUsers
+                                else -> emptyList()
                             }
+                            val currentUser = storyUsers.firstOrNull { it.isCurrentUser }
+                            com.Kelasor.app.ui.components.story.StoriesList(
+                                currentUser = currentUser,
+                                storyUsers = storyUsers,
+                                onStoryClick = { storyUser ->
+                                    storyViewModel.openStoryViewer(storyUser)
+                                },
+                                onAddStoryClick = { showAddStorySheet = true }
+                            )
                         }
                     }
-
                     // Empty State
                     if (state.groups.isEmpty()) {
                         item {
@@ -332,14 +317,46 @@ fun GroupListScreen(
         }
     }
         
-        // ... (Delete Dialog Unchanged)
         if (state.showDeleteConfirmation) {
-              AlertDialog(
-                onDismissRequest = { viewModel.cancelDeleteSelection() },
-                title = { Text("حذف گروه‌ها") },
-                text = { Text("آیا از حذف ${state.selectedGroupIds.size} گروه انتخاب شده اطمینان دارید؟ این عمل قابل برگشت نیست.") },
-                confirmButton = { TextButton(onClick = { viewModel.confirmDeleteSelection() }) { Text("حذف", color = MaterialTheme.colorScheme.error) } },
-                dismissButton = { TextButton(onClick = { viewModel.cancelDeleteSelection() }) { Text("انصراف") } }
+            val allGroups = state.groups + state.pinnedGroups + state.archivedGroups
+            val selectedGroups = allGroups.filter { it.id in state.selectedGroupIds }
+            val selectedName = if (selectedGroups.size == 1) selectedGroups.first().name else "${state.selectedGroupIds.size} گروه"
+            AlertDialog(
+                onDismissRequest = { 
+                    deleteForAll = false
+                    viewModel.cancelDeleteSelection() 
+                },
+                title = { Text("حذف گروه") },
+                text = {
+                    Column {
+                        Text("آیا میخواهید $selectedName را حذف کنید؟")
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            androidx.compose.material3.Checkbox(
+                                checked = deleteForAll,
+                                onCheckedChange = { deleteForAll = it }
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(text = "حذف برای همه", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                },
+                confirmButton = { 
+                    TextButton(onClick = { 
+                        viewModel.confirmDeleteSelection()
+                        deleteForAll = false
+                    }) { 
+                        Text("حذف", color = MaterialTheme.colorScheme.error) 
+                    } 
+                },
+                dismissButton = { 
+                    TextButton(onClick = { 
+                        deleteForAll = false
+                        viewModel.cancelDeleteSelection() 
+                    }) { 
+                        Text("انصراف") 
+                    } 
+                }
             )
         }
 

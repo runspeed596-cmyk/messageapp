@@ -33,6 +33,7 @@ sealed class StoryErrorEvent {
 class StoryViewModel @Inject constructor(
     private val storyRepository: StoryRepository,
     private val userRepository: com.Kelasor.app.data.repository.UserRepository,
+    private val userDao: com.Kelasor.app.data.local.dao.UserDao,
     @ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
 
@@ -82,8 +83,8 @@ class StoryViewModel @Inject constructor(
             storyRepository.getStories().collect { result ->
                 result.fold(
                     onSuccess = { users ->
-                        // Sort: Users with unviewed stories first, then by latest story time
-                        val sorted = users.sortedWith(
+                        val resolved = resolveContactNames(users)
+                        val sorted = resolved.sortedWith(
                             compareByDescending<StoryUser> { !it.allViewed }
                                 .thenByDescending { user ->
                                     val latestStory = user.stories.maxByOrNull { it.createdAt }
@@ -93,7 +94,6 @@ class StoryViewModel @Inject constructor(
                         _uiState.value = StoriesUiState.Success(sorted)
                     },
                     onFailure = { e ->
-                        // Even if fetch fails (e.g. 404), we want to show the list so user can post their own story.
                         _uiState.value = StoriesUiState.Success(emptyList())
                     }
                 )
@@ -134,7 +134,8 @@ class StoryViewModel @Inject constructor(
             }
              storyRepository.getGroupStoriesFromApi().fold(
                 onSuccess = { users ->
-                    val sorted = sortStories(users)
+                    val resolved = resolveContactNames(users)
+                    val sorted = sortStories(resolved)
                     _groupUiState.value = StoriesUiState.Success(sorted)
                 },
                 onFailure = {
@@ -151,7 +152,8 @@ class StoryViewModel @Inject constructor(
             }
             storyRepository.getChannelStoriesFromApi().fold(
                 onSuccess = { users ->
-                    val sorted = sortStories(users)
+                    val resolved = resolveContactNames(users)
+                    val sorted = sortStories(resolved)
                     _channelUiState.value = StoriesUiState.Success(sorted)
                 },
                 onFailure = {
@@ -219,6 +221,23 @@ class StoryViewModel @Inject constructor(
                     latestStory?.createdAt ?: java.time.Instant.MIN
                 }
         )
+    }
+
+    /**
+     * Resolves contact names for story users.
+     * If a user's phone is saved in device contacts, their local contact name replaces the server displayName.
+     */
+    private suspend fun resolveContactNames(users: List<StoryUser>): List<StoryUser> {
+        return users.map { storyUser ->
+            if (storyUser.isCurrentUser) return@map storyUser
+            val userEntity = userDao.getUserById(storyUser.userId)
+            val contactName = userEntity?.contactName
+            if (!contactName.isNullOrBlank()) {
+                storyUser.copy(displayName = contactName)
+            } else {
+                storyUser
+            }
+        }
     }
 
     private fun prepareUpload(uri: Uri, type: String?, duration: Int): Pair<String, Int> {
@@ -296,7 +315,22 @@ class StoryViewModel @Inject constructor(
         viewModelScope.launch {
             storyRepository.getStoryViews(storyId).fold(
                 onSuccess = { viewers ->
-                    _viewersState.value = viewers
+                    // Resolve contact names and avatars for viewers
+                    val resolvedViewers = viewers.map { viewer ->
+                        val userEntity = userDao.getUserById(viewer.userId)
+                        val contactName = userEntity?.contactName
+                        val resolvedName = when {
+                            !contactName.isNullOrBlank() -> contactName
+                            userEntity?.displayName?.isNotBlank() == true -> userEntity.displayName
+                            else -> viewer.displayName
+                        }
+                        val resolvedAvatar = userEntity?.avatarUrl ?: viewer.avatarUrl
+                        viewer.copy(
+                            displayName = resolvedName,
+                            avatarUrl = resolvedAvatar
+                        )
+                    }
+                    _viewersState.value = resolvedViewers
                 },
                 onFailure = {
                     _viewersState.value = emptyList()
@@ -326,6 +360,19 @@ class StoryViewModel @Inject constructor(
                 }
             )
             _isUploading.value = false
+        }
+    }
+
+    // Reply to story
+    private val _replySentEvent = MutableSharedFlow<Boolean>()
+    val replySentEvent: SharedFlow<Boolean> = _replySentEvent.asSharedFlow()
+
+    fun replyToStory(storyId: String, content: String) {
+        viewModelScope.launch {
+            storyRepository.replyToStory(storyId, content).fold(
+                onSuccess = { _replySentEvent.emit(true) },
+                onFailure = { _replySentEvent.emit(false) }
+            )
         }
     }
 }

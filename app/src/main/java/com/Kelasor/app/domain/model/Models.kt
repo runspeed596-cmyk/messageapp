@@ -74,13 +74,15 @@ enum class MessageType {
     TEXT,
     IMAGE,
     VIDEO,
+    VIDEO_NOTE,  // Circular video message (like Telegram video notes)
     VOICE,
     AUDIO,
     FILE,
     LOCATION,
     CONTACT,
     STICKER,
-    POLL
+    POLL,
+    LINK
 }
 
 enum class MessageStatus {
@@ -89,7 +91,8 @@ enum class MessageStatus {
     SENT,      // Message sent to server
     DELIVERED, // Message delivered to recipient
     READ,      // Message read by recipient
-    FAILED     // Message failed to send
+    FAILED,    // Message failed to send
+    SCHEDULED  // Message scheduled for later
 }
 
 data class Message(
@@ -111,11 +114,13 @@ data class Message(
     val reactions: Map<String, Int> = emptyMap(),
     val myReaction: String? = null,
     val poll: Poll? = null,
-    val amplitudes: List<Int>? = null
+    val amplitudes: List<Int>? = null,
+    val isPinned: Boolean = false,
+    val pinnedAt: Instant? = null,
+    val scheduledAt: Instant? = null
 ) {
     val isFromMe: Boolean
-        get() = senderId == "current_user_id" // This logic seems flawed if "current_user_id" is literal string.
-        // But keeping it as is for now, just adding fields.
+        get() = senderId == "current_user_id"
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -203,7 +208,13 @@ data class ChannelPost(
     val createdAt: Instant,
     val editedAt: Instant?,
     val poll: Poll? = null,
-    val amplitudes: List<Int>? = null
+    val amplitudes: List<Int>? = null,
+    val myReaction: String? = null,
+    val isPinned: Boolean = false,
+    val pinnedAt: Instant? = null,
+    val scheduledAt: Instant? = null,
+    val forwardedFrom: String? = null,
+    val isEdited: Boolean = false
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════

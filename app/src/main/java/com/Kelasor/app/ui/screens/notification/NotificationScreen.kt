@@ -302,9 +302,7 @@ private fun formatNotificationTime(createdAt: String): String {
             duration.toHours() < 24 -> "${duration.toHours()} ساعت پیش"
             duration.toDays() < 7 -> "${duration.toDays()} روز پیش"
             else -> {
-                val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy/MM/dd")
-                    .withZone(java.time.ZoneId.systemDefault())
-                formatter.format(instant)
+                com.Kelasor.app.ui.util.PersianDateUtil.formatShamsiDate(instant)
             }
         }
     } catch (e: Exception) {

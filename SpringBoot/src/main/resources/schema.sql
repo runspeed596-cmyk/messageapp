@@ -21,3 +21,9 @@ UPDATE elm_events SET is_approved = FALSE WHERE is_approved IS NULL;
 -- Fix university rank columns
 ALTER TABLE universities ALTER COLUMN iran_rank DROP NOT NULL;
 ALTER TABLE universities ALTER COLUMN world_rank DROP NOT NULL;
+
+-- Fix: Add SCHEDULED to messages.status CHECK constraint
+-- Hibernate auto-created this constraint without SCHEDULED; this ensures it's always correct
+ALTER TABLE messages DROP CONSTRAINT IF EXISTS messages_status_check;
+ALTER TABLE messages ADD CONSTRAINT messages_status_check
+    CHECK (status IN ('SENDING', 'SENT', 'DELIVERED', 'READ', 'FAILED', 'SCHEDULED'));

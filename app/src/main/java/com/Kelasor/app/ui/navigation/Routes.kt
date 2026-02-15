@@ -48,8 +48,13 @@ sealed class Routes(val route: String) {
     // ─────────────────────────────────────────────────────────────────────────────
     // Chat Screens
     // ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Chat Screens
+    // ─────────────────────────────────────────────────────────────────────────────
     data object Conversation : Routes("conversation/{chatId}") {
-        fun createRoute(chatId: String): String = "conversation/$chatId"
+        fun createRoute(chatId: String, messageId: String? = null): String {
+            return if (messageId != null) "conversation/$chatId?messageId=$messageId" else "conversation/$chatId"
+        }
     }
     data object NewChat : Routes("newChat")
     data object ChatInfo : Routes("chatInfo/{chatId}") {
@@ -63,7 +68,9 @@ sealed class Routes(val route: String) {
         fun createRoute(groupId: String): String = "groupDetail/$groupId"
     }
     data object GroupConversation : Routes("groupConversation/{groupId}") {
-        fun createRoute(groupId: String): String = "groupConversation/$groupId"
+        fun createRoute(groupId: String, messageId: String? = null): String {
+             return if (messageId != null) "groupConversation/$groupId?messageId=$messageId" else "groupConversation/$groupId"
+        }
     }
     data object GroupSettings : Routes("groupSettings/{groupId}") {
         fun createRoute(groupId: String): String = "groupSettings/$groupId"
@@ -75,8 +82,11 @@ sealed class Routes(val route: String) {
     // Channel Screens
     // ─────────────────────────────────────────────────────────────────────────────
     data object CreateChannel : Routes("createChannel")
+    data object CreateCourse : Routes("createCourse")
     data object ChannelView : Routes("channelView/{channelId}") {
-        fun createRoute(channelId: String): String = "channelView/$channelId"
+        fun createRoute(channelId: String, messageId: String? = null): String {
+            return if (messageId != null) "channelView/$channelId?messageId=$messageId" else "channelView/$channelId"
+        }
     }
     data object ChannelSettings : Routes("channelSettings/{channelId}") {
         fun createRoute(channelId: String): String = "channelSettings/$channelId"
@@ -130,6 +140,13 @@ sealed class Routes(val route: String) {
     // ─────────────────────────────────────────────────────────────────────────────
     data object FollowList : Routes("followList/{userId}/{tab}") {
         fun createRoute(userId: String, tab: Int = 0): String = "followList/$userId/$tab"
+    }
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Forward Target Selection
+    // ─────────────────────────────────────────────────────────────────────────────
+    data object ForwardTarget : Routes("forwardTarget/{messageIds}/{sourceType}/{sourceId}") {
+        fun createRoute(messageIds: String, sourceType: String = "CHAT", sourceId: String = ""): String =
+            "forwardTarget/$messageIds/$sourceType/$sourceId"
     }
 }
 

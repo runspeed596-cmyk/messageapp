@@ -14,6 +14,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,18 +38,23 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.theme.MessageAppTypography
+import kotlinx.coroutines.delay
 
 /**
  * WhatsApp-style animated attachment menu.
@@ -171,8 +177,9 @@ fun AttachmentMenu(
                         
                         Spacer(modifier = Modifier.height(24.dp))
                         
-                        // Options grid - using aligned columns
+                        // Options grid with staggered cascade
                         val chunkedOptions = options.chunked(3)
+                        var itemIndex = 0
                         Column(
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
@@ -182,13 +189,16 @@ fun AttachmentMenu(
                                     horizontalArrangement = Arrangement.Start
                                 ) {
                                     rowOptions.forEach { option ->
+                                        val currentIndex = itemIndex
+                                        itemIndex++
                                         Box(
                                             modifier = Modifier.weight(1f),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             AttachmentOptionItem(
                                                 option = option,
-                                                onDismiss = onDismiss
+                                                onDismiss = onDismiss,
+                                                staggerIndex = currentIndex
                                             )
                                         }
                                     }
@@ -212,22 +222,51 @@ fun AttachmentMenu(
 @Composable
 private fun AttachmentOptionItem(
     option: AttachmentOption,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    staggerIndex: Int = 0
 ) {
-    val scale by animateFloatAsState(
-        targetValue = if (option.enabled) 1f else 0.9f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "optionScale"
+    // Staggered entrance
+    var appeared by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(staggerIndex * 50L)
+        appeared = true
+    }
+    val entranceScale by animateFloatAsState(
+        targetValue = if (appeared) 1f else 0f,
+        animationSpec = spring(
+            dampingRatio = 0.55f,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "entrance_$staggerIndex"
     )
-    
+    val entranceAlpha by animateFloatAsState(
+        targetValue = if (appeared) 1f else 0f,
+        animationSpec = tween(200, delayMillis = staggerIndex * 50),
+        label = "entranceAlpha_$staggerIndex"
+    )
+    // Press feedback
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.9f else 1f,
+        animationSpec = spring(
+            dampingRatio = 0.5f,
+            stiffness = Spring.StiffnessHigh
+        ),
+        label = "pressScale"
+    )
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .scale(scale)
+            .graphicsLayer {
+                scaleX = entranceScale * pressScale
+                scaleY = entranceScale * pressScale
+                alpha = entranceAlpha
+            }
             .clickable(
                 enabled = option.enabled,
                 indication = null,
-                interactionSource = remember { MutableInteractionSource() }
+                interactionSource = interactionSource
             ) {
                 onDismiss()
                 option.onClick()
@@ -240,7 +279,7 @@ private fun AttachmentOptionItem(
                 .size(56.dp)
                 .clip(CircleShape)
                 .background(
-                    if (option.enabled) option.backgroundColor 
+                    if (option.enabled) option.backgroundColor
                     else option.backgroundColor.copy(alpha = 0.4f)
                 ),
             contentAlignment = Alignment.Center
@@ -252,16 +291,14 @@ private fun AttachmentOptionItem(
                 modifier = Modifier.size(28.dp)
             )
         }
-        
         Spacer(modifier = Modifier.height(8.dp))
-        
         // Label
         Text(
             text = option.label,
             style = MessageAppTypography.chatTime,
-            color = if (option.enabled) 
-                MaterialTheme.colorScheme.onSurface 
-            else 
+            color = if (option.enabled)
+                MaterialTheme.colorScheme.onSurface
+            else
                 MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
             textAlign = TextAlign.Center
         )

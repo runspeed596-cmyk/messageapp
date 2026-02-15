@@ -66,6 +66,7 @@ dependencies {
     implementation(libs.hilt.compose)
     implementation(libs.hilt.work)
     implementation(libs.androidx.compose.foundation.layout)
+    implementation(libs.androidx.foundation.layout)
     ksp(libs.hilt.compiler)
     ksp(libs.androidx.hilt.compiler)
     implementation(libs.retrofit)
@@ -91,6 +92,13 @@ dependencies {
 
     implementation(libs.coil.video)
     implementation(libs.accompanist.permissions)
+    
+    // CameraX for circular video note recording
+    implementation(libs.camerax.core)
+    implementation(libs.camerax.camera2)
+    implementation(libs.camerax.lifecycle)
+    implementation(libs.camerax.video)
+    implementation(libs.camerax.view)
     
     // Mapbox
     implementation(libs.mapbox.maps)

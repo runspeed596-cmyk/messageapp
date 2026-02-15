@@ -367,7 +367,10 @@ data class MessageDto(
     val reactions: Map<String, Int> = emptyMap(),
     val myReaction: String? = null,
     val poll: PollDto? = null,
-    val amplitudes: List<Int>? = null
+    val amplitudes: List<Int>? = null,
+    val isPinned: Boolean = false,
+    val pinnedAt: Instant? = null,
+    val scheduledAt: Instant? = null
 )
 
 data class ReactionRequest(
@@ -423,7 +426,10 @@ fun Message.toDto(userId: UUID? = null): MessageDto {
         reactions = reactions.groupingBy { it.reaction }.eachCount(),
         myReaction = if (userId != null) reactions.find { it.user?.id == userId }?.reaction else null,
         poll = poll?.toDto(userId),
-        amplitudes = amplitudes
+        amplitudes = amplitudes,
+        isPinned = isPinned,
+        pinnedAt = pinnedAt,
+        scheduledAt = scheduledAt
     )
 }
 
@@ -521,13 +527,17 @@ data class GroupMessageDto(
     val mediaUrl: String?,
     val replyToMessageId: UUID?,
     val replyToMessage: GroupMessageDto?,
+    val forwardedFrom: String? = null,
     val isEdited: Boolean,
     val createdAt: Instant,
     val editedAt: Instant?,
     val reactions: Map<String, Int> = emptyMap(),
     val myReaction: String? = null,
     val poll: PollDto? = null,
-    val amplitudes: List<Int>? = null
+    val amplitudes: List<Int>? = null,
+    val isPinned: Boolean = false,
+    val pinnedAt: Instant? = null,
+    val scheduledAt: Instant? = null
 )
 
 data class SendGroupMessageRequest(
@@ -561,15 +571,41 @@ fun GroupMessage.toDto(userId: UUID? = null): GroupMessageDto {
         mediaUrl = mediaUrl,
         replyToMessageId = replyTo?.id,
         replyToMessage = replyTo?.toDto(userId),
+        forwardedFrom = forwardedFrom,
         isEdited = isEdited,
         createdAt = createdAt,
         editedAt = editedAt,
         reactions = reactions.groupingBy { it.reaction }.eachCount(),
         myReaction = if (userId != null) reactions.find { it.user?.id == userId }?.reaction else null,
         poll = poll?.toDto(userId),
-        amplitudes = amplitudes
+        amplitudes = amplitudes,
+        isPinned = isPinned,
+        pinnedAt = pinnedAt,
+        scheduledAt = scheduledAt
     )
 }
+
+fun GroupMessage.toMessageDto(userId: UUID? = null): MessageDto = MessageDto(
+    id = id!!,
+    chatId = group?.id ?: UUID.randomUUID(),
+    senderId = sender?.id ?: UUID.randomUUID(),
+    senderName = sender?.displayName ?: "",
+    senderAvatar = if (userId != null && sender?.id == userId) sender?.avatarUrl else null,
+    type = type,
+    content = content,
+    mediaUrl = mediaUrl,
+    replyToMessageId = replyTo?.id,
+    replyToMessage = null, // Simplify for shared media
+    forwardedFrom = null,
+    status = MessageStatus.SENT,
+    isEdited = isEdited,
+    createdAt = createdAt,
+    editedAt = editedAt,
+    reactions = reactions.groupingBy { it.reaction }.eachCount(),
+    myReaction = if (userId != null) reactions.find { it.user?.id == userId }?.reaction else null,
+    poll = poll?.toDto(userId),
+    amplitudes = amplitudes
+)
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 📢 Channel DTOs
@@ -629,7 +665,11 @@ data class ChannelPostDto(
     val editedAt: Instant?,
     val poll: PollDto? = null,
     val reactions: Map<String, Int> = emptyMap(),
-    val amplitudes: List<Int>? = null
+    val amplitudes: List<Int>? = null,
+    val isPinned: Boolean = false,
+    val pinnedAt: Instant? = null,
+    val forwardedFrom: String? = null,
+    val scheduledAt: Instant? = null
 )
 
 data class CreatePostRequest(
@@ -709,6 +749,32 @@ fun ChannelPost.toDto(userId: UUID? = null): ChannelPostDto = ChannelPostDto(
     editedAt = editedAt,
     poll = poll?.toDto(userId),
     reactions = reactions.groupingBy { it.reaction }.eachCount(),
+    amplitudes = amplitudes,
+    isPinned = isPinned,
+    pinnedAt = pinnedAt,
+    forwardedFrom = forwardedFrom,
+    scheduledAt = scheduledAt
+)
+
+fun ChannelPost.toMessageDto(userId: UUID? = null): MessageDto = MessageDto(
+    id = id!!,
+    chatId = channel?.id ?: UUID.randomUUID(),
+    senderId = channel?.owner?.id ?: UUID.randomUUID(), // Channels usually don't have a sender per post, using owner
+    senderName = channel?.name ?: "",
+    senderAvatar = channel?.avatarUrl,
+    type = type,
+    content = content,
+    mediaUrl = mediaUrl,
+    replyToMessageId = null,
+    replyToMessage = null,
+    forwardedFrom = null,
+    status = MessageStatus.SENT,
+    isEdited = false,
+    createdAt = createdAt,
+    editedAt = editedAt,
+    reactions = reactions.groupingBy { it.reaction }.eachCount(),
+    myReaction = null,
+    poll = poll?.toDto(userId),
     amplitudes = amplitudes
 )
 
@@ -808,7 +874,7 @@ fun Story.toDto(currentUserId: UUID?): StoryDto {
         createdAt = createdAt,
         expiresAt = expiresAt,
         isViewed = if (currentUserId != null) views.any { it.user?.id == currentUserId } else false,
-        viewCount = views.size
+        viewCount = views.distinctBy { it.user?.id }.size
     )
 }
 
@@ -1063,5 +1129,67 @@ data class UserWithSocialDto(
     val profileDetails: ProfileDetailsDto?
 )
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📌 Pin / Forward / Schedule DTOs
+// ═══════════════════════════════════════════════════════════════════════════════
 
+data class PinMessageRequest(
+    val isPinned: Boolean
+)
 
+data class ForwardMessageRequest(
+    val messageIds: List<UUID>,
+    val targetChatId: UUID? = null,
+    val targetGroupId: UUID? = null,
+    val targetChannelId: UUID? = null,
+    val targetType: String // "CHAT", "GROUP", "CHANNEL"
+)
+
+data class ScheduleMessageRequest(
+    val type: MessageType = MessageType.TEXT,
+    val content: String,
+    val mediaUrl: String? = null,
+    val scheduledAt: Instant,
+    val amplitudes: List<Int>? = null
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 💬 Story Reply DTOs
+// ═══════════════════════════════════════════════════════════════════════════════
+
+data class StoryReplyRequest(
+    val content: String
+)
+
+data class StoryReplyDto(
+    val id: UUID,
+    val storyId: UUID,
+    val userId: UUID,
+    val userDisplayName: String,
+    val userAvatarUrl: String?,
+    val content: String,
+    val createdAt: Instant
+)
+
+fun StoryReply.toDto(): StoryReplyDto = StoryReplyDto(
+    id = id!!,
+    storyId = story?.id ?: UUID.randomUUID(),
+    userId = user?.id ?: UUID.randomUUID(),
+    userDisplayName = user?.displayName ?: "",
+    userAvatarUrl = user?.avatarUrl,
+    content = content,
+    createdAt = createdAt
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 👤 Username Setting DTO
+// ═══════════════════════════════════════════════════════════════════════════════
+
+data class SetUsernameRequest(
+    val username: String
+)
+
+data class UsernameAvailabilityResponse(
+    val username: String,
+    val isAvailable: Boolean
+)

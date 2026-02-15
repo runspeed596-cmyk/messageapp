@@ -164,6 +164,29 @@ class UserController(
         val count = userService.getTotalUserCount()
         return ResponseEntity.ok(ApiResponse(true, "موفق", count))
     }
+    @PutMapping("/me/username")
+    fun setUsername(
+        @RequestAttribute("userId") userId: UUID,
+        @RequestBody request: SetUsernameRequest
+    ): ResponseEntity<ApiResponse<UserDto>> {
+        return try {
+            val user = userService.setUsername(userId, request.username)
+            if (user != null) {
+                ResponseEntity.ok(ApiResponse(true, "نام کاربری تنظیم شد", user.toDto()))
+            } else {
+                ResponseEntity.badRequest().body(ApiResponse(false, "کاربر یافت نشد"))
+            }
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(ApiResponse(false, e.message ?: "خطا"))
+        }
+    }
+    @GetMapping("/username/check")
+    fun checkUsernameAvailability(
+        @RequestParam username: String
+    ): ResponseEntity<UsernameAvailabilityResponse> {
+        val isAvailable = !userService.isUsernameTaken(username)
+        return ResponseEntity.ok(UsernameAvailabilityResponse(username, isAvailable))
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -246,6 +269,19 @@ class ChatController(
         } else {
             ResponseEntity.notFound().build()
         }
+    }
+
+    @GetMapping("/shared-content")
+    fun getSharedContent(
+        @RequestAttribute("userId") userId: UUID,
+        @RequestParam targetId: UUID,
+        @RequestParam scope: String,
+        @RequestParam type: String,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "50") size: Int
+    ): ResponseEntity<ApiResponse<List<MessageDto>>> {
+        val response = chatService.getSharedContent(userId, targetId, scope, type, page, size)
+        return ResponseEntity.ok(ApiResponse(true, "موفق", response.messages))
     }
 }
 
@@ -354,6 +390,55 @@ class MessageController(
             ResponseEntity.ok(ApiResponse(true, if (request.reaction != null) "واکنش ثبت شد" else "واکنش حذف شد"))
         } else {
             ResponseEntity.badRequest().body(ApiResponse(false, "خطا یا دسترسی ندارید"))
+        }
+    }
+    // ═══ PIN MANAGEMENT ═══
+    @PutMapping("/messages/{id}/pin")
+    fun pinMessage(
+        @RequestAttribute("userId") userId: UUID,
+        @PathVariable id: UUID,
+        @RequestParam pinned: Boolean
+    ): ResponseEntity<ApiResponse<MessageDto>> {
+        val message = messageService.pinMessage(id, userId, pinned)
+        return if (message != null) {
+            ResponseEntity.ok(ApiResponse(true, if (pinned) "پیام سنجاق شد" else "سنجاق برداشته شد", message))
+        } else {
+            ResponseEntity.badRequest().body(ApiResponse(false, "خطا یا دسترسی ندارید"))
+        }
+    }
+    @GetMapping("/chats/{chatId}/messages/pinned")
+    fun getPinnedMessages(
+        @RequestAttribute("userId") userId: UUID,
+        @PathVariable chatId: UUID
+    ): ResponseEntity<ApiResponse<List<MessageDto>>> {
+        val messages = messageService.getPinnedMessages(chatId, userId)
+        return ResponseEntity.ok(ApiResponse(true, "موفق", messages))
+    }
+    // ═══ FORWARD MESSAGES ═══
+    @PostMapping("/messages/forward")
+    fun forwardMessages(
+        @RequestAttribute("userId") userId: UUID,
+        @RequestBody request: ForwardMessageRequest
+    ): ResponseEntity<ApiResponse<Unit>> {
+        val success = messageService.forwardMessages(userId, request)
+        return if (success) {
+            ResponseEntity.ok(ApiResponse(true, "پیام فروارد شد"))
+        } else {
+            ResponseEntity.badRequest().body(ApiResponse(false, "خطا در فروارد"))
+        }
+    }
+    // ═══ SCHEDULE MESSAGES ═══
+    @PostMapping("/chats/{chatId}/messages/schedule")
+    fun scheduleMessage(
+        @RequestAttribute("userId") userId: UUID,
+        @PathVariable chatId: UUID,
+        @RequestBody request: ScheduleMessageRequest
+    ): ResponseEntity<ApiResponse<MessageDto>> {
+        val message = messageService.scheduleMessage(chatId, userId, request)
+        return if (message != null) {
+            ResponseEntity.ok(ApiResponse(true, "پیام زمان‌بندی شد", message))
+        } else {
+            ResponseEntity.badRequest().body(ApiResponse(false, "خطا در زمان‌بندی"))
         }
     }
 }

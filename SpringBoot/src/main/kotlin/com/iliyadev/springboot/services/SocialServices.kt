@@ -111,7 +111,9 @@ class FollowService(
 class CollaborationService(
     private val collaborationRepository: CollaborationRequestRepository,
     private val userRepository: UserRepository,
-    private val notificationService: NotificationService
+    private val notificationService: NotificationService,
+    private val chatService: ChatService,
+    private val messageService: MessageService
 ) {
     @Transactional
     fun sendRequest(senderId: UUID, request: SendCollaborationRequest): CollaborationRequestDto {
@@ -128,6 +130,17 @@ class CollaborationService(
         )
         val saved = collaborationRepository.save(collaboration)
         notificationService.createCollaborationRequestNotification(senderId, request.receiverId, saved.id!!)
+        // Send collaboration request as a private chat message
+        try {
+            val chatDto = chatService.createPrivateChat(senderId, request.receiverId)
+            if (chatDto != null) {
+                val msgContent = "\uD83E\uDD1D درخواست همکاری\n\nعنوان: ${request.title}\n\nتوضیحات: ${request.message}"
+                val sendRequest = SendMessageRequest(content = msgContent)
+                messageService.sendMessage(chatDto.id, senderId, sendRequest)
+            }
+        } catch (e: Exception) {
+            println("WARN: Failed to send collaboration request as chat message: ${e.message}")
+        }
         return saved.toDto()
     }
     @Transactional

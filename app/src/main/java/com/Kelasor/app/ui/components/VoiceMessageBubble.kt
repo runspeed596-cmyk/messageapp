@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.Kelasor.app.data.audio.AudioPlayerManager
 import com.Kelasor.app.data.audio.PlaybackState
+import com.Kelasor.app.domain.model.MessageStatus
 import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.theme.MessageAppTypography
 import androidx.compose.ui.input.pointer.pointerInput
@@ -57,6 +58,8 @@ fun VoiceMessageBubble(
     isMyMessage: Boolean,
     audioPlayerManager: AudioPlayerManager,
     amplitudes: List<Int>? = null,
+    time: String = "",
+    status: MessageStatus = MessageStatus.SENT,
     modifier: Modifier = Modifier
 ) {
     val extendedColors = MessageAppTheme.extendedColors
@@ -74,30 +77,27 @@ fun VoiceMessageBubble(
     val progress = if (isThisPlaying) playbackInfo.progress else 0f
     val currentPositionMs = if (isThisPlaying) playbackInfo.currentPositionMs else 0L
     val actualDurationMs = if (isThisPlaying && playbackInfo.durationMs > 0) playbackInfo.durationMs else durationMs
-    
+    val currentSpeed = if (isThisPlaying) playbackInfo.playbackSpeed else 1.0f
     // Track if user is dragging slider
     var isDragging by remember { mutableStateOf(false) }
     var dragProgress by remember { mutableFloatStateOf(0f) }
-
     // Background color based on message owner
     val backgroundColor = if (isMyMessage) {
         extendedColors.accent.copy(alpha = 0.15f)
     } else {
         MaterialTheme.colorScheme.surfaceVariant
     }
-
     val accentColor = if (isMyMessage) {
         extendedColors.accent
     } else {
         MaterialTheme.colorScheme.primary
     }
-
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(20.dp))
             .background(backgroundColor)
             .padding(horizontal = 12.dp, vertical = 8.dp)
-            .width(260.dp), // Slightly wider for waveform
+            .width(280.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Play/Pause Button
@@ -116,8 +116,24 @@ fun VoiceMessageBubble(
                 modifier = Modifier.size(24.dp)
             )
         }
-
-        Spacer(modifier = Modifier.width(10.dp))
+        Spacer(modifier = Modifier.width(4.dp))
+        // Speed Control Pill
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(10.dp))
+                .background(accentColor.copy(alpha = 0.2f))
+                .clickable { audioPlayerManager.cyclePlaybackSpeed() }
+                .padding(horizontal = 6.dp, vertical = 4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "${if (currentSpeed % 1.0f == 0f) currentSpeed.toInt().toString() else String.format("%.1f", currentSpeed)}x",
+                style = MaterialTheme.typography.labelSmall,
+                color = accentColor,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+            )
+        }
+        Spacer(modifier = Modifier.width(6.dp))
 
         // Waveform/Slider and Duration
         Column(
@@ -178,21 +194,35 @@ fun VoiceMessageBubble(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Duration text
+            // Duration + time + status row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = formatVoiceDuration(if (isDragging) (dragProgress * actualDurationMs).toLong() else currentPositionMs),
                     style = MessageAppTypography.caption,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(
-                    text = formatVoiceDuration(actualDurationMs),
-                    style = MessageAppTypography.caption,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (time.isNotEmpty()) {
+                        Text(
+                            text = time,
+                            style = MessageAppTypography.messageTime,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (isMyMessage) {
+                        MessageStatusIcon(
+                            status = status,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
     }

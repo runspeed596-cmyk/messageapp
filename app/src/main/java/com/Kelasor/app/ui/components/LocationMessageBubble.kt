@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.theme.MessageAppTypography
+import com.Kelasor.app.domain.model.MessageStatus
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
 import com.mapbox.maps.MapView
@@ -54,6 +55,7 @@ fun LocationMessageBubble(
     longitude: Double,
     isMyMessage: Boolean,
     time: String,
+    status: MessageStatus = MessageStatus.SENT,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -177,11 +179,22 @@ fun LocationMessageBubble(
                 }
             }
             
-            Text(
-                text = time,
-                style = MessageAppTypography.messageTime,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = time,
+                    style = MessageAppTypography.messageTime,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (isMyMessage) {
+                    MessageStatusIcon(
+                        status = status,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }

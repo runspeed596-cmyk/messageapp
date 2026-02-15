@@ -32,14 +32,19 @@ data class UserProfileState(
     val isFollowing: Boolean = false,
     val isFollowLoading: Boolean = false,
     val showCollaborationDialog: Boolean = false,
-    val bioChannels: List<com.Kelasor.app.domain.model.Channel> = emptyList()
+    val bioChannels: List<com.Kelasor.app.domain.model.Channel> = emptyList(),
+    // Shared Media
+    val selectedContentType: com.Kelasor.app.ui.components.ContentType? = null,
+    val sharedContent: List<com.Kelasor.app.domain.model.SharedContent> = emptyList(),
+    val isMediaLoading: Boolean = false
 )
 
 @HiltViewModel
 class UserProfileViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val apiService: ApiService,
-    private val channelRepository: com.Kelasor.app.data.repository.ChannelRepository
+    private val channelRepository: com.Kelasor.app.data.repository.ChannelRepository,
+    private val messageRepository: com.Kelasor.app.data.repository.MessageRepository
 ) : ViewModel() {
     private val _state = MutableStateFlow(UserProfileState())
     val state: StateFlow<UserProfileState> = _state.asStateFlow()
@@ -207,4 +212,31 @@ class UserProfileViewModel @Inject constructor(
             _state.update { it.copy(bioChannels = channels) }
         }
     }
+
+    fun onFilterSelected(type: com.Kelasor.app.ui.components.ContentType?) {
+        _state.update { it.copy(selectedContentType = type) }
+        if (type != null) {
+            loadSharedMedia(_state.value.user?.id ?: return, type)
+        } else {
+            _state.update { it.copy(sharedContent = emptyList()) }
+        }
+    }
+
+    private fun loadSharedMedia(userId: String, type: com.Kelasor.app.ui.components.ContentType) {
+        viewModelScope.launch {
+            _state.update { it.copy(isMediaLoading = true) }
+            val typeString = when(type) {
+                com.Kelasor.app.ui.components.ContentType.Photo -> "IMAGE"
+                com.Kelasor.app.ui.components.ContentType.Video -> "VIDEO"
+                com.Kelasor.app.ui.components.ContentType.Link -> "LINK"
+                com.Kelasor.app.ui.components.ContentType.File -> "FILE"
+                com.Kelasor.app.ui.components.ContentType.Music -> "AUDIO"
+            }
+            
+            messageRepository.getSharedContent(userId, "USER", typeString).collect { content ->
+                _state.update { it.copy(sharedContent = content, isMediaLoading = false) }
+            }
+        }
+    }
 }
+

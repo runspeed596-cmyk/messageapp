@@ -78,6 +78,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.Kelasor.app.domain.model.Chat
 import com.Kelasor.app.domain.model.ChatType
@@ -227,6 +228,7 @@ fun ChatListScreen(
     
     // Removing hardcoded RTL provider to follow global app language
     // CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        var deleteForAll by remember { mutableStateOf(false) }
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -240,13 +242,9 @@ fun ChatListScreen(
                         onClearSelection = { viewModel.clearSelection() },
                         onDeleteSelected = { viewModel.requestDeleteSelection() },
                         onPinSelected = { 
-                            // ... (Logic remains same)
-                            // Get all selected chats to check if any are pinned
                             val allChats = state.chats + state.pinnedChats + state.archivedChats
                             val selectedChats = allChats.filter { it.id in state.selectedChatIds }
                             val anyPinned = selectedChats.any { it.isPinned }
-                            
-                            // Toggle: if any are pinned, unpin all; else pin all
                             val newPinState = !anyPinned
                             state.selectedChatIds.forEach { chatId ->
                                 viewModel.pinChat(chatId, newPinState)
@@ -256,55 +254,24 @@ fun ChatListScreen(
                             viewModel.clearSelection()
                         },
                         onArchiveSelected = { 
-                             // ... (Logic remains same)
                             val allChats = state.chats + state.pinnedChats + state.archivedChats
                             val selectedChats = allChats.filter { it.id in state.selectedChatIds }
                             val anyArchived = selectedChats.any { it.isArchived }
-                            
                             val newArchiveState = !anyArchived
                             state.selectedChatIds.forEach { chatId ->
                                 viewModel.archiveChat(chatId, newArchiveState)
                             }
                             val toastMessage = if (newArchiveState) {
-                                "گفتگو به آرشیو منتقل شد. برای مشاهده به پروفایل > آرشیو شده‌ها بروید"
+                                "گفتگو به آرشیو منتقل شد"
                             } else {
                                 "گفتگو از آرشیو خارج شد"
                             }
-                            android.widget.Toast.makeText(
-                                context, 
-                                toastMessage, 
-                                android.widget.Toast.LENGTH_LONG
-                            ).show()
+                            android.widget.Toast.makeText(context, toastMessage, android.widget.Toast.LENGTH_SHORT).show()
                             viewModel.clearSelection()
                         }
                     )
-
-                if (state.showDeleteConfirmation) {
-                    AlertDialog(
-                        onDismissRequest = { viewModel.cancelDeleteSelection() },
-                        title = { Text(text = "حذف گفتگوها", style = MessageAppTypography.chatName) },
-                        text = { Text(text = "آیا از حذف ${state.selectedChatIds.size} مورد انتخاب شده اطمینان دارید؟ این عملیات غیرقابل بازگشت است.") },
-                        confirmButton = {
-                            TextButton(
-                                onClick = { viewModel.confirmDeleteSelection() }
-                            ) {
-                                Text(text = "حذف", color = MaterialTheme.colorScheme.error)
-                            }
-                        },
-                        dismissButton = {
-                            TextButton(
-                                onClick = { viewModel.cancelDeleteSelection() }
-                            ) {
-                                Text(text = "لغو")
-                            }
-                        }
-                    )
-                }
                 } else {
-                    // Search Header Removed - Handled by MainScreen
-                    
                     // Filter Chips (Visible when searching or if active filter is not ALL)
-                    // We check viewModel state.searchQuery instead of local var
                     AnimatedVisibility(visible = state.searchQuery.isNotEmpty() || state.activeFilter != com.Kelasor.app.ui.viewmodel.SearchFilter.ALL) {
                         LazyRow(
                             modifier = Modifier
@@ -343,8 +310,7 @@ fun ChatListScreen(
                         }
                     }
                 }
-            }
-                // Chat list
+                // Chat list — INSIDE Column
                 if (state.isLoading && filteredChats.isEmpty()) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -357,46 +323,28 @@ fun ChatListScreen(
                         state = listState,
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        // Story Row (Always visible if not searching AND not selecting)
-                        if (state.searchQuery.isEmpty() && state.selectedChatIds.isEmpty() && state.activeFilter == com.Kelasor.app.ui.viewmodel.SearchFilter.ALL) {
-                            item(contentType = { "story_row" }) {
-                                val storiesState = storyUiState
-                                if (storiesState is com.Kelasor.app.ui.viewmodel.StoriesUiState.Success || storiesState is com.Kelasor.app.ui.viewmodel.StoriesUiState.Loading) {
-                                    val storyUsers = if (storiesState is com.Kelasor.app.ui.viewmodel.StoriesUiState.Success) {
-                                        storiesState.storyUsers
-                                    } else {
-                                        emptyList()
-                                    }
-                                    val currentUserStory = storyUsers.find { it.isCurrentUser }
-                                    val currentUserProfile by storyViewModel.currentUser.collectAsState()
-                                    
-                                    com.Kelasor.app.ui.components.story.StoriesList(
-                                        currentUser = currentUserStory ?: currentUserProfile?.let { user ->
-                                            com.Kelasor.app.domain.model.StoryUser(
-                                                userId = user.id,
-                                                username = user.username ?: "",
-                                                displayName = user.displayName ?: "You",
-                                                avatarUrl = user.avatarUrl,
-                                                stories = emptyList(),
-                                                isCurrentUser = true
-                                            )
-                                        },
-                                        storyUsers = storyUsers,
-                                        onStoryClick = { user ->
-                                            if (user.isCurrentUser) {
-                                                onMyStoriesClick()
-                                            } else {
-                                                storyViewModel.openStoryViewer(user)
-                                            }
-                                        },
-                                        onAddStoryClick = {
-                                            showAddStorySheet = true
-                                        }
-                                    )
+                        // Story Row — show only when not searching
+                        if (state.searchQuery.isEmpty() && state.activeFilter == com.Kelasor.app.ui.viewmodel.SearchFilter.ALL) {
+                            item(key = "stories_row", contentType = "stories") {
+                                val storyUsers = when (val uiState = storyUiState) {
+                                    is com.Kelasor.app.ui.viewmodel.StoriesUiState.Success -> uiState.storyUsers
+                                    else -> emptyList()
                                 }
+                                val currentUser = storyUsers.firstOrNull { it.isCurrentUser }
+                                com.Kelasor.app.ui.components.story.StoriesList(
+                                    currentUser = currentUser,
+                                    storyUsers = storyUsers,
+                                    onStoryClick = { storyUser ->
+                                        if (storyUser.isCurrentUser) {
+                                            onMyStoriesClick()
+                                        } else {
+                                            storyViewModel.openStoryViewer(storyUser)
+                                        }
+                                    },
+                                    onAddStoryClick = { showAddStorySheet = true }
+                                )
                             }
                         }
-
                         // Empty State Item
                         if (filteredChats.isEmpty() && state.searchQuery.isEmpty() && state.activeFilter == com.Kelasor.app.ui.viewmodel.SearchFilter.ALL) {
                             item {
@@ -429,8 +377,6 @@ fun ChatListScreen(
                                 }
                             }
                         } else {
-                            // ... Regular Content (will be rendered below)
-                        
                         // Global User Search Results
                         if (state.searchResults.isNotEmpty() && 
                            (state.activeFilter == com.Kelasor.app.ui.viewmodel.SearchFilter.ALL || state.activeFilter == com.Kelasor.app.ui.viewmodel.SearchFilter.PEOPLE)) {
@@ -448,7 +394,6 @@ fun ChatListScreen(
                                 )
                             }
                         }
-                        
                         // Global Channel Search Results
                         if (state.channelSearchResults.isNotEmpty() &&
                            (state.activeFilter == com.Kelasor.app.ui.viewmodel.SearchFilter.ALL || state.activeFilter == com.Kelasor.app.ui.viewmodel.SearchFilter.CHANNEL)) {
@@ -500,7 +445,6 @@ fun ChatListScreen(
                                 )
                             }
                         }
-
                         // Local Chats
                         if (filteredChats.isNotEmpty()) {
                             if (state.searchResults.isNotEmpty()) {
@@ -509,12 +453,9 @@ fun ChatListScreen(
                                 }
                             }
                         }
-                        
-                        
-                        // If not searching and ALL, show Pinned/Archived/All logic. 
-                        // If searching or filtering, just show filtered list directly
+                        // If not searching and ALL, show Pinned/Archived/All logic.
                         if (state.searchQuery.isEmpty() && state.activeFilter == com.Kelasor.app.ui.viewmodel.SearchFilter.ALL) {
-                            // Archived chats section (clickable to expand/collapse)
+                            // Archived chats section
                             if (state.archivedChats.isNotEmpty()) {
                                 item(contentType = { "archive_header" }) {
                                     Row(
@@ -546,7 +487,6 @@ fun ChatListScreen(
                                         )
                                     }
                                 }
-                                
                                 if (isArchivedExpanded) {
                                     items(
                                         items = state.archivedChats,
@@ -567,7 +507,7 @@ fun ChatListScreen(
                                             onLongClick = { viewModel.toggleChatSelection(chat.id) },
                                             onPin = { viewModel.pinChat(chat.id, !chat.isPinned) },
                                             onMute = { viewModel.muteChat(chat.id, !chat.isMuted) },
-                                            onArchive = { viewModel.archiveChat(chat.id, false) }, // Unarchive
+                                            onArchive = { viewModel.archiveChat(chat.id, false) },
                                             onDelete = { viewModel.deleteChat(chat.id) },
                                             currentUserId = state.currentUserId,
                                             onUnarchiveClick = { viewModel.archiveChat(chat.id, false) }
@@ -575,7 +515,6 @@ fun ChatListScreen(
                                     }
                                 }
                             }
-                            
                             // Pinned chats section
                             if (state.pinnedChats.isNotEmpty()) {
                                 item(contentType = { "header" }) {
@@ -606,7 +545,7 @@ fun ChatListScreen(
                                     )
                                 }
                             }
-                             // Regular chats
+                            // Regular chats
                             if (state.pinnedChats.isNotEmpty() && state.chats.isNotEmpty()) {
                                 item(contentType = { "header" }) {
                                     SectionHeader(title = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.all_chats))
@@ -656,15 +595,63 @@ fun ChatListScreen(
                                         }
                                     },
                                     onLongClick = { viewModel.toggleChatSelection(chat.id) },
-                                    onPin = { viewModel.pinChat(chat.id, !chat.isPinned) }, // Use !chat.isPinned for toggle
+                                    onPin = { viewModel.pinChat(chat.id, !chat.isPinned) },
                                     onMute = { viewModel.muteChat(chat.id, !chat.isMuted) },
                                     onArchive = { viewModel.archiveChat(chat.id, true) },
                                     onDelete = { viewModel.deleteChat(chat.id) }
                                 )
-                        } // Close Search Results else
+                        } // Close search-else
+                    } // Close empty-state-else (line 357)
                     } // Close LazyColumn
-                } // Close else for (isLoading) Check
-                }
+                } // Close else for (isLoading)
+            } // Close Column
+            // Delete Confirmation Dialog — at Box level (overlay)
+            if (state.showDeleteConfirmation) {
+                val allChats = state.chats + state.pinnedChats + state.archivedChats
+                val selectedChats = allChats.filter { it.id in state.selectedChatIds }
+                val selectedName = if (selectedChats.size == 1) selectedChats.first().title else "${state.selectedChatIds.size} گفتگو"
+                AlertDialog(
+                    onDismissRequest = { 
+                        deleteForAll = false
+                        viewModel.cancelDeleteSelection() 
+                    },
+                    title = { Text(text = "حذف گفتگو", style = MessageAppTypography.chatName) },
+                    text = {
+                        Column {
+                            Text(text = "آیا میخواهید $selectedName را حذف کنید؟")
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                androidx.compose.material3.Checkbox(
+                                    checked = deleteForAll,
+                                    onCheckedChange = { deleteForAll = it }
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(text = "حذف برای همه", style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = { 
+                                viewModel.confirmDeleteSelection()
+                                deleteForAll = false
+                            }
+                        ) {
+                            Text(text = "حذف", color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { 
+                                deleteForAll = false
+                                viewModel.cancelDeleteSelection() 
+                            }
+                        ) {
+                            Text(text = "لغو")
+                        }
+                    }
+                )
+            }
             // FAB REMOVED
 
             // Upload Loading Indicator
@@ -731,26 +718,35 @@ fun ChatListScreen(
                 }
             }
             
-            // Story Viewer Overlay
-            AnimatedVisibility(
-                visible = selectedStoryUser != null,
-                enter = scaleIn() + fadeIn(),
-                exit = scaleOut() + fadeOut()
-            ) {
+            // Story Viewer Overlay — use Dialog to render truly fullscreen above pager
+            if (selectedStoryUser != null) {
                 selectedStoryUser?.let { user ->
-                    com.Kelasor.app.ui.screens.story.StoryViewerScreen(
-                        viewModel = storyViewModel,
-                        storyUser = user,
-                        initialStoryIndex = 0, // Or find unviewed index
-                        onClose = { storyViewModel.closeStoryViewer() },
-                        onStoryViewed = { story ->
-                            storyViewModel.markStoryAsViewed(story.id)
-                        },
-                        onNavigateToProfile = { userId ->
-                            storyViewModel.closeStoryViewer()
-                            onNavigateToUserProfile(userId)
+                    if (user.stories.isNotEmpty()) {
+                        androidx.compose.ui.window.Dialog(
+                            onDismissRequest = { storyViewModel.closeStoryViewer() },
+                            properties = androidx.compose.ui.window.DialogProperties(
+                                usePlatformDefaultWidth = false,
+                                decorFitsSystemWindows = false
+                            )
+                        ) {
+                            com.Kelasor.app.ui.screens.story.StoryViewerScreen(
+                                viewModel = storyViewModel,
+                                storyUser = user,
+                                initialStoryIndex = 0,
+                                onClose = { storyViewModel.closeStoryViewer() },
+                                onStoryViewed = { story ->
+                                    storyViewModel.markStoryAsViewed(story.id)
+                                },
+                                onNavigateToProfile = { userId ->
+                                    storyViewModel.closeStoryViewer()
+                                    onNavigateToUserProfile(userId)
+                                }
+                            )
                         }
-                    )
+                    } else {
+                        // If user has no stories, close immediately
+                        LaunchedEffect(Unit) { storyViewModel.closeStoryViewer() }
+                    }
                 }
             }
     
@@ -820,6 +816,9 @@ fun SearchUserItem(
 // 📱 Chat Item with Swipe Actions
 // ═══════════════════════════════════════════════════════════════════════════════
 
+private val CHAT_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    .withZone(ZoneId.systemDefault())
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChatItem(
@@ -840,8 +839,7 @@ fun ChatItem(
     val extendedColors = MessageAppTheme.extendedColors
     val interactionSource = remember { MutableInteractionSource() }
     var showDeleteDialog by remember { mutableStateOf(false) }
-    val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-        .withZone(ZoneId.systemDefault())
+    val timeFormatter = CHAT_TIME_FORMATTER
 
     // Confirmation Dialog
     if (showDeleteDialog) {
@@ -934,7 +932,20 @@ fun ChatItem(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = chat.lastMessage?.content ?: androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.no_messages),
+                        text = androidx.compose.ui.text.buildAnnotatedString {
+                            append(chat.lastMessage?.content ?: androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.no_messages))
+                            if (chat.lastMessage?.isEdited == true) {
+                                append(" ")
+                                pushStyle(
+                                    androidx.compose.ui.text.SpanStyle(
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                        fontSize = 10.sp
+                                    )
+                                )
+                                append("(ویرایش\u200Cشده)")
+                                pop()
+                            }
+                        },
                         style = MessageAppTypography.chatPreview,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

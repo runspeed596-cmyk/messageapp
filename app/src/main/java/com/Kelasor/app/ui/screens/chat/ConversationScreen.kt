@@ -44,8 +44,11 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -66,6 +69,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -82,6 +86,7 @@ import com.Kelasor.app.ui.components.BubblePosition
 import com.Kelasor.app.ui.components.ChatBubble
 import com.Kelasor.app.ui.components.DateSeparator
 import com.Kelasor.app.ui.components.GlowingIconButton
+import com.Kelasor.app.ui.components.SwipeToReply
 import com.Kelasor.app.ui.components.TypingIndicator
 import com.Kelasor.app.ui.theme.CardShapes
 import com.Kelasor.app.ui.theme.MessageAppTheme
@@ -92,6 +97,7 @@ import com.Kelasor.app.ui.screens.chat.MessageSelectionTopBar
 import com.Kelasor.app.ui.components.MessageInputBar
 import com.Kelasor.app.ui.components.VoiceMessageBubble
 import com.Kelasor.app.ui.components.MessageActionSheet
+import com.Kelasor.app.ui.components.PinnedMessageBanner
 import com.Kelasor.app.ui.components.AttachmentMenu
 import com.Kelasor.app.ui.components.MediaPreviewDialog
 import com.Kelasor.app.ui.components.ImageMessageBubble
@@ -103,13 +109,23 @@ import com.Kelasor.app.ui.components.LocationMessageBubble
 import com.Kelasor.app.ui.components.MediaType
 import com.Kelasor.app.ui.components.detectMediaType
 import com.Kelasor.app.ui.components.PollBubble
+import com.Kelasor.app.ui.components.MediaEditScreen
+import com.Kelasor.app.ui.components.VideoNoteBubble
+import com.Kelasor.app.ui.components.CircularVideoRecorder
+import com.Kelasor.app.data.video.VideoNoteRecordingState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.ui.unit.sp
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.launch
+
+// Top-level formatter to avoid re-creation per message/recomposition
+private val MESSAGE_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    .withZone(ZoneId.systemDefault())
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 💬 Conversation Screen
@@ -119,8 +135,10 @@ import kotlinx.coroutines.launch
 @Composable
 fun ConversationScreen(
     chatId: String,
+    initialMessageId: String? = null,
     onNavigateBack: () -> Unit,
     onNavigateToProfile: (String) -> Unit,
+    onNavigateToForward: (messageIds: String, sourceType: String, sourceId: String) -> Unit = { _, _, _ -> },
     viewModel: ConversationViewModel = hiltViewModel()
 ) {
     val extendedColors = MessageAppTheme.extendedColors
@@ -131,11 +149,20 @@ fun ConversationScreen(
     var showEditMessageDialog by remember { mutableStateOf(false) }
     var messageToEdit by remember { mutableStateOf<com.Kelasor.app.domain.model.Message?>(null) }
     var messageForActions by remember { mutableStateOf<com.Kelasor.app.domain.model.Message?>(null) }
+    // Forward dialog removed — now uses ForwardTargetScreen via navigation
     
     // Attachment menu state
     var showAttachmentMenu by remember { mutableStateOf(false) }
     var showLocationPicker by remember { mutableStateOf(false) }
     var showPollCreator by remember { mutableStateOf(false) }
+    // Media editing state
+    var pendingMediaUri by remember { mutableStateOf<Uri?>(null) }
+    var pendingMediaIsVideo by remember { mutableStateOf(false) }
+    // Video note recording state
+    var showVideoNoteRecorder by remember { mutableStateOf(false) }
+    // Schedule edit dialog state for rescheduling a scheduled message
+    var showScheduleEditDialog by remember { mutableStateOf(false) }
+    var messageToReschedule by remember { mutableStateOf<com.Kelasor.app.domain.model.Message?>(null) }
     
     // Search State
     var isSearchActive by remember { mutableStateOf(false) }
@@ -149,6 +176,32 @@ fun ConversationScreen(
 
     val listState = rememberLazyListState()
     val scope = androidx.compose.runtime.rememberCoroutineScope()
+    
+    // Auto-scroll to initial message
+    val initialScrollDone = remember { mutableStateOf(false) }
+    LaunchedEffect(state.messages, initialMessageId) {
+        if (!initialScrollDone.value && initialMessageId != null && state.messages.isNotEmpty()) {
+            val index = state.messages.indexOfFirst { it.id == initialMessageId }
+            if (index != -1) {
+                // Messages are sorted descending (newest first).
+                // LazyColumn with reverseLayout=true starts from bottom (index 0).
+                // So the index in the list directly corresponds to the index in LazyColumn.
+                listState.scrollToItem(index)
+                initialScrollDone.value = true
+                
+                initialScrollDone.value = true
+            }
+        }
+    }
+    
+    // Message Highlighting
+    var highlightedMessageId by remember { mutableStateOf(initialMessageId) }
+    LaunchedEffect(highlightedMessageId) {
+        if (highlightedMessageId != null) {
+            kotlinx.coroutines.delay(2000)
+            highlightedMessageId = null
+        }
+    }
     val context = LocalContext.current
     val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
     
@@ -185,15 +238,14 @@ fun ConversationScreen(
         }
     }
     
-    // Gallery picker launcher (images and videos)
+    // Gallery picker launcher (images and videos) → opens media editor
     val galleryPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
         uri?.let {
-            // Check if it's a video based on MIME type
             val mimeType = context.contentResolver.getType(it)
-            val isVideo = mimeType?.startsWith("video/") == true
-            viewModel.uploadAndSendMedia(chatId, it, context, isVideo = isVideo)
+            pendingMediaIsVideo = mimeType?.startsWith("video/") == true
+            pendingMediaUri = it
         }
     }
     
@@ -274,8 +326,22 @@ fun ConversationScreen(
     
     // Edit Message Dialog
     if (showEditMessageDialog && messageToEdit != null) {
+        // For media messages, extract caption (strip emoji prefix + file name)
+        val editableContent = remember(messageToEdit) {
+            val msg = messageToEdit!!
+            if (msg.type in listOf(MessageType.IMAGE, MessageType.VIDEO)) {
+                val stripped = msg.content
+                    .removePrefix("🖼️ ")
+                    .removePrefix("🎬 ")
+                    .trim()
+                // If content looks like an auto-generated file name, show empty for editing
+                if (stripped.startsWith("media_") || stripped.startsWith("edited_")) "" else stripped
+            } else {
+                msg.content
+            }
+        }
         EditMessageDialog(
-            originalMessage = messageToEdit!!.content,
+            originalMessage = editableContent,
             onConfirm = { newContent ->
                 viewModel.editMessage(messageToEdit!!.id, newContent)
                 Toast.makeText(context, "پیام ویرایش شد", Toast.LENGTH_SHORT).show()
@@ -299,13 +365,15 @@ fun ConversationScreen(
                 val isFromMe = selectedMsgForOverlay.senderId == state.currentUserId
                 ChatBubble(
                     message = selectedMsgForOverlay.content,
-                    time = selectedMsgForOverlay.createdAt.atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm")),
+                    time = selectedMsgForOverlay.createdAt.atZone(ZoneId.systemDefault()).format(MESSAGE_TIME_FORMATTER),
                     isMyMessage = isFromMe,
                     status = selectedMsgForOverlay.status,
                     position = BubblePosition.SINGLE,
                     reactions = selectedMsgForOverlay.reactions,
                     myReaction = selectedMsgForOverlay.myReaction,
-                    replyToMessage = selectedMsgForOverlay.replyToMessage
+                    replyToMessage = selectedMsgForOverlay.replyToMessage,
+                    isPinned = selectedMsgForOverlay.isPinned,
+                    forwardedFrom = selectedMsgForOverlay.forwardedFrom
                 )
             }
         },
@@ -331,18 +399,59 @@ fun ConversationScreen(
             }
         }} else null,
         onDeleteClick = if (selectedMsgForOverlay?.senderId == state.currentUserId) {{ deleteForEveryone ->
-            selectedMsgForOverlay?.let { viewModel.deleteMessage(it.id) }
+            selectedMsgForOverlay?.let { viewModel.deleteMessage(it.id, deleteForEveryone) }
         }} else null,
         onSelectClick = {
             selectedMsgForOverlay?.let { viewModel.toggleMessageSelection(it.id) }
         },
+        onPinClick = {
+            selectedMsgForOverlay?.let {
+                viewModel.pinMessage(it.id, !it.isPinned)
+                Toast.makeText(
+                    context,
+                    if (it.isPinned) "پین برداشته شد" else "پیام سنجاق شد",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        },
+        onForwardClick = {
+            selectedMsgForOverlay?.let {
+                onNavigateToForward(it.id, "CHAT", chatId)
+                messageForActions = null
+            }
+        },
         onLockContentClick = {
             Toast.makeText(context, "به زودی!", Toast.LENGTH_SHORT).show()
-        }
+        },
+        onEditScheduleClick = if (selectedMsgForOverlay?.status == com.Kelasor.app.domain.model.MessageStatus.SCHEDULED) {{
+            selectedMsgForOverlay?.let {
+                messageToReschedule = it
+                showScheduleEditDialog = true
+            }
+        }} else null
     )
+
+    // Schedule edit dialog for rescheduling a message
+    if (showScheduleEditDialog && messageToReschedule != null) {
+        com.Kelasor.app.ui.components.SchedulePickerDialog(
+            onDismiss = {
+                showScheduleEditDialog = false
+                messageToReschedule = null
+            },
+            onSchedule = { newTimeMs ->
+                messageToReschedule?.let { msg ->
+                    val iso = java.time.Instant.ofEpochMilli(newTimeMs).toString()
+                    viewModel.updateScheduledTime(msg.id, iso)
+                }
+                showScheduleEditDialog = false
+                messageToReschedule = null
+            }
+        )
+    }
 
     // Removing hardcoded RTL provider
     // CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -355,6 +464,7 @@ fun ConversationScreen(
                         )
                     )
                 )
+                .navigationBarsPadding()
                 .imePadding()
         ) {
             // Top App Bar or Selection Bar
@@ -389,19 +499,33 @@ fun ConversationScreen(
                  Column(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)) {
                     androidx.compose.material3.TopAppBar(
                         title = {
-                            androidx.compose.material3.TextField(
-                                value = searchQuery,
-                                onValueChange = { searchQuery = it },
-                                placeholder = { Text("جستجو...", style = MaterialTheme.typography.bodyLarge) },
-                                modifier = Modifier.fillMaxWidth(),
-                                singleLine = true,
-                                colors = androidx.compose.material3.TextFieldDefaults.colors(
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent,
-                                    focusedIndicatorColor = Color.Transparent,
-                                    unfocusedIndicatorColor = Color.Transparent
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(40.dp),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                androidx.compose.foundation.text.BasicTextField(
+                                    value = searchQuery,
+                                    onValueChange = { searchQuery = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true,
+                                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    ),
+                                    decorationBox = { innerTextField ->
+                                        if (searchQuery.isEmpty()) {
+                                            Text(
+                                                "جستجو...",
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        innerTextField()
+                                    }
                                 )
-                            )
+                            }
                         },
                         navigationIcon = {
                             IconButton(onClick = { 
@@ -573,9 +697,37 @@ fun ConversationScreen(
                     )
                 )
             }
+            // Pinned message banner
+            val pinnedMessage = remember(state.messages) {
+                state.messages.filter { it.isPinned }.maxByOrNull { it.pinnedAt ?: java.time.Instant.EPOCH }
+            }
+            if (pinnedMessage != null) {
+                PinnedMessageBanner(
+                    content = pinnedMessage.content,
+                    senderName = pinnedMessage.senderName,
+                    messageType = pinnedMessage.type,
+                    onClick = {
+                        val index = filteredMessages.indexOfFirst { it.id == pinnedMessage.id }
+                        if (index != -1) {
+                            scope.launch {
+                                listState.animateScrollToItem(index)
+                                highlightedMessageId = pinnedMessage.id
+                            }
+                        }
+                    },
+                    onUnpin = {
+                        viewModel.pinMessage(pinnedMessage.id, false)
+                    }
+                )
+            }
             // Loading indicator
             Box(modifier = Modifier.weight(1f)) {
             // Messages list - Always present
+                val showScrollToFirstFab = remember {
+                    androidx.compose.runtime.derivedStateOf {
+                        listState.firstVisibleItemIndex > 5
+                    }
+                }
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
@@ -601,7 +753,7 @@ fun ConversationScreen(
                     items(
                         items = filteredMessages,
                         key = { it.id },
-                        contentType = { "message" }
+                        contentType = { it.type.name }
                     ) { message ->
                         val isFromMe = message.senderId == state.currentUserId
                         val isSelected = state.selectedMessageIds.contains(message.id)
@@ -613,10 +765,72 @@ fun ConversationScreen(
                         }
                         
                         // 🎬 iMessage-style animation wrapper
+                        val isScheduled = message.status == MessageStatus.SCHEDULED
+                        Column(
+                            modifier = if (isScheduled) Modifier.graphicsLayer(alpha = 0.55f) else Modifier
+                        ) {
+                        // Scheduled message label
+                        if (isScheduled) {
+                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 2.dp),
+                                horizontalArrangement = Arrangement.End,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                val scheduledTimeText = message.scheduledAt?.let { scheduledAt ->
+                                    try {
+                                        val zdt = scheduledAt.atZone(ZoneId.systemDefault())
+                                        val gy = zdt.year
+                                        val gm = zdt.monthValue
+                                        val gd = zdt.dayOfMonth
+                                        val gDaysInMonth = intArrayOf(0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334)
+                                        var gy2 = if (gm > 2) gy + 1 else gy
+                                        var days = 355666 + (365 * gy) + ((gy2 + 3) / 4) - ((gy2 + 99) / 100) + ((gy2 + 399) / 400) + gd + gDaysInMonth[gm - 1]
+                                        var jy = -1595 + (33 * (days / 12053))
+                                        days %= 12053
+                                        jy += 4 * (days / 1461)
+                                        days %= 1461
+                                        if (days > 365) {
+                                            jy += ((days - 1) / 365)
+                                            days = (days - 1) % 365
+                                        }
+                                        val jm: Int
+                                        val jd: Int
+                                        if (days < 186) {
+                                            jm = 1 + (days / 31)
+                                            jd = 1 + (days % 31)
+                                        } else {
+                                            jm = 7 + ((days - 186) / 30)
+                                            jd = 1 + ((days - 186) % 30)
+                                        }
+                                        val timeStr = zdt.format(MESSAGE_TIME_FORMATTER)
+                                        "$timeStr  $jy/${jm.toString().padStart(2, '0')}/${jd.toString().padStart(2, '0')}"
+                                    } catch (e: Exception) { "" }
+                                } ?: ""
+                                Text(
+                                    text = "⏱ \u0632\u0645\u0627\u0646\u200c\u0628\u0646\u062f\u06cc \u0634\u062f\u0647 $scheduledTimeText",
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
+                                    color = Color(0xFFFFA726)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    imageVector = Icons.Default.Schedule,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFFA726),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                            }
+                        }
                         AnimatedMessageBubble(
                             isMyMessage = isFromMe,
                             messageId = message.id
                         ) {
+                            SwipeToReply(
+                                onSwipeReply = { viewModel.setReplyMessage(message) }
+                            ) {
                             // Wrap bubble with selection logic
                             Box(
                                 modifier = Modifier
@@ -636,11 +850,14 @@ fun ConversationScreen(
                                         }
                                     )
                                     .background(
-                                        if (isSelected) extendedColors.accent.copy(alpha = 0.1f)
-                                        else Color.Transparent
+                                        when {
+                                            isSelected -> extendedColors.accent.copy(alpha = 0.1f)
+                                            message.id == highlightedMessageId -> extendedColors.accent.copy(alpha = 0.3f)
+                                            else -> Color.Transparent
+                                        }
                                     )
                                     .padding(horizontal = 4.dp, vertical = 4.dp),
-                                contentAlignment = if (isFromMe) Alignment.CenterEnd else Alignment.CenterStart
+                                contentAlignment = if (isFromMe) AbsoluteAlignment.CenterRight else AbsoluteAlignment.CenterLeft
                             ) {
                             // Render based on message type
                             when {
@@ -669,36 +886,66 @@ fun ConversationScreen(
                                         isMyMessage = isFromMe,
                                         audioPlayerManager = viewModel.audioPlayerManager,
                                         amplitudes = message.amplitudes,
+                                        time = message.createdAt.atZone(ZoneId.systemDefault()).format(MESSAGE_TIME_FORMATTER),
+                                        status = message.status,
                                         modifier = Modifier.padding(horizontal = 8.dp)
                                     )
                                 }
                                 
                                 // Image message
                                 message.type == MessageType.IMAGE && message.mediaUrl != null -> {
+                                    val imageCaption = message.content
+                                        .removePrefix("🖼️ ")
+                                        .trim()
+                                        .let { if (it.startsWith("media_") || it.startsWith("edited_") || it.matches(Regex(".*\\.(jpg|jpeg|png|gif|webp|mp4|mov|avi|mkv|bmp|svg|heic|heif|3gp|webm)$", RegexOption.IGNORE_CASE))) null else it }
                                     ImageMessageBubble(
                                         mediaUrl = message.mediaUrl!!,
                                         isVideo = false,
                                         isMyMessage = isFromMe,
-                                        time = message.createdAt.atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm")),
+                                        time = message.createdAt.atZone(ZoneId.systemDefault()).format(MESSAGE_TIME_FORMATTER),
                                         onPreviewClick = { url, type ->
                                             mediaPreviewUrl = url
                                             mediaPreviewType = type
                                         },
+                                        caption = imageCaption,
+                                        status = message.status,
                                         modifier = Modifier.padding(horizontal = 8.dp)
                                     )
                                 }
                                 
                                 // Video message
                                 message.type == MessageType.VIDEO && message.mediaUrl != null -> {
+                                    val videoCaption = message.content
+                                        .removePrefix("🎬 ")
+                                        .trim()
+                                        .let { if (it.startsWith("media_") || it.startsWith("edited_") || it.matches(Regex(".*\\.(jpg|jpeg|png|gif|webp|mp4|mov|avi|mkv|bmp|svg|heic|heif|3gp|webm)$", RegexOption.IGNORE_CASE))) null else it }
                                     ImageMessageBubble(
                                         mediaUrl = message.mediaUrl!!,
                                         isVideo = true,
                                         isMyMessage = isFromMe,
-                                        time = message.createdAt.atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm")),
+                                        time = message.createdAt.atZone(ZoneId.systemDefault()).format(MESSAGE_TIME_FORMATTER),
                                         onPreviewClick = { url, type ->
                                             mediaPreviewUrl = url
                                             mediaPreviewType = type
                                         },
+                                        caption = videoCaption,
+                                        status = message.status,
+                                        modifier = Modifier.padding(horizontal = 8.dp)
+                                    )
+                                }
+                                
+                                // Video note (circular video)
+                                message.type == MessageType.VIDEO_NOTE && message.mediaUrl != null -> {
+                                    val durationText = message.content
+                                        .substringAfter("(", "")
+                                        .substringBefore("s)", "")
+                                        .let { if (it.isNotBlank()) "${it}s" else null }
+                                    VideoNoteBubble(
+                                        mediaUrl = message.mediaUrl!!,
+                                        isMyMessage = isFromMe,
+                                        time = message.createdAt.atZone(ZoneId.systemDefault()).format(MESSAGE_TIME_FORMATTER),
+                                        durationText = durationText,
+                                        status = message.status,
                                         modifier = Modifier.padding(horizontal = 8.dp)
                                     )
                                 }
@@ -713,6 +960,8 @@ fun ConversationScreen(
                                         durationMs = 0L, // Duration will be fetched from player
                                         isMyMessage = isFromMe,
                                         audioPlayerManager = viewModel.audioPlayerManager,
+                                        time = message.createdAt.atZone(ZoneId.systemDefault()).format(MESSAGE_TIME_FORMATTER),
+                                        status = message.status,
                                         modifier = Modifier.padding(horizontal = 8.dp)
                                     )
                                 }
@@ -728,7 +977,8 @@ fun ConversationScreen(
                                             latitude = lat,
                                             longitude = lng,
                                             isMyMessage = isFromMe,
-                                            time = message.createdAt.atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm")),
+                                            time = message.createdAt.atZone(ZoneId.systemDefault()).format(MESSAGE_TIME_FORMATTER),
+                                            status = message.status,
                                             modifier = Modifier.padding(horizontal = 8.dp)
                                         )
                                     }
@@ -746,6 +996,8 @@ fun ConversationScreen(
                                         mediaUrl = message.mediaUrl!!,
                                         fileName = fileName,
                                         isMyMessage = isFromMe,
+                                        time = message.createdAt.atZone(ZoneId.systemDefault()).format(MESSAGE_TIME_FORMATTER),
+                                        status = message.status,
                                         modifier = Modifier.padding(horizontal = 8.dp)
                                     )
                                 }
@@ -754,7 +1006,7 @@ fun ConversationScreen(
                                 else -> {
                                     ChatBubble(
                                         message = message.content,
-                                        time = message.createdAt.atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm")),
+                                        time = message.createdAt.atZone(ZoneId.systemDefault()).format(MESSAGE_TIME_FORMATTER),
                                         isMyMessage = isFromMe,
                                         status = message.status,
                                         position = BubblePosition.SINGLE,
@@ -762,6 +1014,9 @@ fun ConversationScreen(
                                         reactions = message.reactions,
                                         myReaction = message.myReaction,
                                         replyToMessage = message.replyToMessage,
+                                        isEdited = message.isEdited,
+                                        isPinned = message.isPinned,
+                                        forwardedFrom = message.forwardedFrom,
                                         onReactionClick = { emoji ->
                                             viewModel.reactToMessage(message.id, emoji)
                                         },
@@ -784,6 +1039,8 @@ fun ConversationScreen(
                                 }
                             }
                         }
+                        }
+                        } // end Column(alpha wrapper)
                         }
                     }
                     // Date separator
@@ -809,6 +1066,32 @@ fun ConversationScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                    }
+                }
+                // Scroll to latest message FAB
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = showScrollToFirstFab.value,
+                    modifier = Modifier
+                        .align(AbsoluteAlignment.BottomRight)
+                        .padding(16.dp),
+                    enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.scaleIn(),
+                    exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.scaleOut()
+                ) {
+                    FloatingActionButton(
+                        onClick = {
+                            scope.launch {
+                                listState.animateScrollToItem(0)
+                            }
+                        },
+                        containerColor = extendedColors.accent,
+                        contentColor = Color.White,
+                        modifier = Modifier.size(42.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.KeyboardArrowDown,
+                            contentDescription = "آخرین پیام",
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 }
             }
@@ -863,31 +1146,88 @@ fun ConversationScreen(
             }
             
             // Reply Indicator
-            state.replyToMessage?.let { replyMsg ->
+            state.replyToMessage?.let { replyMsg: Message ->
                 ReplyIndicator(
                     message = replyMsg,
                     onCancel = { viewModel.setReplyMessage(null) }
                 )
             }
 
-            // Input bar
-            MessageInputBar(
-                text = messageText,
-                onTextChange = { messageText = it },
-                onSendClick = {
-                    if (messageText.isNotBlank()) {
-                        viewModel.sendMessage(messageText)
-                        messageText = ""
-                    } else {
-                        Toast.makeText(context, context.getString(com.Kelasor.app.R.string.enter_message_error), Toast.LENGTH_SHORT).show()
+            // Input bar or Multi-Select Action Panel
+            if (state.selectedMessageIds.isNotEmpty()) {
+                com.Kelasor.app.ui.components.MultiSelectActionPanel(
+                    selectedCount = state.selectedMessageIds.size,
+                    onForwardClick = {
+                        if (state.selectedMessageIds.isNotEmpty()) {
+                            val ids = state.selectedMessageIds.joinToString(",")
+                            onNavigateToForward(ids, "CHAT", chatId)
+                        }
+                        viewModel.clearSelection()
+                    },
+                    onReplyClick = if (state.selectedMessageIds.size == 1) {{
+                        val messageId = state.selectedMessageIds.first()
+                        val message = messages.find { it.id == messageId }
+                        if (message != null) {
+                            viewModel.setReplyMessage(message)
+                        }
+                        viewModel.clearSelection()
+                    }} else null,
+                    onCopyClick = {
+                        val selectedText = messages.filter { it.id in state.selectedMessageIds }
+                            .joinToString("\n") { it.content }
+                        clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(selectedText))
+                        viewModel.clearSelection()
+                        Toast.makeText(context, "کپی شد", Toast.LENGTH_SHORT).show()
+                    },
+                    onDeleteClick = {
+                        viewModel.deleteSelectedMessages(true)
+                        Toast.makeText(context, "پیام حذف شد", Toast.LENGTH_SHORT).show()
+                    },
+                    onPinClick = if (state.selectedMessageIds.size == 1) {{
+                        val messageId = state.selectedMessageIds.first()
+                        val message = messages.find { it.id == messageId }
+                        if (message != null) {
+                            viewModel.pinMessage(messageId, !message.isPinned)
+                            Toast.makeText(
+                                context,
+                                if (message.isPinned) "پین برداشته شد" else "پیام سنجاق شد",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        viewModel.clearSelection()
+                    }} else null
+                )
+            } else {
+                MessageInputBar(
+                    text = messageText,
+                    onTextChange = { messageText = it },
+                    onSendClick = {
+                        if (messageText.isNotBlank()) {
+                            viewModel.sendMessage(messageText)
+                            messageText = ""
+                        } else {
+                            Toast.makeText(context, context.getString(com.Kelasor.app.R.string.enter_message_error), Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    onAttachClick = { showAttachmentMenu = true },
+                    voiceRecorderManager = viewModel.voiceRecorderManager,
+                    onVoiceRecorded = { file, duration, amplitudes ->
+                        viewModel.sendVoiceMessage(file, duration, amplitudes)
+                    },
+                    onScheduleSendClick = { timestampMs ->
+                        if (messageText.isNotBlank()) {
+                            val instant = java.time.Instant.ofEpochMilli(timestampMs)
+                            val isoTime = instant.toString()
+                            viewModel.scheduleMessage(messageText, isoTime)
+                            messageText = ""
+                            Toast.makeText(context, "پیام زمان‌بندی شد", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    onVideoNoteClick = {
+                        showVideoNoteRecorder = true
                     }
-                },
-                onAttachClick = { showAttachmentMenu = true },
-                voiceRecorderManager = viewModel.voiceRecorderManager,
-                onVoiceRecorded = { file, duration, amplitudes ->
-                    viewModel.sendVoiceMessage(file, duration, amplitudes)
-                }
-            )
+                )
+            }
         }
         
         // Attachment Menu overlay
@@ -931,8 +1271,50 @@ fun ConversationScreen(
                 }
             )
         }
-    // }
-}
+
+        // Circular Video Note Recorder Overlay
+        if (showVideoNoteRecorder) {
+            CircularVideoRecorder(
+                videoNoteRecorderManager = viewModel.videoNoteRecorderManager,
+                onRecordComplete = {
+                    showVideoNoteRecorder = false
+                    val info = viewModel.videoNoteRecorderManager.recordingInfo.value
+                    if (info.state == VideoNoteRecordingState.COMPLETED && info.filePath != null) {
+                        viewModel.sendVideoNote(
+                            java.io.File(info.filePath!!),
+                            info.durationMs
+                        )
+                        viewModel.videoNoteRecorderManager.reset()
+                    }
+                },
+                onCancel = {
+                    showVideoNoteRecorder = false
+                    viewModel.videoNoteRecorderManager.reset()
+                }
+            )
+        }
+
+        // Forward dialog removed — navigation to ForwardTargetScreen handles this now
+
+    }
+
+    // ── Media Editor Overlay (outside Column, covers full screen) ──
+    pendingMediaUri?.let { uri ->
+        MediaEditScreen(
+            mediaUri = uri,
+            isVideo = pendingMediaIsVideo,
+            onSend = { editedUri, captionText ->
+                viewModel.uploadAndSendMedia(
+                    chatId, editedUri, context,
+                    isVideo = pendingMediaIsVideo,
+                    caption = captionText.ifBlank { null }
+                )
+                pendingMediaUri = null
+            },
+            onDismiss = { pendingMediaUri = null }
+        )
+    }
+    } // end Box
 
 @Composable
 fun ReplyIndicator(

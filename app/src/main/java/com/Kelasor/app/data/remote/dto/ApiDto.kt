@@ -149,7 +149,10 @@ data class MessageDto(
     val reactions: Map<String, Int> = emptyMap(),
     val myReaction: String? = null,
     val poll: PollDto? = null,
-    val amplitudes: List<Int>? = null
+    val amplitudes: List<Int>? = null,
+    val isPinned: Boolean = false,
+    val pinnedAt: String? = null,
+    val scheduledAt: String? = null
 )
 
 data class MessageListResponse(
@@ -253,13 +256,17 @@ data class GroupMessageDto(
     val status: String? = "SENT",
     val replyToMessageId: String? = null,
     val replyToMessage: GroupMessageDto? = null,
+    val forwardedFrom: String? = null,
     val isEdited: Boolean = false,
     val createdAt: String? = null,
     val editedAt: String? = null,
     val reactions: Map<String, Int> = emptyMap(),
     val myReaction: String? = null,
     val poll: PollDto? = null,
-    val amplitudes: List<Int>? = null
+    val amplitudes: List<Int>? = null,
+    val isPinned: Boolean = false,
+    val pinnedAt: String? = null,
+    val scheduledAt: String? = null
 )
 
 data class GroupMessageListResponse(
@@ -344,7 +351,13 @@ data class ChannelPostDto(
     val editedAt: String? = null,
     val reactions: Map<String, Int> = emptyMap(),
     val poll: PollDto? = null,
-    val amplitudes: List<Int>? = null
+    val amplitudes: List<Int>? = null,
+    val myReaction: String? = null,
+    val isPinned: Boolean = false,
+    val pinnedAt: String? = null,
+    val scheduledAt: String? = null,
+    val forwardedFrom: String? = null,
+    val isEdited: Boolean = false
 )
 
 data class PostListResponse(
@@ -673,4 +686,40 @@ data class UniversityDto(
     val longitude: Double = 0.0,
     val imageUrl: String? = null,
     val websiteUrl: String? = null
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📌 Pin / Forward / Schedule DTOs
+// ═══════════════════════════════════════════════════════════════════════════════
+
+data class PinMessageRequest(
+    val isPinned: Boolean
+)
+
+data class ForwardMessageRequest(
+    val messageIds: List<String>,
+    val targetChatId: String? = null,
+    val targetGroupId: String? = null,
+    val targetChannelId: String? = null,
+    val targetType: String // "CHAT", "GROUP", "CHANNEL"
+)
+
+data class ScheduleMessageRequest(
+    val content: String,
+    val type: String = "TEXT",
+    val mediaUrl: String? = null,
+    val scheduledAt: String
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🆔 Username DTOs
+// ═══════════════════════════════════════════════════════════════════════════════
+
+data class SetUsernameRequest(
+    val username: String
+)
+
+data class UsernameAvailabilityResponse(
+    val isAvailable: Boolean,
+    val message: String? = null
 )

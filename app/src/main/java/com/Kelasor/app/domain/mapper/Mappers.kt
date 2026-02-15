@@ -169,6 +169,7 @@ fun ChatDto.toEntity(): ChatEntity = ChatEntity(
     lastMessageId = lastMessage?.id,
     lastMessage = lastMessage?.content,
     lastMessageTime = lastMessage?.createdAt?.let { parseInstant(it)?.toEpochMilli() },
+    isLastMessageEdited = lastMessage?.isEdited ?: false,
     unreadCount = unreadCount,
     isPinned = isPinned,
     isMuted = isMuted,
@@ -192,7 +193,7 @@ fun ChatEntity.toDomain(participants: List<User> = emptyList()): Chat {
             replyToMessage = null,
             forwardedFrom = null,
             status = MessageStatus.DELIVERED,
-            isEdited = false,
+            isEdited = isLastMessageEdited,
             createdAt = Instant.ofEpochMilli(lastMessageTime),
             editedAt = null
         )
@@ -233,14 +234,17 @@ fun MessageDto.toDomain(): Message = Message(
     replyToMessageId = replyToMessageId,
     replyToMessage = replyToMessage?.toDomain(),
     forwardedFrom = forwardedFrom,
-    status = MessageStatus.valueOf(status),
+    status = try { MessageStatus.valueOf(status) } catch (e: Exception) { MessageStatus.SENT },
     isEdited = isEdited,
     createdAt = parseInstant(createdAt) ?: Instant.now(),
     editedAt = editedAt?.let { parseInstant(it) },
     reactions = reactions,
     myReaction = myReaction,
     poll = poll?.toDomain(),
-    amplitudes = amplitudes
+    amplitudes = amplitudes,
+    isPinned = isPinned,
+    pinnedAt = pinnedAt?.let { parseInstant(it) },
+    scheduledAt = scheduledAt?.let { parseInstant(it) }
 )
 
 fun MessageDto.toEntity(): MessageEntity = MessageEntity(
@@ -262,7 +266,10 @@ fun MessageDto.toEntity(): MessageEntity = MessageEntity(
     isSynced = true,
     reactions = com.google.gson.Gson().toJson(reactions),
     myReaction = myReaction,
-    amplitudes = amplitudes?.joinToString(",")
+    amplitudes = amplitudes?.joinToString(","),
+    isPinned = isPinned,
+    pinnedAt = pinnedAt?.let { parseInstant(it)?.toEpochMilli() },
+    scheduledAt = scheduledAt?.let { parseInstant(it)?.toEpochMilli() }
 )
 
 fun MessageEntity.toDomain(): Message = Message(
@@ -308,7 +315,10 @@ fun MessageEntity.toDomain(): Message = Message(
         } catch (e: Exception) { emptyMap() }
     } else emptyMap(),
     myReaction = myReaction,
-    amplitudes = amplitudes?.split(",")?.mapNotNull { it.toIntOrNull() }
+    amplitudes = amplitudes?.split(",")?.mapNotNull { it.toIntOrNull() },
+    isPinned = isPinned,
+    pinnedAt = pinnedAt?.let { Instant.ofEpochMilli(it) },
+    scheduledAt = scheduledAt?.let { Instant.ofEpochMilli(it) }
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -352,6 +362,7 @@ fun GroupDto.toEntity(): GroupEntity = GroupEntity(
     myRole = myRole,
     lastMessageContent = lastMessage?.content,
     lastMessageTime = lastMessage?.createdAt?.let { parseInstant(it)?.toEpochMilli() },
+    isLastMessageEdited = lastMessage?.isEdited ?: false,
     unreadCount = unreadCount,
 
     createdAt = parseInstant(createdAt)?.toEpochMilli() ?: System.currentTimeMillis(),
@@ -375,7 +386,7 @@ fun GroupEntity.toDomain(): Group {
             replyToMessage = null,
             forwardedFrom = null,
             status = MessageStatus.DELIVERED,
-            isEdited = false,
+            isEdited = isLastMessageEdited,
             createdAt = Instant.ofEpochMilli(lastMessageTime),
             editedAt = null
         )
@@ -427,7 +438,7 @@ fun GroupMessageDto.toDomain(): Message = Message(
     mediaUrl = mediaUrl,
     replyToMessageId = replyToMessageId,
     replyToMessage = replyToMessage?.toDomain(),
-    forwardedFrom = null,
+    forwardedFrom = forwardedFrom,
     status = try { MessageStatus.valueOf(status ?: "SENT") } catch (e: Exception) { MessageStatus.SENT },
     isEdited = isEdited,
     createdAt = parseInstant(createdAt) ?: Instant.now(),
@@ -435,7 +446,10 @@ fun GroupMessageDto.toDomain(): Message = Message(
     reactions = reactions,
     myReaction = myReaction,
     poll = poll?.toDomain(),
-    amplitudes = amplitudes
+    amplitudes = amplitudes,
+    isPinned = isPinned,
+    pinnedAt = pinnedAt?.let { parseInstant(it) },
+    scheduledAt = scheduledAt?.let { parseInstant(it) }
 )
 
 fun GroupMessageDto.toEntity(): GroupMessageEntity = GroupMessageEntity(
@@ -533,6 +547,7 @@ fun ChannelDto.toEntity(): ChannelEntity = ChannelEntity(
     isAdmin = isAdmin,
     lastPostContent = lastPost?.content,
     lastPostTime = lastPost?.createdAt?.let { parseInstant(it)?.toEpochMilli() },
+    isLastPostEdited = lastPost?.isEdited ?: false,
     unreadCount = unreadCount,
 
     createdAt = parseInstant(createdAt)?.toEpochMilli() ?: System.currentTimeMillis(),
@@ -554,7 +569,8 @@ fun ChannelEntity.toDomain(): Channel {
             commentsEnabled = true,
             commentCount = 0,
             createdAt = Instant.ofEpochMilli(lastPostTime),
-            editedAt = null
+            editedAt = null,
+            isEdited = isLastPostEdited
         )
     } else null
     
@@ -607,7 +623,13 @@ fun ChannelPostDto.toDomain(): ChannelPost = ChannelPost(
     createdAt = parseInstant(createdAt) ?: Instant.now(),
     editedAt = editedAt?.let { parseInstant(it) },
     poll = poll?.toDomain(),
-    amplitudes = amplitudes
+    amplitudes = amplitudes,
+    myReaction = myReaction,
+    isPinned = isPinned,
+    pinnedAt = pinnedAt?.let { parseInstant(it) },
+    scheduledAt = scheduledAt?.let { parseInstant(it) },
+    forwardedFrom = forwardedFrom,
+    isEdited = isEdited
 )
 
 fun ChannelPostDto.toEntity(): ChannelPostEntity = ChannelPostEntity(
@@ -622,7 +644,13 @@ fun ChannelPostDto.toEntity(): ChannelPostEntity = ChannelPostEntity(
     editedAt = editedAt?.let { parseInstant(it)?.toEpochMilli() },
     poll = if (poll != null) com.google.gson.Gson().toJson(poll) else null,
     reactions = if (reactions.isNotEmpty()) com.google.gson.Gson().toJson(reactions) else null,
-    amplitudes = amplitudes?.joinToString(",")
+    amplitudes = amplitudes?.joinToString(","),
+    isPinned = isPinned,
+    pinnedAt = pinnedAt?.let { parseInstant(it)?.toEpochMilli() },
+    scheduledAt = scheduledAt?.let { parseInstant(it)?.toEpochMilli() },
+    forwardedFrom = forwardedFrom,
+    isEdited = isEdited,
+    myReaction = myReaction
 )
 
 fun ChannelPostEntity.toDomain(): ChannelPost = ChannelPost(
@@ -647,7 +675,13 @@ fun ChannelPostEntity.toDomain(): ChannelPost = ChannelPost(
              com.google.gson.Gson().fromJson(poll, com.Kelasor.app.data.remote.dto.PollDto::class.java)?.toDomain()
         } catch (e: Exception) { null }
     } else null,
-    amplitudes = amplitudes?.split(",")?.mapNotNull { it.toIntOrNull() }
+    amplitudes = amplitudes?.split(",")?.mapNotNull { it.toIntOrNull() },
+    myReaction = myReaction,
+    isPinned = isPinned,
+    pinnedAt = pinnedAt?.let { Instant.ofEpochMilli(it) },
+    scheduledAt = scheduledAt?.let { Instant.ofEpochMilli(it) },
+    forwardedFrom = forwardedFrom,
+    isEdited = isEdited
 )
 
 fun ChannelSubscriberDto.toDomain(): ChannelSubscriber = ChannelSubscriber(
@@ -674,7 +708,7 @@ fun ChannelSubscriberEntity.toDomain(user: User): ChannelSubscriber = ChannelSub
 // 🔧 Helper Functions
 // ═══════════════════════════════════════════════════════════════════════════════
 
-private fun parseInstant(dateString: String?): Instant? {
+internal fun parseInstant(dateString: String?): Instant? {
     if (dateString == null) return null
     return try {
         Instant.parse(dateString)

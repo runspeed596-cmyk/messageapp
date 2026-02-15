@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.LayoutDirection
@@ -100,6 +101,7 @@ fun BottomNavBar(
     modifier: Modifier = Modifier
 ) {
     val extendedColors = MessageAppTheme.extendedColors
+    val context = androidx.compose.ui.platform.LocalContext.current
     
     // Items in Visual Left-to-Right order: Bazaar, Elm, Home, Messaging, Treasure
     val items = listOf(
@@ -115,7 +117,7 @@ fun BottomNavBar(
         Box(
             modifier = modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 24.dp) // Wider floating margin
+                .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 12.dp) // Adjusted floating margin
                 .height(72.dp) // Fixed height space for sleeker look
         ) {
             // Liquid Glass / Dark Gradient Background
@@ -178,6 +180,11 @@ fun BottomNavBar(
                             item = item,
                             isSelected = selected,
                             onClick = { 
+                                // Intercept Elm tab — show "under development" toast
+                                if (item is BottomNavItem.Elm) {
+                                    android.widget.Toast.makeText(context, "در حال توسعه", android.widget.Toast.LENGTH_SHORT).show()
+                                    return@AnimatedBottomNavItem
+                                }
                                 // Direct click handling
                                 if (item is BottomNavItem.Messaging && !selected) {
                                      onItemClick(Routes.Messaging.route)
@@ -203,14 +210,30 @@ fun AnimatedBottomNavItem(
 ) {
     val extendedColors = MessageAppTheme.extendedColors
     val interactionSource = remember { MutableInteractionSource() }
-
-    // Animations (Fixed Scale)
+    // Enhanced scale with bouncy spring
     val scale by animateFloatAsState(
-        targetValue = if (isSelected) 1.1f else 1f, 
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        targetValue = if (isSelected) 1.12f else 1f,
+        animationSpec = spring(
+            dampingRatio = 0.5f,
+            stiffness = Spring.StiffnessMediumLow
+        ),
         label = "scale"
     )
-    
+    // Subtle rotation on selection
+    val rotation by animateFloatAsState(
+        targetValue = if (isSelected) 0f else 0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "rotation"
+    )
+    // Badge pop-in
+    val badgeScale by animateFloatAsState(
+        targetValue = if (item.badgeCount > 0) 1f else 0f,
+        animationSpec = spring(
+            dampingRatio = 0.4f,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "badge_scale"
+    )
     // Using Theme colors
     val indicatorColor = when (item) {
         is BottomNavItem.Messaging -> Color(0xFF00897B) // Teal/Green
@@ -218,28 +241,31 @@ fun AnimatedBottomNavItem(
         is BottomNavItem.Treasure -> Color(0xFF8E24AA)  // Purple
         else -> extendedColors.accent                   // Default Gold/Accent
     }
-    val iconSelectedColor = Color.White 
+    val iconSelectedColor = Color.White
     val iconUnselectedColor = extendedColors.navItemInactive
-    
     Box(
         modifier = modifier
             .fillMaxHeight()
             .clickable(
-                interactionSource = interactionSource, 
-                indication = null, 
+                interactionSource = interactionSource,
+                indication = null,
                 onClick = onClick
             ),
         contentAlignment = Alignment.Center
     ) {
-         // Active Indicator - Solid Squircle
+         // Active Indicator - Solid Squircle with spring animation
          androidx.compose.animation.AnimatedVisibility(
             visible = isSelected,
-            enter = scaleIn() + fadeIn(),
-            exit = scaleOut() + fadeOut()
+            enter = scaleIn(
+                animationSpec = spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow)
+            ) + fadeIn(animationSpec = androidx.compose.animation.core.tween(150)),
+            exit = scaleOut(
+                animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow)
+            ) + fadeOut(animationSpec = androidx.compose.animation.core.tween(120))
         ) {
             Box(
                 modifier = Modifier
-                    .size(52.dp) 
+                    .size(52.dp)
                     .background(
                         color = indicatorColor,
                         shape = RoundedCornerShape(18.dp)
@@ -247,10 +273,15 @@ fun AnimatedBottomNavItem(
                     .shadow(8.dp, RoundedCornerShape(18.dp), spotColor = indicatorColor)
             )
         }
-
         // Icon with Painter
         Box(
-            modifier = Modifier.scale(scale)
+            modifier = Modifier
+                .scale(scale)
+                .then(
+                    Modifier.graphicsLayer {
+                        rotationZ = rotation
+                    }
+                )
         ) {
             Icon(
                 painter = painterResource(if (isSelected) item.selectedIcon else item.unselectedIcon),
@@ -258,14 +289,20 @@ fun AnimatedBottomNavItem(
                 tint = if(isSelected) iconSelectedColor else iconUnselectedColor,
                 modifier = Modifier.size(28.dp)
             )
-            
             if (item.badgeCount > 0) {
-                 UnreadBadge(
-                    count = item.badgeCount,
+                Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .offset(x = 8.dp, y = (-8).dp)
-                )
+                        .graphicsLayer {
+                            scaleX = badgeScale
+                            scaleY = badgeScale
+                        }
+                ) {
+                    UnreadBadge(
+                        count = item.badgeCount
+                    )
+                }
             }
         }
     }

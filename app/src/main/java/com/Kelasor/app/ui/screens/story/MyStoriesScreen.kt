@@ -89,15 +89,6 @@ fun MyStoriesScreen(
                     titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { showAddOptionsSheet = true },
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("استوری جدید") },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            )
         }
     ) { padding ->
         Box(
@@ -141,9 +132,7 @@ fun MyStoriesScreen(
                                 )
                             },
                             supportingContent = {
-                                val formatter = DateTimeFormatter.ofPattern("HH:mm - dd MMM")
-                                    .withZone(ZoneId.systemDefault())
-                                Text(formatter.format(story.createdAt))
+                                Text(com.Kelasor.app.ui.util.PersianDateUtil.formatShamsi(story.createdAt))
                             },
                             leadingContent = {
                                 if (story.type == StoryType.VIDEO) {
@@ -246,21 +235,29 @@ fun MyStoriesScreen(
                 }
             }
 
-            // Story Viewer Overlay
+            // Story Viewer Overlay — fullscreen Dialog
             val selectedStoryUser by viewModel.selectedStoryUser.collectAsState()
             
             if (selectedStoryUser != null && selectedStoryUser?.isCurrentUser == true) {
-                com.Kelasor.app.ui.screens.story.StoryViewerScreen(
-                    viewModel = viewModel,
-                    storyUser = selectedStoryUser!!,
-                    initialStoryIndex = initialStoryIndex,
-                    onClose = { viewModel.closeStoryViewer() },
-                    onStoryViewed = { /* Already handled */ },
-                    onNavigateToProfile = { userId ->
-                        viewModel.closeStoryViewer()
-                        onNavigateToUserProfile(userId)
-                    }
-                )
+                androidx.compose.ui.window.Dialog(
+                    onDismissRequest = { viewModel.closeStoryViewer() },
+                    properties = androidx.compose.ui.window.DialogProperties(
+                        usePlatformDefaultWidth = false,
+                        decorFitsSystemWindows = false
+                    )
+                ) {
+                    StoryViewerScreen(
+                        viewModel = viewModel,
+                        storyUser = selectedStoryUser!!,
+                        initialStoryIndex = initialStoryIndex,
+                        onClose = { viewModel.closeStoryViewer() },
+                        onStoryViewed = { /* Already handled */ },
+                        onNavigateToProfile = { userId ->
+                            viewModel.closeStoryViewer()
+                            onNavigateToUserProfile(userId)
+                        }
+                    )
+                }
             }
         }
     }

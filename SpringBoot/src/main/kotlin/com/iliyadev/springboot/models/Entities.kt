@@ -1,6 +1,7 @@
 package com.iliyadev.springboot.models
 
 import jakarta.persistence.*
+import org.hibernate.annotations.BatchSize
 import java.time.Instant
 import java.util.UUID
 import com.fasterxml.jackson.annotation.JsonFormat
@@ -19,13 +20,16 @@ enum class MessageType {
     TEXT,
     IMAGE,
     VIDEO,
+    VIDEO_NOTE,  // Circular video message (like Telegram video notes)
     VOICE,
     AUDIO,  // Added to match Android client - for audio file attachments (not voice recordings)
     FILE,
     LOCATION,
     CONTACT,
     STICKER,
-    POLL
+    GIF,
+    POLL,
+    LINK
 }
 
 enum class MessageStatus {
@@ -33,7 +37,8 @@ enum class MessageStatus {
     SENT,
     DELIVERED,
     READ,
-    FAILED
+    FAILED,
+    SCHEDULED
 }
 
 enum class MemberRole {
@@ -179,12 +184,21 @@ class Message(
     var createdAt: Instant = Instant.now(),
     var editedAt: Instant? = null,
     @OneToMany(mappedBy = "message", cascade = [CascadeType.ALL], orphanRemoval = true)
+    @BatchSize(size = 50)
     var reactions: MutableList<MessageReaction> = mutableListOf(),
     @OneToOne(cascade = [CascadeType.ALL])
     @JoinColumn(name = "poll_id")
     var poll: Poll? = null,
     @ElementCollection
-    var amplitudes: MutableList<Int> = mutableListOf()
+    @BatchSize(size = 50)
+    var amplitudes: MutableList<Int> = mutableListOf(),
+    // Pin support
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    var isPinned: Boolean = false,
+    var pinnedAt: Instant? = null,
+    var pinnedById: UUID? = null,
+    // Scheduled messages
+    var scheduledAt: Instant? = null
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -269,16 +283,26 @@ class GroupMessage(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reply_to_id")
     var replyTo: GroupMessage? = null,
+    var forwardedFrom: String? = null,
     var isEdited: Boolean = false,
     var createdAt: Instant = Instant.now(),
     var editedAt: Instant? = null,
     @OneToMany(mappedBy = "message", cascade = [CascadeType.ALL], orphanRemoval = true)
+    @BatchSize(size = 50)
     var reactions: MutableList<GroupMessageReaction> = mutableListOf(),
     @OneToOne(cascade = [CascadeType.ALL])
     @JoinColumn(name = "poll_id")
     var poll: Poll? = null,
     @ElementCollection
-    var amplitudes: MutableList<Int> = mutableListOf()
+    @BatchSize(size = 50)
+    var amplitudes: MutableList<Int> = mutableListOf(),
+    // Pin support
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    var isPinned: Boolean = false,
+    var pinnedAt: Instant? = null,
+    var pinnedById: UUID? = null,
+    // Scheduled messages
+    var scheduledAt: Instant? = null
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -357,17 +381,27 @@ class ChannelPost(
     var mediaUrl: String? = null,
     var viewCount: Int = 0,
     var commentsEnabled: Boolean = true,
+    var forwardedFrom: String? = null,
     var createdAt: Instant = Instant.now(),
     var editedAt: Instant? = null,
     @OneToOne(cascade = [CascadeType.ALL])
     @JoinColumn(name = "poll_id")
     var poll: Poll? = null,
     @OneToMany(mappedBy = "post", cascade = [CascadeType.ALL], orphanRemoval = true)
+    @BatchSize(size = 50)
     var reactions: MutableList<ChannelPostReaction> = mutableListOf(),
     @OneToMany(mappedBy = "post", cascade = [CascadeType.ALL], orphanRemoval = true)
     var comments: MutableList<ChannelPostComment> = mutableListOf(),
     @ElementCollection
-    var amplitudes: MutableList<Int> = mutableListOf()
+    @BatchSize(size = 50)
+    var amplitudes: MutableList<Int> = mutableListOf(),
+    // Pin support
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    var isPinned: Boolean = false,
+    var pinnedAt: Instant? = null,
+    var pinnedById: UUID? = null,
+    // Scheduled messages
+    var scheduledAt: Instant? = null
 )
 
 @Entity
@@ -829,4 +863,25 @@ class RiddleOption(
     var riddle: EntertainmentRiddle? = null,
     var text: String = "",
     var displayOrder: Int = 0
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 💬 Story Reply Entity
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "story_replies")
+class StoryReply(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "story_id")
+    var story: Story? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    var user: User? = null,
+    @Column(length = 2000)
+    var content: String = "",
+    var createdAt: Instant = Instant.now()
 )

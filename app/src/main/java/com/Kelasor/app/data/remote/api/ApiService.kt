@@ -114,6 +114,15 @@ interface ApiService {
         @Path("id") id: String,
         @Body request: ReactionRequest
     ): Response<ApiResponse<Unit>>
+
+    @GET("api/chats/shared-content")
+    suspend fun getSharedContent(
+        @Query("targetId") targetId: String,
+        @Query("scope") scope: String, // USER, GROUP, CHANNEL
+        @Query("type") type: String,   // IMAGE, VIDEO, FILE, AUDIO, LINK, etc.
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 50
+    ): Response<ApiResponse<List<MessageDto>>> // Reusing MessageDto as it contains media info
     // ═══════════════════════════════════════════════════════════════════════════════
     // 👥 Group Endpoints
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -415,4 +424,84 @@ interface ApiService {
     suspend fun markAllNotificationsAsRead(): Response<ApiResponse<Int>>
     @GET("api/notifications/unread-count")
     suspend fun getUnreadNotificationCount(): Response<UnreadCountResponse>
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // 📌 Message Pin Endpoints
+    // ═══════════════════════════════════════════════════════════════════════════════
+    @PUT("api/messages/{id}/pin")
+    suspend fun pinMessage(
+        @Path("id") id: String,
+        @Query("pinned") pinned: Boolean
+    ): Response<ApiResponse<MessageDto>>
+
+    @GET("api/chats/{chatId}/messages/pinned")
+    suspend fun getPinnedMessages(
+        @Path("chatId") chatId: String
+    ): Response<ApiResponse<List<MessageDto>>>
+
+    @PUT("api/groups/{id}/messages/{messageId}/pin")
+    suspend fun pinGroupMessage(
+        @Path("id") groupId: String,
+        @Path("messageId") messageId: String,
+        @Query("pinned") pinned: Boolean
+    ): Response<ApiResponse<GroupMessageDto>>
+
+    @GET("api/groups/{id}/messages/pinned")
+    suspend fun getPinnedGroupMessages(
+        @Path("id") groupId: String
+    ): Response<ApiResponse<List<GroupMessageDto>>>
+
+    @PUT("api/channels/{id}/posts/{postId}/pin")
+    suspend fun pinChannelPost(
+        @Path("id") channelId: String,
+        @Path("postId") postId: String,
+        @Query("pinned") pinned: Boolean
+    ): Response<ApiResponse<ChannelPostDto>>
+
+    @GET("api/channels/{id}/posts/pinned")
+    suspend fun getPinnedChannelPosts(
+        @Path("id") channelId: String
+    ): Response<ApiResponse<List<ChannelPostDto>>>
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // 🔀 Message Forward Endpoints
+    // ═══════════════════════════════════════════════════════════════════════════════
+    @POST("api/messages/forward")
+    suspend fun forwardMessages(
+        @Body request: ForwardMessageRequest
+    ): Response<ApiResponse<Unit>>
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // ⏰ Message Schedule Endpoints
+    // ═══════════════════════════════════════════════════════════════════════════════
+    @POST("api/chats/{chatId}/messages/schedule")
+    suspend fun scheduleMessage(
+        @Path("chatId") chatId: String,
+        @Body request: ScheduleMessageRequest
+    ): Response<ApiResponse<MessageDto>>
+
+    @POST("api/groups/{id}/messages/schedule")
+    suspend fun scheduleGroupMessage(
+        @Path("id") groupId: String,
+        @Body request: ScheduleMessageRequest
+    ): Response<ApiResponse<GroupMessageDto>>
+
+    @POST("api/channels/{id}/posts/schedule")
+    suspend fun scheduleChannelPost(
+        @Path("id") channelId: String,
+        @Body request: ScheduleMessageRequest
+    ): Response<ApiResponse<ChannelPostDto>>
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // 🆔 Username Management Endpoints
+    // ═══════════════════════════════════════════════════════════════════════════════
+    @PUT("api/users/me/username")
+    suspend fun setUsername(
+        @Body request: SetUsernameRequest
+    ): Response<ApiResponse<UserDto>>
+
+    @GET("api/users/username/check")
+    suspend fun checkUsernameAvailability(
+        @Query("username") username: String
+    ): Response<UsernameAvailabilityResponse>
 }

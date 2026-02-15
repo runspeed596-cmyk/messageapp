@@ -13,6 +13,10 @@ import javax.inject.Inject
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
+import coil3.disk.DiskCache
+import coil3.disk.directory
+import coil3.memory.MemoryCache
+import coil3.request.CachePolicy
 import coil3.request.crossfade
 import coil3.video.VideoFrameDecoder
 
@@ -71,6 +75,19 @@ class MessageApplication : Application(), SingletonImageLoader.Factory, androidx
                 add(VideoFrameDecoder.Factory())
             }
             .crossfade(true)
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .diskCachePolicy(CachePolicy.ENABLED)
+            .memoryCache {
+                MemoryCache.Builder()
+                    .maxSizePercent(context, 0.25)
+                    .build()
+            }
+            .diskCache {
+                DiskCache.Builder()
+                    .directory(java.io.File(context.cacheDir, "image_cache"))
+                    .maxSizeBytes(250L * 1024L * 1024L)
+                    .build()
+            }
             .build()
     }
 }

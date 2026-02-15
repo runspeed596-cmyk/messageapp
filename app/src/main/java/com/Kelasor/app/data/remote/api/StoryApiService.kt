@@ -75,6 +75,17 @@ interface StoryApiService {
         @Part("duration") duration: Int,
         @Part("caption") caption: String?
     ): Response<StoryDto>
+
+    @POST("api/stories/{id}/reply")
+    suspend fun replyToStory(
+        @Path("id") storyId: String,
+        @retrofit2.http.Body body: StoryReplyRequestBody
+    ): Response<StoryReplyResponseDto>
+
+    @GET("api/stories/{id}/replies")
+    suspend fun getStoryReplies(
+        @Path("id") storyId: String
+    ): Response<List<StoryReplyResponseDto>>
 }
 
 // DTOs (Data Transfer Objects) matching the API response structure
@@ -107,3 +118,18 @@ data class StoryViewDto(
     val userAvatarUrl: String?,
     val viewedAt: String // ISO timestamp
 )
+
+data class StoryReplyRequestBody(
+    val content: String
+)
+
+data class StoryReplyResponseDto(
+    val id: String,
+    val storyId: String,
+    val userId: String,
+    val userDisplayName: String,
+    val userAvatarUrl: String?,
+    val content: String,
+    val createdAt: String // ISO timestamp
+)
+

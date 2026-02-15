@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -64,8 +65,9 @@ import android.net.Uri
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // URL detection pattern
+// URL detection pattern - Updated to support "google.com" style links
 private val URL_PATTERN = Regex(
-    """(https?://[^\s]+|www\.[^\s]+)""",
+    """((https?://|www\.)[^\s]+|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}[^\s]*)""",
     RegexOption.IGNORE_CASE
 )
 
@@ -88,6 +90,9 @@ fun ChatBubble(
     onReactionClick: ((String) -> Unit)? = null,
     onSenderClick: (() -> Unit)? = null,
     onReplyClick: (() -> Unit)? = null,
+    isEdited: Boolean = false,
+    isPinned: Boolean = false,
+    forwardedFrom: String? = null,
     onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -161,7 +166,7 @@ fun ChatBubble(
                     }
                 } else Modifier
             )
-            .padding(horizontal = 14.dp, vertical = 10.dp)
+            .padding(horizontal = 10.dp, vertical = 6.dp)
     ) {
         Column {
             // Reply Preview
@@ -200,6 +205,39 @@ fun ChatBubble(
                 }
             }
 
+            // Pin Indicator
+            if (isPinned) {
+                Row(
+                    modifier = Modifier.padding(bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PushPin,
+                        contentDescription = "Pinned",
+                        tint = extendedColors.accent,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Text(
+                        text = "سنجاق شده",
+                        style = MessageAppTypography.chatTime.copy(fontSize = 10.sp),
+                        color = extendedColors.accent
+                    )
+                }
+            }
+
+            // Forward Indicator
+            if (!forwardedFrom.isNullOrEmpty()) {
+                Text(
+                    text = "↗ ارسال مجدد از: $forwardedFrom",
+                    style = MessageAppTypography.chatTime.copy(fontSize = 10.sp, fontWeight = FontWeight.Medium),
+                    color = if (isMyMessage) extendedColors.myBubbleText.copy(alpha = 0.7f) else extendedColors.otherBubbleText.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(bottom = 4.dp),
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+            }
+
             // Sender Name (for Groups/Channels)
             if (!isMyMessage && !senderName.isNullOrEmpty()) {
                 Text(
@@ -218,7 +256,6 @@ fun ChatBubble(
             val context = LocalContext.current
             val textColor = if (isMyMessage) extendedColors.myBubbleText else extendedColors.otherBubbleText
             val linkColor = Color(0xFF4FC3F7) // Light blue for links
-            
             val annotatedMessage = buildAnnotatedString {
                 var lastIndex = 0
                 URL_PATTERN.findAll(message).forEach { matchResult ->
@@ -239,67 +276,91 @@ fun ChatBubble(
                     append(message.substring(lastIndex))
                 }
             }
-            
-            
+            // Build the inline time+status label to measure its width
+            val timeLabel = buildString {
+                if (isEdited) append("ویرایش شده ")
+                append(time)
+                if (isMyMessage) append("  ✓") // placeholder for status icon width
+            }
             var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
-            
-            Text(
-                text = annotatedMessage,
-                style = MessageAppTypography.messageText.copy(
-                    fontFamily = VazirFontFamily,
-                    color = textColor
-                ),
-                onTextLayout = { layoutResult = it },
-                modifier = Modifier.pointerInput(onLongClick) {
-                    detectTapGestures(
-                        onLongPress = { 
-                            onLongClick?.invoke()
-                        },
-                        onTap = { offset ->
-                            layoutResult?.let { layout ->
-                                val position = layout.getOffsetForPosition(offset)
-                                annotatedMessage.getStringAnnotations(tag = "URL", start = position, end = position)
-                                    .firstOrNull()?.let { annotation ->
-                                        val url = if (annotation.item.startsWith("http://") || annotation.item.startsWith("https://")) {
-                                            annotation.item
-                                        } else {
-                                            "https://${annotation.item}"
-                                        }
-                                        try {
-                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                                            context.startActivity(intent)
-                                        } catch (e: Exception) {
-                                            // Handle invalid URL gracefully
-                                        }
-                                    }
-                            }
-                        }
-                    )
-                }
-            )
-            
-            Row(
-                modifier = Modifier
-                    .align(if (isMyMessage) Alignment.Start else Alignment.End)
-                    .padding(top = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            // Use Box to overlay time on the message text, Telegram-style
+            Box {
+                // Message text with invisible trailing spacer for time
                 Text(
-                    text = time,
-                    style = MessageAppTypography.messageTime,
-                    color = if (isMyMessage) {
-                        extendedColors.myBubbleText.copy(alpha = 0.6f)
-                    } else {
-                        extendedColors.otherBubbleText.copy(alpha = 0.6f)
+                    text = buildAnnotatedString {
+                        append(annotatedMessage)
+                        // Add invisible spacer to reserve room for the time overlay
+                        withStyle(SpanStyle(fontSize = 10.sp, color = Color.Transparent)) {
+                            append("     $timeLabel  ")
+                        }
+                    },
+                    style = MessageAppTypography.messageText.copy(
+                        fontFamily = VazirFontFamily,
+                        color = textColor
+                    ),
+                    onTextLayout = { layoutResult = it },
+                    modifier = Modifier.pointerInput(onLongClick) {
+                        detectTapGestures(
+                            onLongPress = {
+                                onLongClick?.invoke()
+                            },
+                            onTap = { offset ->
+                                layoutResult?.let { layout ->
+                                    val position = layout.getOffsetForPosition(offset)
+                                    annotatedMessage.getStringAnnotations(tag = "URL", start = position, end = position)
+                                        .firstOrNull()?.let { annotation ->
+                                            val url = if (annotation.item.startsWith("http://") || annotation.item.startsWith("https://")) {
+                                                annotation.item
+                                            } else {
+                                                "https://${annotation.item}"
+                                            }
+                                            try {
+                                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                                context.startActivity(intent)
+                                            } catch (e: Exception) {
+                                                // Handle invalid URL gracefully
+                                            }
+                                        }
+                                }
+                            }
+                        )
                     }
                 )
-                
-                if (isMyMessage) {
-                    MessageStatusIcon(
-                        status = status,
-                        tint = extendedColors.myBubbleText.copy(alpha = 0.6f)
+                // Time + status overlay at bottom-end
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(top = 4.dp, start = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Edited indicator
+                    if (isEdited) {
+                        Text(
+                            text = "ویرایش شده",
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
+                            color = if (isMyMessage) {
+                                extendedColors.myBubbleText.copy(alpha = 0.6f)
+                            } else {
+                                extendedColors.otherBubbleText.copy(alpha = 0.6f)
+                            }
+                        )
+                    }
+                    Text(
+                        text = time,
+                        style = MessageAppTypography.messageTime,
+                        color = if (isMyMessage) {
+                            extendedColors.myBubbleText.copy(alpha = 0.6f)
+                        } else {
+                            extendedColors.otherBubbleText.copy(alpha = 0.6f)
+                        }
                     )
+                    if (isMyMessage) {
+                        MessageStatusIcon(
+                            status = status,
+                            tint = extendedColors.myBubbleText.copy(alpha = 0.6f)
+                        )
+                    }
                 }
             }
 
@@ -308,7 +369,7 @@ fun ChatBubble(
                  FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.padding(top = 8.dp)
+                    modifier = Modifier.padding(top = 4.dp)
                  ) {
                      reactions.forEach { (emoji, count) ->
                          val isSelected = emoji == myReaction
@@ -316,11 +377,11 @@ fun ChatBubble(
                              modifier = Modifier
                                  .clip(RoundedCornerShape(12.dp))
                                  .background(
-                                     if (isSelected) extendedColors.accent.copy(alpha = 0.3f) 
+                                     if (isSelected) extendedColors.accent.copy(alpha = 0.3f)
                                      else Color.Black.copy(alpha = 0.2f)
                                  )
                                  .clickable { onReactionClick?.invoke(emoji) }
-                                 .padding(horizontal = 8.dp, vertical = 6.dp)
+                                 .padding(horizontal = 6.dp, vertical = 4.dp)
                          ) {
                              Text(
                                  text = "$emoji $count",
@@ -388,6 +449,12 @@ fun MessageStatusIcon(
             imageVector = Icons.Default.Schedule,
             contentDescription = "Pending",
             tint = tint,
+            modifier = modifier.size(14.dp)
+        )
+        MessageStatus.SCHEDULED -> Icon(
+            imageVector = Icons.Default.Schedule,
+            contentDescription = "Scheduled",
+            tint = Color(0xFFFFA726),
             modifier = modifier.size(14.dp)
         )
     }

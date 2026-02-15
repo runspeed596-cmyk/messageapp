@@ -85,7 +85,7 @@ class WebSocketManager @Inject constructor(
 ) {
     companion object {
         private const val TAG = "WebSocketManager"
-        private const val WS_BASE_URL = "ws://46.249.100.239/ws"
+        private const val WS_BASE_URL = "ws://192.168.70.113:8080/ws"
         private const val RECONNECT_DELAY_MS = 5000L
         private const val MAX_RECONNECT_ATTEMPTS = 5
     }
@@ -257,9 +257,9 @@ class WebSocketManager @Inject constructor(
                     }
                 }
                 
-                // CRITICAL: Also subscribe to topic-based messages as fallback for user queue issues
-                Log.i(TAG, "📡 Subscribing to /topic/user/$userId/messages (fallback)")
-                scope.launch {
+                // REMOVED: topic-based messages fallback no longer needed (using user queue only)
+                // Log.i(TAG, "📡 Subscribing to /topic/user/$userId/messages (fallback)")
+                if (false) scope.launch {
                     try {
                          session.subscribeText("/topic/user/$userId/messages").collect { frame ->
                              Log.d(TAG, "📨 Received message (topic fallback): $frame")
@@ -336,64 +336,22 @@ class WebSocketManager @Inject constructor(
         }
     }
     
+    // Chat-specific topic subscription removed — messages arrive via /user/queue/messages
     fun subscribeToChat(chatId: String) {
-        if (activeSubscriptions.contains("chat_$chatId")) return
-        
-        scope.launch {
-            try {
-                val session = stompSession ?: return@launch
-                Log.i(TAG, "📡 Subscribing to /topic/chat/$chatId/messages")
-                activeSubscriptions.add("chat_$chatId")
-                
-                session.subscribeText("/topic/chat/$chatId/messages").collect { frame ->
-                    Log.d(TAG, "📨 Received chat message: $frame")
-                    handleMessage(frame)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error subscribing to chat $chatId", e)
-                activeSubscriptions.remove("chat_$chatId")
-            }
-        }
+        // No-op: messages now delivered exclusively via user queue
+        Log.d(TAG, "subscribeToChat($chatId) is no-op — using user queue delivery")
     }
     
+    // Group topic subscription removed — messages arrive via /user/queue/messages
     fun subscribeToGroup(groupId: String) {
-        if (activeSubscriptions.contains("group_$groupId")) return
-        
-        scope.launch {
-            try {
-                val session = stompSession ?: return@launch
-                Log.i(TAG, "📡 Subscribing to /topic/group/$groupId/messages")
-                activeSubscriptions.add("group_$groupId")
-                
-                session.subscribeText("/topic/group/$groupId/messages").collect { frame ->
-                    Log.d(TAG, "📨 Received group message: $frame")
-                    handleGroupMessageFrame(frame)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error subscribing to group $groupId", e)
-                activeSubscriptions.remove("group_$groupId")
-            }
-        }
+        // No-op: messages now delivered exclusively via user queue
+        Log.d(TAG, "subscribeToGroup($groupId) is no-op — using user queue delivery")
     }
     
+    // Channel topic subscription removed — messages arrive via /user/queue/messages
     fun subscribeToChannel(channelId: String) {
-        if (activeSubscriptions.contains("channel_$channelId")) return
-        
-        scope.launch {
-            try {
-                val session = stompSession ?: return@launch
-                Log.i(TAG, "📡 Subscribing to /topic/channel/$channelId/posts")
-                activeSubscriptions.add("channel_$channelId")
-                
-                session.subscribeText("/topic/channel/$channelId/posts").collect { frame ->
-                    Log.d(TAG, "📨 Received channel post: $frame")
-                    handleChannelPostFrame(frame)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error subscribing to channel $channelId", e)
-                activeSubscriptions.remove("channel_$channelId")
-            }
-        }
+        // No-op: messages now delivered exclusively via user queue
+        Log.d(TAG, "subscribeToChannel($channelId) is no-op — using user queue delivery")
     }
     
     fun unsubscribeFromGroup(groupId: String) {
@@ -414,13 +372,14 @@ class WebSocketManager @Inject constructor(
             val type = json.get("type")?.asString
             
             when (type) {
-                "CHAT_MESSAGE" -> handleChatMessage(json)
+                "CHAT_MESSAGE", "TEXT", "IMAGE", "VIDEO", "VIDEO_NOTE", "VOICE", "AUDIO", "FILE", "POLL" -> 
+                    handleChatMessage(json)
                 "GROUP_MESSAGE" -> handleGroupMessage(json)
                 "CHANNEL_POST" -> handleChannelPost(json)
                 "USER_ONLINE" -> handleUserOnline(json)
                 "TYPING" -> handleTyping(json)
                 "MESSAGE_READ" -> handleMessageRead(json)
-                "CHAT_UPDATE" -> handleChatUpdate(json)
+                "CHAT_UPDATE" -> handleChatEvent(json) // Use event/data wrapper if present
                 "GROUP_MEMBER_UPDATE" -> handleGroupMemberUpdate(json)
                 "CHANNEL_SUBSCRIBER_UPDATE" -> handleChannelSubscriberUpdate(json)
                 else -> {
@@ -466,8 +425,11 @@ class WebSocketManager @Inject constructor(
     }
     
     private suspend fun handleDirectChatMessage(json: com.google.gson.JsonObject) {
-        val messageId = json.get("id").asString
-        val senderId = json.get("senderId").asString
+        val data = if (json.has("data")) json.getAsJsonObject("data") else json
+        val messageId = data.get("id")?.safeString() ?: java.util.UUID.randomUUID().toString()
+        val senderId = data.get("senderId")?.safeString() ?: ""
+        val chatId = data.get("chatId")?.safeString() ?: ""
+        val content = data.get("content")?.safeString() ?: ""
         
         // Check if message exists locally (matched by ID)
         val existingMessage = messageDao.getMessageById(messageId)
@@ -477,17 +439,17 @@ class WebSocketManager @Inject constructor(
         // try to find a matching PENDING message to preserve reply context.
         // This handles race condition where WebSocket arrives before API response overwrites local ID.
         if (localReplyToMessage == null && senderId == sessionManager.userId.firstOrNull()) {
-             val content = json.get("content").asString
-             val chatId = json.get("chatId").asString
-             val pendingMessage = messageDao.findPendingMessageByContent(chatId, content)
+             val contentValue = data.get("content")?.safeString() ?: ""
+             val chatIdValue = data.get("chatId")?.safeString() ?: ""
+             val pendingMessage = messageDao.findPendingMessageByContent(chatIdValue, contentValue)
              if (pendingMessage != null) {
                  localReplyToMessage = pendingMessage.replyToMessage
                  Log.d(TAG, "📎 Found matching pending message for reply context: ${pendingMessage.id}")
              }
         }
 
-        // ADDITIONAL FIX: If still null, but we have an ID (e.g. from server echo), look up the original message
-        val replyToMessageId = json.get("replyToMessageId")?.takeIf { !it.isJsonNull }?.asString
+        // ADDITIONAL FIX: If still null, but we have an ID, look up the original message context
+        val replyToMessageId = data.get("replyToMessageId")?.safeString()
         if (localReplyToMessage == null && replyToMessageId != null) {
             try {
                 val quotedMessage = messageDao.getMessageById(replyToMessageId)
@@ -518,27 +480,56 @@ class WebSocketManager @Inject constructor(
             }
         }
         
+        // FIX: Extract timestamp from server if available, fallback to receipt time
+        val createdAt = data.get("timestamp")?.safeString()?.let { parseTimestamp(it) }
+            ?: data.get("createdAt")?.safeString()?.let { parseTimestamp(it) }
+            ?: System.currentTimeMillis()
+
+        // FIX: Preserve local entity's type/mediaUrl/poll/amplitudes if WebSocket would override with defaults
+        val networkType = data.get("type")?.safeString() ?: "TEXT"
+        val networkMediaUrl = data.get("mediaUrl")?.safeString()
+        val networkPoll = data.get("poll")?.takeIf { !it.isJsonNull }?.let { gson.toJson(it) }
+        val networkAmplitudes = data.get("amplitudes")?.takeIf { !it.isJsonNull && it.isJsonArray }?.asJsonArray?.joinToString(",") { it.asString }
+
+        val finalType = if (existingMessage != null && existingMessage.type != "TEXT" && networkType == "TEXT") {
+            Log.d(TAG, "📧 Preserving local type=${existingMessage.type} instead of network type=$networkType")
+            existingMessage.type
+        } else networkType
+
+        val finalMediaUrl = if (existingMessage != null && existingMessage.mediaUrl != null && networkMediaUrl == null) {
+            Log.d(TAG, "📧 Preserving local mediaUrl instead of null from network")
+            existingMessage.mediaUrl
+        } else networkMediaUrl
+
+        val finalPoll = if (existingMessage != null && existingMessage.poll != null && networkPoll == null) {
+            existingMessage.poll
+        } else networkPoll
+
+        val finalAmplitudes = if (existingMessage != null && existingMessage.amplitudes != null && networkAmplitudes == null) {
+            existingMessage.amplitudes
+        } else networkAmplitudes
+
         val messageEntity = MessageEntity(
             id = messageId,
-            chatId = json.get("chatId").asString,
+            chatId = chatId,
             senderId = senderId,
-            senderName = json.get("senderName")?.takeIf { !it.isJsonNull }?.asString ?: "",
-            senderAvatar = json.get("senderAvatar")?.takeIf { !it.isJsonNull }?.asString,
-            type = json.get("type")?.takeIf { !it.isJsonNull }?.asString ?: "TEXT",
-            content = json.get("content").asString,
-            mediaUrl = json.get("mediaUrl")?.takeIf { !it.isJsonNull }?.asString,
-            replyToMessageId = json.get("replyToMessageId")?.takeIf { !it.isJsonNull }?.asString,
-            replyToMessage = localReplyToMessage, // PRESERVE local replyToMessage JSON
-            forwardedFrom = json.get("forwardedFrom")?.takeIf { !it.isJsonNull }?.asString,
-            status = json.get("status")?.takeIf { !it.isJsonNull }?.asString ?: "DELIVERED",
-            isEdited = json.get("isEdited")?.takeIf { !it.isJsonNull }?.asBoolean ?: false,
-            createdAt = System.currentTimeMillis(),
-            editedAt = null,
+            senderName = data.get("senderName")?.safeString() ?: "",
+            senderAvatar = data.get("senderAvatar")?.safeString(),
+            type = finalType,
+            content = content,
+            mediaUrl = finalMediaUrl,
+            replyToMessageId = data.get("replyToMessageId")?.safeString(),
+            replyToMessage = localReplyToMessage,
+            forwardedFrom = data.get("forwardedFrom")?.safeString(),
+            status = data.get("status")?.safeString() ?: "DELIVERED",
+            isEdited = data.get("isEdited")?.safeBoolean() ?: false,
+            createdAt = createdAt,
+            editedAt = data.get("editedAt")?.safeString()?.let { parseTimestamp(it) },
             isSynced = true,
-            reactions = json.get("reactions")?.takeIf { !it.isJsonNull }?.let { gson.toJson(it) },
-            myReaction = json.get("myReaction")?.takeIf { !it.isJsonNull }?.asString,
-            poll = json.get("poll")?.takeIf { !it.isJsonNull }?.let { gson.toJson(it) },
-            amplitudes = json.get("amplitudes")?.takeIf { !it.isJsonNull && it.isJsonArray }?.asJsonArray?.joinToString(",") { it.asString }
+            reactions = data.get("reactions")?.takeIf { !it.isJsonNull }?.let { gson.toJson(it) },
+            myReaction = data.get("myReaction")?.safeString(),
+            poll = finalPoll,
+            amplitudes = finalAmplitudes
         )
         
         Log.d(TAG, "📨 Private message: id=${messageEntity.id}, type=${messageEntity.type}, mediaUrl=${messageEntity.mediaUrl != null}, poll=${messageEntity.poll != null}, amplitudes=${messageEntity.amplitudes != null}")
@@ -583,60 +574,39 @@ class WebSocketManager @Inject constructor(
     }
     
     private suspend fun handleChatMessage(json: com.google.gson.JsonObject) {
-        val data = json.getAsJsonObject("data") ?: json
+        val data = if (json.has("data")) json.getAsJsonObject("data") else json
         val messageId = data.get("id")?.safeString() ?: java.util.UUID.randomUUID().toString()
-        // Removed conflicting unsafe extraction of senderId here
+        val senderId = data.get("senderId")?.safeString() ?: ""
+        val chatId = data.get("chatId")?.safeString() ?: ""
+        val content = data.get("content")?.safeString() ?: ""
         
-        // Robust parsing using safe extensions is done below at lines ~596
-        val chatIdForPendingCheck = data.get("chatId")?.safeString() ?: ""
-        val senderIdForCheck = data.get("senderId")?.safeString() ?: ""
-        
+        if (chatId.isEmpty()) {
+            Log.e(TAG, "❌ Unified message missing chatId. Skipping.")
+            return
+        }
+
         // Check if message exists locally (matched by ID)
         val existingMessage = messageDao.getMessageById(messageId)
         var localReplyToMessage = existingMessage?.replyToMessage
         
-        // FIX: If message is from ME, and not found by ID, find matching PENDING message
-        if (localReplyToMessage == null && senderIdForCheck == sessionManager.userId.firstOrNull()) {
-             val content = data.get("content").asString
-             val pendingMessage = messageDao.findPendingMessageByContent(chatIdForPendingCheck, content)
+        val currentUserId = sessionManager.userId.firstOrNull()
+
+        // FIX: If message is from ME, and not found by ID, try to find matching PENDING message
+        if (localReplyToMessage == null && senderId == currentUserId) {
+             val pendingMessage = messageDao.findPendingMessageByContent(chatId, content)
              if (pendingMessage != null) {
                  localReplyToMessage = pendingMessage.replyToMessage
-                 Log.d(TAG, "📎 Found matching pending message for reply context via data: ${pendingMessage.id}")
+                 Log.d(TAG, "📎 Found matching pending message for unified reply context: ${pendingMessage.id}")
              }
         }
 
-        // ADDITIONAL FIX: If still null, but we have an ID (e.g. from server echo), look up the original message
-        val replyToMessageId = data.get("replyToMessageId")?.takeIf { !it.isJsonNull }?.asString
+        // ADDITIONAL FIX: If still null, look up original message context
+        val replyToMessageId = data.get("replyToMessageId")?.safeString()
         if (localReplyToMessage == null && replyToMessageId != null) {
             try {
                 val quotedMessage = messageDao.getMessageById(replyToMessageId)
                 if (quotedMessage != null) {
-                     // We need to convert Entity -> Domain -> Json, OR just re-use if possible.
-                     // Since Entity has replyToMessage as String (JSON), but we want the *whole message* as JSON.
-                     // We can construct a domain object or just serialize the entity fields we need.
-                     // Simplify: use Gson to serialize the quoted message entity directly?
-                     // The field expects a JSON string representing the Message object.
-                     // Let's use the Mapper if available, or manual construction.
-                     // The repository fix used `toDomain`. Here we don't have Mapper imported easily?
-                     // Actually `toDomain` is an extension function. Let's see imports.
-                     // `com.Kelasor.app.domain.mapper.toDomain` is imported in Repository.
-                     // Here we have `com.Kelasor.app.data.local.dao.*`.
-                     // Let's manually reconstruct a minimal JSON or try to use the raw entity.
-                     // Safe approach: Serialize the entity as a map or similar to match domain structure.
-                     // Or just rely on the fact that `replyToMessage` string in DB is what we want? 
-                     // NO, `replyToMessage` column in `MessageEntity` IS the JSON of the referenced message.
-                     // BUT we are setting the `replyToMessage` FIELD of the NEW message, which should contain the JSON of the QUOTED message.
-                     // So we want the JSON representation of `quotedMessage`.
-                     // We can use `gson.toJson(quotedMessage)`.
-                     // Note: `MessageEntity` structure might slightly differ from `Message` domain model (e.g. `isSynced`).
-                     // But for display purposes, it's likely fine.
-                     // Better: Map `quotedMessage` (Entity) to `Message` (Domain) then `gson.toJson`.
-                     // I will assume `toDomain` is available or I can map it.
-                     // `WebSocketManager` imports `com.Kelasor.app.data.local.entity.*`.
-                     // It does NOT import `toDomain`.
-                     // I will manually map key fields to a map and serialize.
-                     // Create a map that matches MessageDto structure so standard mappers can parse it
-                     val replyMap = mapOf(
+                      val replyMap = mapOf(
                         "id" to quotedMessage.id,
                         "chatId" to quotedMessage.chatId,
                         "senderId" to quotedMessage.senderId,
@@ -652,84 +622,83 @@ class WebSocketManager @Inject constructor(
                         "isEdited" to quotedMessage.isEdited,
                         "createdAt" to quotedMessage.createdAt.toString(),
                         "editedAt" to quotedMessage.editedAt?.toString()
-                     )
-                     localReplyToMessage = gson.toJson(replyMap)
+                      )
+                      localReplyToMessage = gson.toJson(replyMap)
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error looking up reply message context", e)
+                Log.e(TAG, "Error looking up reply context in handleChatMessage", e)
             }
         }
-        
-        // Robust parsing using safe extensions
-        val chatId = data.get("chatId")?.safeString() ?: ""
-        val senderId = data.get("senderId")?.safeString() ?: ""
-        val senderName = data.get("senderName")?.safeString() ?: ""
-        val content = data.get("content")?.safeString() ?: ""
-        val type = data.get("type")?.safeString() ?: "TEXT"
-        
-        if (chatId.isEmpty()) {
-            Log.e(TAG, "❌ Private message missing chatId. Skipping.")
-            return
-        }
 
-        // Ensure Chat exists in local DB (Self-healing for new chats)
-        val existingChat = chatDao.getChatById(chatId)
-        if (existingChat == null) {
-            Log.w(TAG, "⚠️ Chat $chatId not found locally. Creating new PRIVATE chat entity.")
-            val senderAvatar = data.get("senderAvatar")?.safeString()
-            val newChat = ChatEntity(
-                id = chatId,
-                type = "PRIVATE", // Assuming generic messages are private unless specified
-                title = resolveSenderName(senderId, senderName), 
-                avatarUrl = senderAvatar,
-                lastMessageId = messageId,
-                lastMessage = content,
-                lastMessageTime = System.currentTimeMillis(),
-                unreadCount = 1
-            )
-            chatDao.insertChat(newChat)
-        }
+        // Extract timestamp from server if available, fallback to receipt time
+        val createdAt = data.get("timestamp")?.safeString()?.let { parseTimestamp(it) }
+            ?: data.get("createdAt")?.safeString()?.let { parseTimestamp(it) }
+            ?: System.currentTimeMillis()
+
+        // Preserve local entity's type/mediaUrl/poll/amplitudes if WebSocket would override with defaults
+        val networkType = data.get("type")?.safeString() ?: "TEXT"
+        val networkMediaUrl = data.get("mediaUrl")?.safeString()
+        val networkPoll = data.get("poll")?.takeIf { !it.isJsonNull }?.let { gson.toJson(it) }
+        val networkAmplitudes = data.get("amplitudes")?.takeIf { !it.isJsonNull && it.isJsonArray }?.asJsonArray?.joinToString(",") { it.asString }
+
+        val finalType = if (existingMessage != null && existingMessage.type != "TEXT" && networkType == "TEXT") {
+            Log.d(TAG, "📧 Preserving local type=${existingMessage.type} instead of network type=$networkType")
+            existingMessage.type
+        } else networkType
+
+        val finalMediaUrl = if (existingMessage != null && existingMessage.mediaUrl != null && networkMediaUrl == null) {
+            Log.d(TAG, "📧 Preserving local mediaUrl instead of null from network")
+            existingMessage.mediaUrl
+        } else networkMediaUrl
+
+        val finalPoll = if (existingMessage != null && existingMessage.poll != null && networkPoll == null) {
+            existingMessage.poll
+        } else networkPoll
+
+        val finalAmplitudes = if (existingMessage != null && existingMessage.amplitudes != null && networkAmplitudes == null) {
+            existingMessage.amplitudes
+        } else networkAmplitudes
 
         val messageEntity = MessageEntity(
             id = messageId,
             chatId = chatId,
             senderId = senderId,
-            senderName = senderName,
+            senderName = data.get("senderName")?.safeString() ?: "",
             senderAvatar = data.get("senderAvatar")?.safeString(),
-            type = type,
+            type = finalType,
             content = content,
-            mediaUrl = data.get("mediaUrl")?.safeString(),
+            mediaUrl = finalMediaUrl,
             replyToMessageId = data.get("replyToMessageId")?.safeString(),
-            replyToMessage = localReplyToMessage, // PRESERVE local replyToMessage JSON
+            replyToMessage = localReplyToMessage,
             forwardedFrom = data.get("forwardedFrom")?.safeString(),
             status = data.get("status")?.safeString() ?: "DELIVERED",
             isEdited = data.get("isEdited")?.safeBoolean() ?: false,
-            createdAt = System.currentTimeMillis(),
-            editedAt = null,
+            createdAt = createdAt,
+            editedAt = data.get("editedAt")?.safeString()?.let { parseTimestamp(it) },
             isSynced = true,
             reactions = data.get("reactions")?.takeIf { !it.isJsonNull }?.let { gson.toJson(it) },
             myReaction = data.get("myReaction")?.safeString(),
-            poll = data.get("poll")?.takeIf { !it.isJsonNull }?.let { gson.toJson(it) },
-            amplitudes = data.get("amplitudes")?.takeIf { !it.isJsonNull && it.isJsonArray }?.asJsonArray?.joinToString(",") { it.asString }
+            poll = finalPoll,
+            amplitudes = finalAmplitudes
         )
         
-        Log.d(TAG, "📨 Chat message: id=${messageEntity.id}, type=${messageEntity.type}, mediaUrl=${messageEntity.mediaUrl != null}, poll=${messageEntity.poll != null}, amplitudes=${messageEntity.amplitudes != null}")
-        
+        Log.d(TAG, "📨 Unwrapped message handled: id=${messageEntity.id}, type=${messageEntity.type}")
+
+        // Deduplication
+        if (existingMessage != null && existingMessage.isSynced) {
+            Log.d(TAG, "⏭️ Skipping duplicate unwrapped message: id=$messageId")
+            _messages.emit(WebSocketMessage.ChatMessage(existingMessage))
+            return
+        }
+
         // Save to local database
         messageDao.insertMessage(messageEntity)
-        
-        // Emit to subscribers
         _messages.emit(WebSocketMessage.ChatMessage(messageEntity))
-        
-        // Update Chat metadata
         updateChatMetadata(messageEntity)
 
-        // 🔊 Play receive sound ONLY if chat represents the active conversation
-        if (!isCurrentUser(messageEntity.senderId) && currentChatManager.isChatOpen(messageEntity.chatId)) {
+        if (senderId != currentUserId && currentChatManager.isChatOpen(messageEntity.chatId)) {
             soundPlayer.playReceiveSound()
         }
-        
-        // Show notification
         showMessageNotification(messageEntity)
     }
     
@@ -870,6 +839,11 @@ class WebSocketManager @Inject constructor(
             existingMessage.amplitudes
         } else networkAmplitudes
 
+        // FIX: Extract timestamp from server if available, fallback to receipt time
+        val createdAt = data.get("timestamp")?.safeString()?.let { parseTimestamp(it) }
+            ?: data.get("createdAt")?.safeString()?.let { parseTimestamp(it) }
+            ?: System.currentTimeMillis()
+
         val messageEntity = GroupMessageEntity(
             id = id,
             groupId = groupId,
@@ -882,8 +856,8 @@ class WebSocketManager @Inject constructor(
             replyToMessageId = data.get("replyToMessageId")?.safeString(),
             replyToMessage = data.get("replyToMessage")?.takeIf { !it.isJsonNull }?.let { gson.toJson(it) },
             isEdited = data.get("isEdited")?.safeBoolean(false) ?: false,
-            createdAt = System.currentTimeMillis(),
-            editedAt = null,
+            createdAt = createdAt,
+            editedAt = data.get("editedAt")?.safeString()?.let { parseTimestamp(it) },
             isSynced = true,
             reactions = data.get("reactions")?.takeIf { !it.isJsonNull }?.let { gson.toJson(it) },
             myReaction = data.get("myReaction")?.safeString(),
@@ -1349,6 +1323,13 @@ class WebSocketManager @Inject constructor(
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error handling social notification", e)
+        }
+    }
+    private fun parseTimestamp(timestamp: String): Long {
+        return try {
+            java.time.Instant.parse(timestamp).toEpochMilli()
+        } catch (e: Exception) {
+            timestamp.toLongOrNull() ?: System.currentTimeMillis()
         }
     }
 }

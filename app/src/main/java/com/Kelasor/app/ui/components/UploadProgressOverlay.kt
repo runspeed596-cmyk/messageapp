@@ -1,10 +1,17 @@
 package com.Kelasor.app.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,6 +19,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -29,13 +37,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.theme.MessageAppTypography
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * Upload progress overlay shown during file upload.
- * Displays circular progress, percentage, and cancel button.
+ * Displays circular progress, percentage, orbiting dots, and cancel button.
  */
 
 @Composable
@@ -47,17 +58,42 @@ fun UploadProgressOverlay(
     modifier: Modifier = Modifier
 ) {
     val extendedColors = MessageAppTheme.extendedColors
-    
     val animatedProgress by animateFloatAsState(
         targetValue = progress,
         animationSpec = tween(300),
         label = "uploadProgress"
     )
-    
+    // Orbit animation
+    val infiniteTransition = rememberInfiniteTransition(label = "orbit")
+    val orbitAngle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "orbitAngle"
+    )
+    // Pulse for progress ring
+    val ringPulse by infiniteTransition.animateFloat(
+        initialValue = 0.95f,
+        targetValue = 1.05f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "ringPulse"
+    )
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(tween(200)),
-        exit = fadeOut(tween(200)),
+        enter = fadeIn(tween(250)) + scaleIn(
+            initialScale = 0.9f,
+            animationSpec = tween(300)
+        ),
+        exit = fadeOut(tween(200)) + scaleOut(
+            targetScale = 0.9f,
+            animationSpec = tween(200)
+        ),
         modifier = modifier
     ) {
         Box(
@@ -70,29 +106,56 @@ fun UploadProgressOverlay(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                // Progress indicator with percentage
+                // Progress indicator with orbiting dots
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier.size(120.dp)
+                    modifier = Modifier.size(140.dp)
                 ) {
                     // Background circle
                     CircularProgressIndicator(
                         progress = { 1f },
-                        modifier = Modifier.size(100.dp),
-                        color = Color.White.copy(alpha = 0.2f),
+                        modifier = Modifier
+                            .size(100.dp)
+                            .graphicsLayer {
+                                scaleX = ringPulse
+                                scaleY = ringPulse
+                            },
+                        color = Color.White.copy(alpha = 0.15f),
                         strokeWidth = 8.dp,
                         strokeCap = StrokeCap.Round
                     )
-                    
                     // Progress circle
                     CircularProgressIndicator(
                         progress = { animatedProgress },
-                        modifier = Modifier.size(100.dp),
+                        modifier = Modifier
+                            .size(100.dp)
+                            .graphicsLayer {
+                                scaleX = ringPulse
+                                scaleY = ringPulse
+                            },
                         color = extendedColors.accent,
                         strokeWidth = 8.dp,
                         strokeCap = StrokeCap.Round
                     )
-                    
+                    // Orbiting dots
+                    val orbitRadius = 62f
+                    repeat(3) { index ->
+                        val angle = orbitAngle + (index * 120f)
+                        val radians = Math.toRadians(angle.toDouble())
+                        val dotX = (cos(radians) * orbitRadius).toFloat()
+                        val dotY = (sin(radians) * orbitRadius).toFloat()
+                        Box(
+                            modifier = Modifier
+                                .offset(x = dotX.dp, y = dotY.dp)
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    extendedColors.accent.copy(
+                                        alpha = 0.8f - (index * 0.2f)
+                                    )
+                                )
+                        )
+                    }
                     // Percentage text
                     Text(
                         text = "${(animatedProgress * 100).toInt()}%",
@@ -100,18 +163,14 @@ fun UploadProgressOverlay(
                         color = Color.White
                     )
                 }
-                
                 Spacer(modifier = Modifier.height(24.dp))
-                
                 // File name
                 Text(
                     text = fileName,
                     style = MessageAppTypography.chatTime,
                     color = Color.White.copy(alpha = 0.8f)
                 )
-                
                 Spacer(modifier = Modifier.height(16.dp))
-                
                 // Cancel button
                 IconButton(
                     onClick = onCancel,

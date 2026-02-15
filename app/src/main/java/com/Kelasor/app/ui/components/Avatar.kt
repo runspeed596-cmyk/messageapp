@@ -71,11 +71,7 @@ fun AvatarImage(
     
     // Resolve URL: Prepend BASE_URL if relative
     val resolvedUrl = remember(imageUrl) {
-        if (!imageUrl.isNullOrEmpty() && imageUrl.startsWith("/")) {
-             "${com.Kelasor.app.util.Constants.BASE_URL.removeSuffix("/")}$imageUrl"
-        } else {
-            imageUrl
-        }
+        com.Kelasor.app.util.UrlUtils.getFullUrl(imageUrl)
     }
     
     Box(

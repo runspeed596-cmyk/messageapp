@@ -234,7 +234,7 @@ class MessageSyncManager @Inject constructor(
                                 
                                 // FIX: If server returns null/TEXT for media messages, preserve local type and mediaUrl
                                 // This is critical to prevent media appearing as text
-                                val isMediaType = message.type in listOf("IMAGE", "VIDEO", "AUDIO", "VOICE", "FILE", "LOCATION")
+                                val isMediaType = message.type in listOf("IMAGE", "VIDEO", "VIDEO_NOTE", "AUDIO", "VOICE", "FILE", "LOCATION")
                                 val finalServerEntity = if (isMediaType && (serverEntity.mediaUrl == null || serverEntity.type == "TEXT")) {
                                     serverEntity.copy(
                                         mediaUrl = message.mediaUrl ?: serverEntity.mediaUrl,

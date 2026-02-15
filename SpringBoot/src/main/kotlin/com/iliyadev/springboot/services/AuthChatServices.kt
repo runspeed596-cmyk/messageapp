@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
 import kotlin.random.Random
+import com.iliyadev.springboot.util.MessageUtils
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🔐 Auth Service
@@ -261,11 +262,29 @@ class UserService(
      * Check if two users are contacts (have an existing chat with messages).
      */
     fun areUsersContacts(userId1: UUID, userId2: UUID): Boolean {
-        val chat = chatRepository.findPrivateChatBetween(userId1, userId2)
-        return chat != null
+        return chatRepository.findPrivateChatBetween(userId1, userId2).isNotEmpty()
     }
 
     fun getTotalUserCount(): Long = userRepository.count()
+    @Transactional
+    fun setUsername(userId: UUID, username: String): User? {
+        val user = userRepository.findById(userId).orElse(null) ?: return null
+        val normalizedUsername = username.lowercase().trim()
+        if (normalizedUsername.length < 3) {
+            throw IllegalArgumentException("نام کاربری باید حداقل ۳ کاراکتر باشد")
+        }
+        if (!normalizedUsername.matches(Regex("^[a-z0-9_]+$"))) {
+            throw IllegalArgumentException("نام کاربری فقط می‌تواند شامل حروف انگلیسی، اعداد و زیرخط باشد")
+        }
+        if (userRepository.existsByUsername(normalizedUsername)) {
+            throw IllegalArgumentException("این نام کاربری قبلاً استفاده شده است")
+        }
+        user.username = normalizedUsername
+        return userRepository.save(user)
+    }
+    fun isUsernameTaken(username: String): Boolean {
+        return userRepository.existsByUsername(username.lowercase().trim())
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -277,11 +296,126 @@ class ChatService(
     private val chatRepository: ChatRepository,
     private val userRepository: UserRepository,
     private val messageRepository: MessageRepository,
+    private val groupMessageRepository: GroupMessageRepository,
+    private val channelPostRepository: ChannelPostRepository,
     private val webSocketMessageHandler: WebSocketMessageHandler
 ) {
+    fun getSharedContent(userId: UUID, targetId: UUID, scope: String, type: String, page: Int, size: Int): MessageListResponse {
+        val pageable = org.springframework.data.domain.PageRequest.of(page, size)
+        val types = mapTypeStringToMessageTypes(type)
+        println("DEBUG: getSharedContent - User: $userId, Target: $targetId, Scope: $scope, RequestedType: $type, MappedTypes: $types")
+
+        return when (scope.uppercase()) {
+            "USER" -> {
+                var chats = chatRepository.findPrivateChatBetween(userId, targetId)
+                
+                if (chats.isEmpty()) {
+                    println("DEBUG: getSharedContent - USER scope search failed for User: $userId and Target: $targetId")
+                    val totalChatsInDb = chatRepository.count()
+                    println("DEBUG: getSharedContent - TOTAL CHATS IN DATABASE: $totalChatsInDb")
+                    
+                    if (totalChatsInDb > 0) {
+                        println("DEBUG: getSharedContent - LISTING ALL CHATS IN DB FOR DIAGNOSIS:")
+                        chatRepository.findAll().forEach { c ->
+                            println("DEBUG:   - Chat ${c.id} | Type: ${c.type} | Participants: ${c.participants.map { it.id }}")
+                        }
+                    }
+                    
+                    // FALLBACK 1: Maybe targetId is already a chatId?
+                    val fallbackChat = chatRepository.findById(targetId).orElse(null)
+                    if (fallbackChat != null) {
+                        println("DEBUG: getSharedContent - FALLBACK: Found Chat by ID directly: ${fallbackChat.id} (Type: ${fallbackChat.type})")
+                        chats = listOf(fallbackChat)
+                    } else {
+                        // FALLBACK 2: Exhaustive dump of user's chats for diagnosis
+                        val allUserChats = chatRepository.findByParticipantId(userId, org.springframework.data.domain.PageRequest.of(0, 20))
+                        println("DEBUG: getSharedContent - DIAGNOSTIC: User $userId has ${allUserChats.totalElements} total chats. Listing first 5:")
+                        allUserChats.content.take(5).forEach { c ->
+                            println("DEBUG:   - Chat ${c.id} | Type: ${c.type} | Participants: ${c.participants.map { it.id }}")
+                        }
+                        return MessageListResponse(emptyList(), 0, false)
+                    }
+                }
+                
+                val chat = chats.first()
+                println("DEBUG: getSharedContent - Proceeding with Chat ${chat.id}, searching for messages of types $types")
+                
+                val includeLinks = types.contains(MessageType.LINK)
+                val messages = messageRepository.findSharedContent(chat.id!!, types, includeLinks, pageable)
+                println("DEBUG: getSharedContent - Final Query Result: ${messages.totalElements} messages found for types $types")
+                
+                MessageListResponse(
+                    messages = messages.content.map { it.toDto(userId) },
+                    totalCount = messages.totalElements.toInt(),
+                    hasMore = messages.hasNext()
+                )
+            }
+            "GROUP" -> {
+                val includeLinks = types.contains(MessageType.LINK)
+                val messages = groupMessageRepository.findSharedContent(targetId, types, includeLinks, pageable)
+                println("DEBUG: getSharedContent - Found ${messages.totalElements} messages for Group $targetId")
+                MessageListResponse(
+                    messages = messages.content.map { it.toMessageDto(userId) },
+                    totalCount = messages.totalElements.toInt(),
+                    hasMore = messages.hasNext()
+                )
+            }
+            "CHANNEL" -> {
+                val includeLinks = types.contains(MessageType.LINK)
+                val posts = channelPostRepository.findSharedContent(targetId, types, includeLinks, pageable)
+                println("DEBUG: getSharedContent - Found ${posts.totalElements} posts for Channel $targetId")
+                MessageListResponse(
+                    messages = posts.content.map { it.toMessageDto(userId) },
+                    totalCount = posts.totalElements.toInt(),
+                    hasMore = posts.hasNext()
+                )
+            }
+            else -> throw IllegalArgumentException("Invalid scope: $scope")
+        }
+    }
+
+    private fun mapTypeStringToMessageTypes(typeString: String): List<MessageType> {
+        val allTypes = MessageType.values().toList()
+        return when (typeString.uppercase()) {
+            "IMAGE" -> listOfNotNull(
+                safeMessageType("IMAGE"),
+                safeMessageType("STICKER"),
+                safeMessageType("GIF")
+            )
+            "VIDEO" -> listOfNotNull(safeMessageType("VIDEO"))
+            "LINK" -> listOfNotNull(safeMessageType("LINK"))
+            "FILE" -> listOfNotNull(safeMessageType("FILE"))
+            "AUDIO" -> listOfNotNull(
+                safeMessageType("AUDIO"),
+                safeMessageType("VOICE")
+            )
+            "GIF" -> listOfNotNull(
+                safeMessageType("IMAGE"),
+                safeMessageType("GIF")
+            )
+            "STICKER" -> listOfNotNull(safeMessageType("STICKER"))
+            "CONTACT" -> listOfNotNull(safeMessageType("CONTACT"))
+            else -> allTypes
+        }
+    }
+
+    private fun safeMessageType(name: String): MessageType? {
+        return try {
+            MessageType.valueOf(name)
+        } catch (e: Exception) {
+            println("WARN: MessageType $name not found in Enum, skipping filter")
+            null
+        }
+    }
+
     fun getChatsForUser(userId: UUID, page: Int, size: Int): ChatListResponse {
         val pageable = org.springframework.data.domain.PageRequest.of(page, size)
         val chats = chatRepository.findActiveChatsForUser(userId, pageable)
+        println("DEBUG: getChatsForUser - User: $userId, Found ${chats.totalElements} active chats")
+        if (chats.totalElements == 0L) {
+             val allChatsCount = chatRepository.count()
+             println("DEBUG: getChatsForUser - DIAGNOSTIC: Total chats in DB: $allChatsCount")
+        }
         return ChatListResponse(
             chats = chats.content.map { chat ->
                 val lastMessage = messageRepository.findTopByChatIdOrderByCreatedAtDesc(chat.id!!)
@@ -306,11 +440,20 @@ class ChatService(
     
     @Transactional
     fun createPrivateChat(userId: UUID, participantId: UUID): ChatDto? {
-        val user = userRepository.findById(userId).orElse(null) ?: return null
-        val participant = userRepository.findById(participantId).orElse(null) ?: return null
-        val existingChat = chatRepository.findPrivateChatBetween(userId, participantId)
-        if (existingChat != null) {
-            return chatToDto(existingChat, userId)
+        val user = userRepository.findById(userId).orElse(null)
+        val participant = userRepository.findById(participantId).orElse(null)
+        
+        if (user == null || participant == null) {
+            val totalUsersInDb = userRepository.count()
+            println("DEBUG: createPrivateChat - FAILED. UserFound: ${user != null}, ParticipantFound: ${participant != null}")
+            println("DEBUG: createPrivateChat - ParticipantId searched: $participantId")
+            println("DEBUG: createPrivateChat - TOTAL USERS IN DATABASE: $totalUsersInDb")
+            return null
+        }
+
+        val existingChats = chatRepository.findPrivateChatBetween(userId, participantId)
+        if (existingChats.isNotEmpty()) {
+            return chatToDto(existingChats.first(), userId)
         }
         val chat = Chat().apply {
             type = ChatType.PRIVATE
@@ -433,9 +576,16 @@ class MessageService(
     private val chatRepository: ChatRepository,
     private val userRepository: UserRepository,
     private val webSocketMessageHandler: WebSocketMessageHandler,
-    private val pollRepository: PollRepository
+    private val pollRepository: PollRepository,
+    private val groupRepository: GroupRepository,
+    private val groupMemberRepository: GroupMemberRepository,
+    private val groupMessageRepository: GroupMessageRepository,
+    private val channelRepository: ChannelRepository,
+    private val channelSubscriberRepository: ChannelSubscriberRepository,
+    private val channelPostRepository: ChannelPostRepository
 ) {
     private val logger = org.slf4j.LoggerFactory.getLogger(MessageService::class.java)
+    @Transactional(readOnly = true)
     fun getMessagesForChat(chatId: UUID, userId: UUID, page: Int, size: Int): MessageListResponse {
         val chat = chatRepository.findById(chatId).orElse(null)
             ?: throw IllegalArgumentException("چت یافت نشد")
@@ -443,7 +593,7 @@ class MessageService(
             throw IllegalAccessException("شما به این چت دسترسی ندارید")
         }
         val pageable = org.springframework.data.domain.PageRequest.of(page, size)
-        val messages = messageRepository.findByChatIdOrderByCreatedAtDesc(chatId, pageable)
+        val messages = messageRepository.findWithReactionsByChatId(chatId, pageable)
         return MessageListResponse(
             messages = messages.content.map { it.toDto(userId) },
             totalCount = messages.totalElements.toInt(),
@@ -481,13 +631,15 @@ class MessageService(
         
         val chat = chatRepository.findById(chatId).orElse(null)
         if (chat == null) {
-            logger.warn("❌ Chat not found: $chatId")
+            val totalChatsInDb = chatRepository.count()
+            logger.warn("❌ Chat not found: $chatId. TOTAL CHATS IN DATABASE: $totalChatsInDb")
             return null
         }
         
         val sender = userRepository.findById(senderId).orElse(null)
         if (sender == null) {
-            logger.warn("❌ Sender not found: $senderId")
+            val totalUsers = userRepository.count()
+            logger.warn("❌ Sender not found: $senderId. TOTAL USERS IN DATABASE: $totalUsers")
             return null
         }
         
@@ -503,7 +655,14 @@ class MessageService(
         val message = Message().apply {
             this.chat = chat
             this.sender = sender
-            this.type = request.type
+            
+            // Auto-detect Link type if TEXT
+            var finalType = request.type
+            if (finalType == MessageType.TEXT && MessageUtils.isLink(request.content)) {
+                finalType = MessageType.LINK
+            }
+            
+            this.type = finalType
             this.content = request.content
             this.mediaUrl = request.mediaUrl
             this.replyTo = replyTo
@@ -517,7 +676,8 @@ class MessageService(
                 }
             }
             if (request.amplitudes != null) {
-                this.amplitudes = request.amplitudes.toMutableList()
+                // Limit to 200 samples to prevent DB issues
+                this.amplitudes = request.amplitudes.take(200).toMutableList()
             }
         }
         val savedMessage = messageRepository.save(message)
@@ -727,7 +887,6 @@ class MessageService(
         val message = messageRepository.findById(messageId).orElse(null) ?: return false
         val chat = message.chat ?: return false
         if (chat.participants.none { it.id == userId }) return false
-
         val existingReaction = messageReactionRepository.findByMessageIdAndUserId(messageId, userId)
         if (reaction == null) {
             if (existingReaction != null) {
@@ -748,10 +907,168 @@ class MessageService(
                 messageReactionRepository.save(newReaction)
             }
         }
-        
-        // Notify participants about update
         notifyChatUpdateToParticipants(chat, message, userId)
-        
         return true
+    }
+    // ═══ PIN MESSAGE ═══
+    @Transactional
+    fun pinMessage(messageId: UUID, userId: UUID, isPinned: Boolean): MessageDto? {
+        val message = messageRepository.findById(messageId).orElse(null) ?: return null
+        val chat = message.chat ?: return null
+        if (chat.participants.none { it.id == userId }) return null
+        message.isPinned = isPinned
+        message.pinnedAt = if (isPinned) Instant.now() else null
+        message.pinnedById = if (isPinned) userId else null
+        val saved = messageRepository.save(message)
+        return saved.toDto(userId)
+    }
+    fun getPinnedMessages(chatId: UUID, userId: UUID): List<MessageDto> {
+        val chat = chatRepository.findById(chatId).orElse(null) ?: return emptyList()
+        if (chat.participants.none { it.id == userId }) return emptyList()
+        return messageRepository.findByChatIdAndIsPinnedTrue(chatId).map { it.toDto(userId) }
+    }
+    // ═══ FORWARD MESSAGE ═══
+    @Transactional
+    fun forwardMessages(userId: UUID, request: ForwardMessageRequest): Boolean {
+        val sender = userRepository.findById(userId).orElse(null) ?: return false
+        // Try to find original messages from any source (chat, group, channel)
+        val originals = findOriginalMessages(request.messageIds)
+        if (originals.isEmpty()) return false
+        when (request.targetType.uppercase()) {
+            "CHAT" -> forwardToChat(userId, sender, originals, request.targetChatId ?: return false)
+            "GROUP" -> forwardToGroup(userId, sender, originals, request.targetGroupId ?: return false)
+            "CHANNEL" -> forwardToChannel(userId, sender, originals, request.targetChannelId ?: return false)
+            else -> return false
+        }
+        return true
+    }
+    private data class OriginalMessageData(
+        val type: MessageType,
+        val content: String,
+        val mediaUrl: String?,
+        val senderName: String
+    )
+    private fun findOriginalMessages(messageIds: List<UUID>): List<OriginalMessageData> {
+        val results = mutableListOf<OriginalMessageData>()
+        for (id in messageIds) {
+            // Try chat messages first
+            val chatMsg = messageRepository.findById(id).orElse(null)
+            if (chatMsg != null) {
+                results.add(OriginalMessageData(chatMsg.type, chatMsg.content, chatMsg.mediaUrl, chatMsg.sender?.displayName ?: "فروارد شده"))
+                continue
+            }
+            // Try group messages
+            val groupMsg = groupMessageRepository.findById(id).orElse(null)
+            if (groupMsg != null) {
+                results.add(OriginalMessageData(groupMsg.type, groupMsg.content, groupMsg.mediaUrl, groupMsg.sender?.displayName ?: "فروارد شده"))
+                continue
+            }
+            // Try channel posts
+            val channelPost = channelPostRepository.findById(id).orElse(null)
+            if (channelPost != null) {
+                results.add(OriginalMessageData(channelPost.type, channelPost.content, channelPost.mediaUrl, channelPost.channel?.name ?: "فروارد شده"))
+                continue
+            }
+        }
+        return results
+    }
+    private fun forwardToChat(userId: UUID, sender: User, originals: List<OriginalMessageData>, targetChatId: UUID) {
+        val chat = chatRepository.findById(targetChatId).orElse(null) ?: return
+        if (chat.participants.none { it.id == userId }) return
+        originals.forEach { original ->
+            val forwarded = Message().apply {
+                this.chat = chat
+                this.sender = sender
+                this.type = original.type
+                this.content = original.content
+                this.mediaUrl = original.mediaUrl
+                this.createdAt = Instant.now()
+                this.forwardedFrom = original.senderName
+            }
+            val saved = messageRepository.save(forwarded)
+            // WebSocket: broadcast to other participants
+            broadcastMessageToRecipients(chat, saved, userId)
+            notifyChatUpdateToParticipants(chat, saved, userId)
+        }
+        chat.updatedAt = Instant.now()
+        chatRepository.save(chat)
+    }
+    private fun forwardToGroup(userId: UUID, sender: User, originals: List<OriginalMessageData>, targetGroupId: UUID) {
+        val group = groupRepository.findById(targetGroupId).orElse(null) ?: return
+        val membership = groupMemberRepository.findByGroupIdAndUserId(targetGroupId, userId) ?: return
+        originals.forEach { original ->
+            val forwarded = GroupMessage().apply {
+                this.group = group
+                this.sender = sender
+                this.type = original.type
+                this.content = original.content
+                this.mediaUrl = original.mediaUrl
+                this.createdAt = Instant.now()
+                this.forwardedFrom = original.senderName
+            }
+            val saved = groupMessageRepository.save(forwarded)
+            // WebSocket: broadcast to group members
+            val wsMessage = WsMessage(
+                id = saved.id!!,
+                chatId = targetGroupId,
+                senderId = sender.id!!,
+                senderName = sender.displayName,
+                senderAvatar = sender.avatarUrl,
+                content = saved.content,
+                type = saved.type,
+                mediaUrl = saved.mediaUrl,
+                timestamp = saved.createdAt
+            )
+            val memberIds = groupMemberRepository.findByGroupId(targetGroupId)
+                .mapNotNull { it.user?.id }
+                .filter { it != userId }
+            webSocketMessageHandler.broadcastGroupMessage(targetGroupId, wsMessage, memberIds)
+        }
+    }
+    private fun forwardToChannel(userId: UUID, sender: User, originals: List<OriginalMessageData>, targetChannelId: UUID) {
+        val channel = channelRepository.findById(targetChannelId).orElse(null) ?: return
+        // Only owner or admin can post to channel
+        val isOwner = channel.owner?.id == userId
+        if (!isOwner) {
+            val subscription = channelSubscriberRepository.findByChannelIdAndUserId(targetChannelId, userId)
+            if (subscription == null || !subscription.isAdmin) return
+        }
+        originals.forEach { original ->
+            val post = ChannelPost().apply {
+                this.channel = channel
+                this.type = original.type
+                this.content = original.content
+                this.mediaUrl = original.mediaUrl
+                this.createdAt = Instant.now()
+                this.forwardedFrom = original.senderName
+            }
+            val saved = channelPostRepository.save(post)
+            // WebSocket: broadcast to all subscribers
+            val subscriberIds = channelSubscriberRepository.findByChannelId(targetChannelId)
+                .mapNotNull { it.user?.id }
+            webSocketMessageHandler.broadcastChannelPost(targetChannelId, saved.toDto(null), subscriberIds)
+        }
+    }
+    // ═══ SCHEDULE MESSAGE ═══
+    @Transactional
+    fun scheduleMessage(chatId: UUID, userId: UUID, request: ScheduleMessageRequest): MessageDto? {
+        val chat = chatRepository.findById(chatId).orElse(null) ?: return null
+        val sender = userRepository.findById(userId).orElse(null) ?: return null
+        if (chat.participants.none { it.id == userId }) return null
+        val message = Message().apply {
+            this.chat = chat
+            this.sender = sender
+            this.type = request.type
+            this.content = request.content
+            this.mediaUrl = request.mediaUrl
+            this.scheduledAt = request.scheduledAt
+            this.createdAt = Instant.now()
+            this.status = MessageStatus.SCHEDULED
+            if (request.amplitudes != null) {
+                this.amplitudes = request.amplitudes.take(200).toMutableList()
+            }
+        }
+        val saved = messageRepository.save(message)
+        return saved.toDto(userId)
     }
 }

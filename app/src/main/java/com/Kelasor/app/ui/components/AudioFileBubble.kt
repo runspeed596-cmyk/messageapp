@@ -40,6 +40,7 @@ import com.Kelasor.app.data.audio.AudioPlayerManager
 import com.Kelasor.app.data.audio.PlaybackState
 import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.theme.MessageAppTypography
+import com.Kelasor.app.domain.model.MessageStatus
 import com.Kelasor.app.util.Constants
 
 /**
@@ -55,6 +56,8 @@ fun AudioFileBubble(
     durationMs: Long,
     isMyMessage: Boolean,
     audioPlayerManager: AudioPlayerManager,
+    time: String = "",
+    status: MessageStatus = MessageStatus.SENT,
     modifier: Modifier = Modifier
 ) {
     val extendedColors = MessageAppTheme.extendedColors
@@ -165,21 +168,40 @@ fun AudioFileBubble(
                 }
             )
             
-            // Duration
+            // Duration + time + status row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = formatAudioDuration(if (isDragging) (dragProgress * actualDurationMs).toLong() else currentPositionMs),
                     style = MessageAppTypography.messageTime,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(
-                    text = formatAudioDuration(actualDurationMs),
-                    style = MessageAppTypography.messageTime,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = formatAudioDuration(actualDurationMs),
+                        style = MessageAppTypography.messageTime,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (time.isNotEmpty()) {
+                        Text(
+                            text = time,
+                            style = MessageAppTypography.messageTime,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (isMyMessage) {
+                        MessageStatusIcon(
+                            status = status,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
     }

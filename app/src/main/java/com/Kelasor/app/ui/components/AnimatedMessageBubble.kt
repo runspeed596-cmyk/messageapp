@@ -1,19 +1,23 @@
 package com.Kelasor.app.ui.components
 
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 
 /**
- * 🎬 iMessage-Style Elegant Message Bubble Animation
- * 
- * Smooth, subtle, premium animation effects:
- * - Gentle scale from 0.85 to 1.0 (subtle, not dramatic)
- * - Soft slide from sender side (only 30px, not 200px)
- * - No rotation (cleaner look)
- * - Smooth ease-out curve
+ * Telegram-style send animation — only for outgoing new messages.
+ * Also animates incoming messages with a subtle slide from left.
+ * Animates ONLY local (pending) messages on first send.
+ * Server-confirmed messages (ID replacement) render instantly.
  */
 @Composable
 fun AnimatedMessageBubble(
@@ -22,98 +26,85 @@ fun AnimatedMessageBubble(
     isNewMessage: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    // Animation state - starts at 0 and animates to 1
-    var animationStarted by remember(messageId) { mutableStateOf(false) }
-    
-    // Gentle scale animation - starts at 85% (subtle, not dramatic)
-    val scale by animateFloatAsState(
-        targetValue = if (animationStarted) 1f else 0.85f,
-        animationSpec = tween(
-            durationMillis = 200,
-            easing = FastOutSlowInEasing
-        ),
-        label = "scale_$messageId"
-    )
-    
-    // Smooth alpha animation
-    val alpha by animateFloatAsState(
-        targetValue = if (animationStarted) 1f else 0f,
-        animationSpec = tween(
-            durationMillis = 150,
-            easing = LinearEasing
-        ),
-        label = "alpha_$messageId"
-    )
-    
-    // Subtle slide - only 30px, not 200px (smooth, not aggressive)
-    val slideX by animateFloatAsState(
-        targetValue = if (animationStarted) 0f else if (isMyMessage) 30f else -30f,
-        animationSpec = tween(
-            durationMillis = 220,
-            easing = FastOutSlowInEasing
-        ),
-        label = "slide_$messageId"
-    )
-    
-    // Trigger animation on first composition
-    LaunchedEffect(messageId) {
-        animationStarted = true
+    // Only animate local pending messages (outgoing) or new incoming
+    val isLocalPending = messageId.startsWith("local_")
+    // For outgoing: only animate local pending
+    if (isMyMessage && (!isNewMessage || !isLocalPending)) {
+        Box { content() }
+        return
     }
-    
-    Box(
-        modifier = Modifier
-            .graphicsLayer {
+    // For incoming: only animate truly new messages
+    if (!isMyMessage && !isNewMessage) {
+        Box { content() }
+        return
+    }
+    var started by remember(messageId) { mutableStateOf(false) }
+    if (isMyMessage) {
+        // Outgoing: slide up + scale + fade
+        val scale by animateFloatAsState(
+            targetValue = if (started) 1f else 0.96f,
+            animationSpec = tween(220, easing = FastOutSlowInEasing),
+            label = "send_scale"
+        )
+        val alpha by animateFloatAsState(
+            targetValue = if (started) 1f else 0f,
+            animationSpec = tween(150, easing = FastOutSlowInEasing),
+            label = "send_alpha"
+        )
+        val slideY by animateFloatAsState(
+            targetValue = if (started) 0f else 24f,
+            animationSpec = tween(220, easing = FastOutSlowInEasing),
+            label = "send_slide"
+        )
+        LaunchedEffect(messageId) { started = true }
+        Box(
+            modifier = Modifier.graphicsLayer {
                 scaleX = scale
                 scaleY = scale
                 this.alpha = alpha
-                translationX = slideX
-                // Transform origin from the message sender side
-                transformOrigin = if (isMyMessage) {
-                    androidx.compose.ui.graphics.TransformOrigin(1f, 0.5f)
-                } else {
-                    androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
-                }
+                translationY = slideY
             }
-    ) {
-        content()
+        ) {
+            content()
+        }
+    } else {
+        // Incoming: subtle slide from left + fade
+        val alpha by animateFloatAsState(
+            targetValue = if (started) 1f else 0f,
+            animationSpec = tween(200, easing = FastOutSlowInEasing),
+            label = "incoming_alpha"
+        )
+        val slideX by animateFloatAsState(
+            targetValue = if (started) 0f else -20f,
+            animationSpec = tween(250, easing = FastOutSlowInEasing),
+            label = "incoming_slide"
+        )
+        val scale by animateFloatAsState(
+            targetValue = if (started) 1f else 0.97f,
+            animationSpec = tween(220, easing = FastOutSlowInEasing),
+            label = "incoming_scale"
+        )
+        LaunchedEffect(messageId) { started = true }
+        Box(
+            modifier = Modifier.graphicsLayer {
+                this.alpha = alpha
+                translationX = slideX
+                scaleX = scale
+                scaleY = scale
+            }
+        ) {
+            content()
+        }
     }
 }
 
 /**
- * 🎯 Ultra-Minimal Animation - Just fade + tiny scale
- * 
- * The most subtle option for premium feel
+ * No-op wrapper — instant render.
  */
 @Composable
 fun MinimalMessageAnimation(
     messageId: String,
     content: @Composable () -> Unit
 ) {
-    var visible by remember(messageId) { mutableStateOf(false) }
-    
-    val scale by animateFloatAsState(
-        targetValue = if (visible) 1f else 0.95f,
-        animationSpec = tween(180, easing = FastOutSlowInEasing),
-        label = "scale"
-    )
-    
-    val alpha by animateFloatAsState(
-        targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(120),
-        label = "alpha"
-    )
-    
-    LaunchedEffect(messageId) {
-        visible = true
-    }
-    
-    Box(
-        modifier = Modifier.graphicsLayer {
-            scaleX = scale
-            scaleY = scale
-            this.alpha = alpha
-        }
-    ) {
-        content()
-    }
+    Box { content() }
 }

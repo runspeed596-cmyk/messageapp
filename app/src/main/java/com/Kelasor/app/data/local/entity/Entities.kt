@@ -58,6 +58,7 @@ data class ChatEntity(
     val lastMessageId: String?,
     val lastMessage: String? = null,
     val lastMessageTime: Long? = null,
+    val isLastMessageEdited: Boolean = false,
     val unreadCount: Int = 0,
     val isPinned: Boolean = false,
     val isMuted: Boolean = false,
@@ -94,7 +95,10 @@ data class MessageEntity(
     val reactions: String? = null,
     val myReaction: String? = null,
     val poll: String? = null,
-    val amplitudes: String? = null
+    val amplitudes: String? = null,
+    val isPinned: Boolean = false,
+    val pinnedAt: Long? = null,
+    val scheduledAt: Long? = null
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -116,6 +120,7 @@ data class GroupEntity(
     val myRole: String?,
     val lastMessageContent: String? = null,
     val lastMessageTime: Long? = null,
+    val isLastMessageEdited: Boolean = false,
     val unreadCount: Int = 0,
     val isMuted: Boolean = false,
     val isPinned: Boolean = false,
@@ -183,6 +188,7 @@ data class ChannelEntity(
     val isAdmin: Boolean = false,
     val lastPostContent: String? = null,
     val lastPostTime: Long? = null,
+    val isLastPostEdited: Boolean = false,
     val unreadCount: Int = 0,
     val isMuted: Boolean = false,
     val isPinned: Boolean = false,
@@ -206,7 +212,13 @@ data class ChannelPostEntity(
     val editedAt: Long? = null,
     val poll: String? = null,
     val reactions: String? = null, // JSON map of reactions
-    val amplitudes: String? = null
+    val amplitudes: String? = null,
+    val isPinned: Boolean = false,
+    val pinnedAt: Long? = null,
+    val scheduledAt: Long? = null,
+    val forwardedFrom: String? = null,
+    val isEdited: Boolean = false,
+    val myReaction: String? = null
 )
 
 @Entity(

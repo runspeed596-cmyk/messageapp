@@ -8,6 +8,8 @@ import com.Kelasor.app.data.local.entity.MessageEntity
 import com.Kelasor.app.data.remote.api.ApiService
 import com.Kelasor.app.data.remote.dto.CreateChatRequest
 import com.Kelasor.app.data.remote.dto.EditMessageRequest
+import com.Kelasor.app.data.remote.dto.ForwardMessageRequest
+import com.Kelasor.app.data.remote.dto.ScheduleMessageRequest
 import com.Kelasor.app.data.remote.dto.SendMessageRequest
 import com.Kelasor.app.data.sync.SyncCoordinator
 import com.Kelasor.app.domain.mapper.*
@@ -274,6 +276,78 @@ class ChatRepository @Inject constructor(
             Result.failure(Exception("خطا در اتصال به سرور: ${e.message}"))
         }
     }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 📌 Pin / Forward / Schedule Operations
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    suspend fun pinMessage(messageId: String, isPinned: Boolean): Result<Message> {
+        return try {
+            val response = apiService.pinMessage(messageId, isPinned)
+            if (response.isSuccessful && response.body()?.success == true) {
+                val dto = response.body()?.data
+                if (dto != null) {
+                    Result.success(dto.toDomain())
+                } else {
+                    Result.failure(Exception("خطا در سنجاق کردن پیام"))
+                }
+            } else {
+                Result.failure(Exception(response.body()?.message ?: "خطا"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("خطا در اتصال به سرور: ${e.message}"))
+        }
+    }
+
+    suspend fun forwardMessage(messageId: String, targetChatId: String?, targetGroupId: String?, targetChannelId: String?): Result<Boolean> {
+        return try {
+            val targetType = when {
+                targetChatId != null -> "CHAT"
+                targetGroupId != null -> "GROUP"
+                targetChannelId != null -> "CHANNEL"
+                else -> return Result.failure(Exception("هیچ مقصدی مشخص نشده"))
+            }
+            val request = ForwardMessageRequest(
+                messageIds = listOf(messageId),
+                targetChatId = targetChatId,
+                targetGroupId = targetGroupId,
+                targetChannelId = targetChannelId,
+                targetType = targetType
+            )
+            val response = apiService.forwardMessages(request)
+            if (response.isSuccessful && response.body()?.success == true) {
+                Result.success(true)
+            } else {
+                Result.failure(Exception(response.body()?.message ?: "خطا"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("خطا در اتصال به سرور: ${e.message}"))
+        }
+    }
+
+    suspend fun scheduleMessage(chatId: String, content: String, type: String, mediaUrl: String?, scheduledAt: String): Result<Message> {
+        return try {
+            val request = ScheduleMessageRequest(
+                content = content,
+                type = type,
+                mediaUrl = mediaUrl,
+                scheduledAt = scheduledAt
+            )
+            val response = apiService.scheduleMessage(chatId, request)
+            if (response.isSuccessful && response.body()?.success == true) {
+                val dto = response.body()?.data
+                if (dto != null) {
+                    Result.success(dto.toDomain())
+                } else {
+                    Result.failure(Exception("خطا در زمانبندی پیام"))
+                }
+            } else {
+                Result.failure(Exception(response.body()?.message ?: "خطا"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("خطا در اتصال به سرور: ${e.message}"))
+        }
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -318,6 +392,40 @@ class MessageRepository @Inject constructor(
         messageDao.observeMessagesForChat(chatId).map { messages ->
             messages.map { it.toDomain() }
         }.distinctUntilChanged()
+    
+    /**
+     * Fetch shared content (media, files, links) for a specific target (User, Group, Channel).
+     * This bypasses the local DB for now to get fresh results from server.
+     */
+    fun getSharedContent(
+        targetId: String,
+        scope: String, // USER, GROUP, CHANNEL
+        type: String // IMAGE, VIDEO, FILE, AUDIO, LINK, etc.
+    ): Flow<List<com.Kelasor.app.domain.model.SharedContent>> = flow {
+        try {
+            val response = apiService.getSharedContent(targetId, scope, type)
+            if (response.isSuccessful && response.body()?.success == true) {
+                val contents = response.body()?.data?.map { dto ->
+                    com.Kelasor.app.domain.model.SharedContent(
+                        id = dto.id,
+                        type = com.Kelasor.app.domain.model.MessageType.valueOf(dto.type),
+                        url = dto.mediaUrl ?: dto.content,
+                        thumbnail = dto.mediaUrl, // Simple fallback
+                        name = if (dto.type == "FILE") dto.content else null,
+                        caption = dto.content,
+                        createdAt = com.Kelasor.app.domain.mapper.parseInstant(dto.createdAt) ?: java.time.Instant.now(), // Fixed mismatch
+                        messageId = dto.id,
+                        chatId = dto.chatId
+                    )
+                } ?: emptyList()
+                emit(contents)
+            } else {
+                emit(emptyList())
+            }
+        } catch (e: Exception) {
+            emit(emptyList())
+        }
+    }
     
     // ═══════════════════════════════════════════════════════════════════════════
     // 🔄 SYNC STATUS (For UI Loading Indicators)
@@ -401,7 +509,18 @@ class MessageRepository @Inject constructor(
         messageDao.insertMessage(entity)
         
         // FIX: Also update chat preview for own sent messages
-        val previewContent = if (type == "TEXT") content else "Media: $type"
+        val previewContent = when (type) {
+            "TEXT" -> content
+            "IMAGE" -> "🖼️ عکس"
+            "VIDEO" -> "🎬 ویدیو"
+            "VIDEO_NOTE" -> "🎥 پیام ویدیویی"
+            "VOICE" -> "🎤 پیام صوتی"
+            "AUDIO" -> "🎵 فایل صوتی"
+            "FILE" -> "📎 فایل"
+            "LOCATION" -> "📍 موقعیت مکانی"
+            "POLL" -> "📊 نظرسنجی"
+            else -> "📎 $type"
+        }
         chatDao.updateLastMessage(chatId, previewContent, now)
         
         return messageId

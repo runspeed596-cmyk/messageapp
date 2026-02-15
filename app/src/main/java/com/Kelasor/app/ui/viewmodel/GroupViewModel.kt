@@ -292,6 +292,7 @@ class GroupConversationViewModel @Inject constructor(
     private val sessionManager: com.Kelasor.app.data.session.SessionManager,
     private val soundPlayer: com.Kelasor.app.data.media.SoundPlayer,
     private val currentChatManager: com.Kelasor.app.data.session.CurrentChatManager,
+    val videoNoteRecorderManager: com.Kelasor.app.data.video.VideoNoteRecorderManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -469,7 +470,7 @@ class GroupConversationViewModel @Inject constructor(
         }
     }
 
-    fun uploadAndSendMedia(groupId: String, uri: android.net.Uri, context: android.content.Context, isVideo: Boolean) {
+    fun uploadAndSendMedia(groupId: String, uri: android.net.Uri, context: android.content.Context, isVideo: Boolean, caption: String? = null) {
         viewModelScope.launch {
             _state.update { it.copy(isSending = true, isUploading = true, uploadProgress = 0f, uploadTotalBytes = 0L) }
             try {
@@ -491,8 +492,13 @@ class GroupConversationViewModel @Inject constructor(
                 response.fold(
                     onSuccess = { fileUrl ->
                         val messageType = if (isVideoFile) "VIDEO" else "IMAGE"
-                        val emojiPrefix = if (isVideoFile) "🎬" else "🖼️"
-                        sendMessage("$emojiPrefix $fileName", type = messageType, mediaUrl = fileUrl)
+                        val content = if (!caption.isNullOrBlank()) {
+                            caption
+                        } else {
+                            val emojiPrefix = if (isVideoFile) "🎬" else "🖼️"
+                            "$emojiPrefix $fileName"
+                        }
+                        sendMessage(content, type = messageType, mediaUrl = fileUrl)
                     },
                     onFailure = { e ->
                         _events.emit(GroupEvent.Error("خطا در آپلود: ${e.message}"))
@@ -564,6 +570,36 @@ class GroupConversationViewModel @Inject constructor(
                 voiceFile.delete()
             } catch (e: Exception) {
                 _events.emit(GroupEvent.Error("خطا در آپلود صدا: ${e.message}"))
+            } finally {
+                _state.update { it.copy(isSending = false, isUploading = false, uploadProgress = 0f) }
+            }
+        }
+    }
+
+    /**
+     * Send a circular video note message.
+     */
+    fun sendVideoNote(videoFile: java.io.File, durationMs: Long) {
+        val groupId = currentGroupId ?: return
+        viewModelScope.launch {
+            _state.update { it.copy(isSending = true, isUploading = true, uploadProgress = 0f, uploadTotalBytes = 0L) }
+            try {
+                val requestBody = videoFile.asRequestBody("video/mp4".toMediaTypeOrNull())
+                _state.update { it.copy(uploadTotalBytes = videoFile.length()) }
+                val part = okhttp3.MultipartBody.Part.createFormData("file", videoFile.name, requestBody)
+                val response = chatRepository.uploadFile(part)
+                response.fold(
+                    onSuccess = { fileUrl ->
+                        val durationSeconds = durationMs / 1000
+                        sendMessage("🎥 ویدیو نوت (${durationSeconds}s)", type = "VIDEO_NOTE", mediaUrl = fileUrl)
+                    },
+                    onFailure = { e ->
+                        _events.emit(GroupEvent.Error("خطا در آپلود ویدیو نوت: ${e.message}"))
+                    }
+                )
+                videoFile.delete()
+            } catch (e: Exception) {
+                _events.emit(GroupEvent.Error("خطا در آپلود ویدیو نوت: ${e.message}"))
             } finally {
                 _state.update { it.copy(isSending = false, isUploading = false, uploadProgress = 0f) }
             }
@@ -679,6 +715,45 @@ class GroupConversationViewModel @Inject constructor(
 
     fun clearSelection() {
         _state.update { it.copy(selectedMessageIds = emptySet()) }
+    }
+
+    fun reactToMultipleMessages(messageIds: Set<String>, reaction: String) {
+        val groupId = currentGroupId ?: return
+        viewModelScope.launch {
+            messageIds.forEach { messageId ->
+                groupRepository.reactToMessage(groupId, messageId, reaction).collect { result ->
+                    if (result is GroupResult.Error) _events.emit(GroupEvent.Error(result.message))
+                }
+            }
+            clearSelection()
+        }
+    }
+
+    fun pinMessage(messageId: String, isPinned: Boolean) {
+        viewModelScope.launch {
+            try {
+                val response = chatRepository.pinMessage(messageId, isPinned)
+                response.fold(
+                    onSuccess = {
+                        android.util.Log.d("GroupConversationVM", "Message $messageId pin state set to $isPinned")
+                        _state.update { currentState ->
+                            currentState.copy(
+                                messages = currentState.messages.map { msg ->
+                                    if (msg.id == messageId) msg.copy(isPinned = isPinned, pinnedAt = if (isPinned) java.time.Instant.now() else null) else msg
+                                }
+                            )
+                        }
+                    },
+                    onFailure = { e ->
+                        android.util.Log.e("GroupConversationVM", "Failed to pin message", e)
+                        _events.emit(GroupEvent.Error("خطا در سنجاق کردن پیام"))
+                    }
+                )
+            } catch (e: Exception) {
+                android.util.Log.e("GroupConversationVM", "pinMessage failed", e)
+                _events.emit(GroupEvent.Error("خطا در سنجاق کردن پیام"))
+            }
+        }
     }
 }
 
@@ -1139,7 +1214,11 @@ data class GroupDetailState(
     val searchQuery: String = "",
     val searchResults: List<com.Kelasor.app.domain.model.User> = emptyList(),
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    // Shared Media
+    val selectedContentType: com.Kelasor.app.ui.components.ContentType? = null,
+    val sharedContent: List<com.Kelasor.app.domain.model.SharedContent> = emptyList(),
+    val isMediaLoading: Boolean = false
 )
 
 @HiltViewModel
@@ -1148,6 +1227,7 @@ class GroupDetailViewModel @Inject constructor(
     private val userRepository: com.Kelasor.app.data.repository.UserRepository,
     private val contactsRepository: com.Kelasor.app.data.repository.ContactsRepository,
     private val sessionManager: com.Kelasor.app.data.session.SessionManager,
+    private val messageRepository: com.Kelasor.app.data.repository.MessageRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     
@@ -1375,4 +1455,31 @@ class GroupDetailViewModel @Inject constructor(
             }
         }
     }
+
+    fun onFilterSelected(type: com.Kelasor.app.ui.components.ContentType?) {
+        _state.update { it.copy(selectedContentType = type) }
+        if (type != null) {
+            loadSharedMedia(_state.value.group?.id ?: return, type)
+        } else {
+            _state.update { it.copy(sharedContent = emptyList()) }
+        }
+    }
+
+    private fun loadSharedMedia(groupId: String, type: com.Kelasor.app.ui.components.ContentType) {
+        viewModelScope.launch {
+            _state.update { it.copy(isMediaLoading = true) }
+            val typeString = when(type) {
+                com.Kelasor.app.ui.components.ContentType.Photo -> "IMAGE"
+                com.Kelasor.app.ui.components.ContentType.Video -> "VIDEO"
+                com.Kelasor.app.ui.components.ContentType.Link -> "LINK"
+                com.Kelasor.app.ui.components.ContentType.File -> "FILE"
+                com.Kelasor.app.ui.components.ContentType.Music -> "AUDIO"
+            }
+            
+            messageRepository.getSharedContent(groupId, "GROUP", typeString).collect { content ->
+                _state.update { it.copy(sharedContent = content, isMediaLoading = false) }
+            }
+        }
+    }
 }
+

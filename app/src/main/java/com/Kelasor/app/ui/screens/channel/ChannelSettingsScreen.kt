@@ -80,6 +80,7 @@ fun ChannelSettingsScreen(
     channelId: String,
     onNavigateBack: () -> Unit,
     onChannelDeleted: () -> Unit = {},
+    onNavigateToMessage: (String, String) -> Unit,
     viewModel: ChannelSettingsViewModel = hiltViewModel()
 ) {
     val extendedColors = MessageAppTheme.extendedColors
@@ -93,6 +94,22 @@ fun ChannelSettingsScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var showAddMemberDialog by remember { mutableStateOf(false) }
+    
+    // Shared Media Action State
+    var selectedSharedContent by remember { mutableStateOf<com.Kelasor.app.domain.model.SharedContent?>(null) }
+    
+    // Media Preview State
+    var previewMediaUrl by remember { mutableStateOf<String?>(null) }
+    var previewMediaType by remember { mutableStateOf(com.Kelasor.app.ui.components.MediaType.IMAGE) }
+
+    // Media Preview Dialog
+    previewMediaUrl?.let { url ->
+        com.Kelasor.app.ui.components.MediaPreviewDialog(
+            mediaUrl = url,
+            mediaType = previewMediaType,
+            onDismiss = { previewMediaUrl = null }
+        )
+    }
     
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -404,6 +421,34 @@ fun ChannelSettingsScreen(
                 }
             }
             
+
+
+            // Shared Media Filter
+            item {
+                Text(
+                    text = "رسانه‌های اشتراکی",
+                    style = MessageAppTypography.sectionTitle,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
+                )
+                
+                com.Kelasor.app.ui.components.ContentFilter(
+                    selectedType = state.selectedContentType,
+                    onTypeSelected = { viewModel.onFilterSelected(it) }
+                )
+                
+                if (state.selectedContentType != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    com.Kelasor.app.ui.components.SharedMediaGrid(
+                        content = state.sharedContent,
+                        isLoading = state.isMediaLoading,
+                        onItemClick = { item ->
+                            selectedSharedContent = item
+                        }
+                    )
+                }
+            }
+            
             // Danger Zone - Positioned prominently after Invite Link
             item {
                 val isOwner = state.isOwner
@@ -539,6 +584,42 @@ fun ChannelSettingsScreen(
             currentMemberIds = state.subscribers.map { it.user.id }.toSet()
         )
     }
+    
+    // Shared Media Action Sheet
+    com.Kelasor.app.ui.components.SharedMediaActionSheet(
+        content = selectedSharedContent,
+        onDismissRequest = { selectedSharedContent = null },
+        onView = {
+            selectedSharedContent?.let { item ->
+                when (item.type) {
+                    com.Kelasor.app.domain.model.MessageType.IMAGE,
+                    com.Kelasor.app.domain.model.MessageType.VIDEO -> {
+                        previewMediaUrl = item.url
+                        previewMediaType = if (item.type == com.Kelasor.app.domain.model.MessageType.VIDEO) 
+                            com.Kelasor.app.ui.components.MediaType.VIDEO 
+                        else 
+                            com.Kelasor.app.ui.components.MediaType.IMAGE
+                    }
+                    com.Kelasor.app.domain.model.MessageType.LINK -> {
+                        try {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(item.url))
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            android.widget.Toast.makeText(context, "خطا در باز کردن لینک", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    else -> {
+                        android.widget.Toast.makeText(context, "قابلیت نمایش این فایل هنوز پیاده‌سازی نشده است", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        },
+        onShowInChat = {
+            selectedSharedContent?.let { item ->
+                onNavigateToMessage(channelId, item.messageId)
+            }
+        }
+    )
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

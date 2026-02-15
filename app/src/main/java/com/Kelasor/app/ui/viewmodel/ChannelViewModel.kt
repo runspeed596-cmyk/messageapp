@@ -249,7 +249,8 @@ class ChannelViewViewModel @Inject constructor(
     val voiceRecorderManager: VoiceRecorderManager,
     val audioPlayerManager: AudioPlayerManager,
     val locationManager: com.Kelasor.app.data.location.LocationManager,
-    private val currentChatManager: com.Kelasor.app.data.session.CurrentChatManager
+    private val currentChatManager: com.Kelasor.app.data.session.CurrentChatManager,
+    val videoNoteRecorderManager: com.Kelasor.app.data.video.VideoNoteRecorderManager
 ) : ViewModel() {
 
     fun setActiveChat(id: String) {
@@ -559,6 +560,36 @@ class ChannelViewViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Send a circular video note post.
+     */
+    fun sendVideoNote(videoFile: java.io.File, durationMs: Long) {
+        val channelId = currentChannelId ?: return
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, isUploading = true, uploadProgress = 0f) }
+            try {
+                val requestBody = videoFile.asRequestBody("video/mp4".toMediaTypeOrNull())
+                _state.update { it.copy(uploadTotalBytes = videoFile.length()) }
+                val part = okhttp3.MultipartBody.Part.createFormData("file", videoFile.name, requestBody)
+                val response = chatRepository.uploadFile(part)
+                response.fold(
+                    onSuccess = { fileUrl ->
+                        val durationSeconds = durationMs / 1000
+                        createPost(content = "🎥 ویدیو نوت (${durationSeconds}s)", type = "VIDEO_NOTE", mediaUrl = fileUrl)
+                    },
+                    onFailure = { e ->
+                        _events.emit(ChannelEvent.Error("خطا در آپلود ویدیو نوت: ${e.message}"))
+                    }
+                )
+                videoFile.delete()
+            } catch (e: Exception) {
+                _events.emit(ChannelEvent.Error("خطا در آپلود ویدیو نوت: ${e.message}"))
+            } finally {
+                _state.update { it.copy(isLoading = false, isUploading = false, uploadProgress = 0f) }
+            }
+        }
+    }
+
     fun sendLocationMessage(latitude: Double, longitude: Double) {
         val channelId = currentChannelId ?: return
         viewModelScope.launch {
@@ -706,6 +737,32 @@ class ChannelViewViewModel @Inject constructor(
             }
         }
     }
+    fun pinPost(postId: String, isPinned: Boolean) {
+        viewModelScope.launch {
+            try {
+                val response = chatRepository.pinMessage(postId, isPinned)
+                response.fold(
+                    onSuccess = {
+                        android.util.Log.d("ChannelViewVM", "Post $postId pin state set to $isPinned")
+                        _state.update { currentState ->
+                            currentState.copy(
+                                posts = currentState.posts.map { post ->
+                                    if (post.id == postId) post.copy(isPinned = isPinned, pinnedAt = if (isPinned) java.time.Instant.now() else null) else post
+                                }
+                            )
+                        }
+                    },
+                    onFailure = { e ->
+                        android.util.Log.e("ChannelViewVM", "Failed to pin post", e)
+                        _events.emit(ChannelEvent.Error("خطا در سنجاق کردن پست"))
+                    }
+                )
+            } catch (e: Exception) {
+                android.util.Log.e("ChannelViewVM", "pinPost failed", e)
+                _events.emit(ChannelEvent.Error("خطا در سنجاق کردن پست"))
+            }
+        }
+    }
 
     fun openComments(postId: String) {
         _state.update { it.copy(activePostForComments = postId, comments = emptyList()) }
@@ -796,7 +853,11 @@ data class ChannelSettingsState(
     val error: String? = null,
     val contacts: List<com.Kelasor.app.domain.model.User> = emptyList(),
     val searchQuery: String = "",
-    val searchResults: List<com.Kelasor.app.domain.model.User> = emptyList()
+    val searchResults: List<com.Kelasor.app.domain.model.User> = emptyList(),
+    // Shared Media
+    val selectedContentType: com.Kelasor.app.ui.components.ContentType? = null,
+    val sharedContent: List<com.Kelasor.app.domain.model.SharedContent> = emptyList(),
+    val isMediaLoading: Boolean = false
 )
 
 sealed class ChannelSettingsEvent {
@@ -812,6 +873,7 @@ class ChannelSettingsViewModel @Inject constructor(
     private val userRepository: com.Kelasor.app.data.repository.UserRepository,
     private val contactsRepository: com.Kelasor.app.data.repository.ContactsRepository,
     private val sessionManager: com.Kelasor.app.data.session.SessionManager,
+    private val messageRepository: com.Kelasor.app.data.repository.MessageRepository,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
     private val _state = MutableStateFlow(ChannelSettingsState())
@@ -1056,6 +1118,32 @@ class ChannelSettingsViewModel @Inject constructor(
                     }
                     else -> {}
                 }
+            }
+        }
+    }
+
+    fun onFilterSelected(type: com.Kelasor.app.ui.components.ContentType?) {
+        _state.update { it.copy(selectedContentType = type) }
+        if (type != null) {
+            loadSharedMedia(_state.value.channel?.id ?: return, type)
+        } else {
+            _state.update { it.copy(sharedContent = emptyList()) }
+        }
+    }
+
+    private fun loadSharedMedia(channelId: String, type: com.Kelasor.app.ui.components.ContentType) {
+        viewModelScope.launch {
+            _state.update { it.copy(isMediaLoading = true) }
+            val typeString = when(type) {
+                com.Kelasor.app.ui.components.ContentType.Photo -> "IMAGE"
+                com.Kelasor.app.ui.components.ContentType.Video -> "VIDEO"
+                com.Kelasor.app.ui.components.ContentType.Link -> "LINK"
+                com.Kelasor.app.ui.components.ContentType.File -> "FILE"
+                com.Kelasor.app.ui.components.ContentType.Music -> "AUDIO"
+            }
+            
+            messageRepository.getSharedContent(channelId, "CHANNEL", typeString).collect { content ->
+                _state.update { it.copy(sharedContent = content, isMediaLoading = false) }
             }
         }
     }

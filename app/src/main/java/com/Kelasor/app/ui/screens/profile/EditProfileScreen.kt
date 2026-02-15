@@ -1,5 +1,6 @@
 package com.Kelasor.app.ui.screens.profile
 
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -17,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.Kelasor.app.domain.model.Channel
@@ -24,8 +27,14 @@ import com.Kelasor.app.ui.components.AvatarImage
 import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.viewmodel.ProfileViewModel
 import com.Kelasor.app.ui.viewmodel.ChannelListViewModel
+import com.Kelasor.app.ui.viewmodel.ProfileEvent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,10 +47,50 @@ fun EditProfileScreen(
     val channelState by channelViewModel.state.collectAsState()
     val user = profileState.user
     val extendedColors = MessageAppTheme.extendedColors
+    val context = LocalContext.current
+
+    // Local URI for immediate preview after picking
+    var selectedAvatarUri by remember { mutableStateOf<Uri?>(null) }
+
+    // Avatar picker launcher
+    val avatarPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let {
+            selectedAvatarUri = it
+            // Copy to temp file and upload
+            try {
+                val inputStream = context.contentResolver.openInputStream(it)
+                val tempFile = java.io.File.createTempFile("avatar_", ".jpg", context.cacheDir)
+                inputStream?.use { input ->
+                    tempFile.outputStream().use { output -> input.copyTo(output) }
+                }
+                profileViewModel.uploadAvatar(tempFile)
+            } catch (e: Exception) {
+                selectedAvatarUri = null
+                android.widget.Toast.makeText(context, "خطا در بارگذاری تصویر", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     // Load channels on mount
     LaunchedEffect(Unit) {
         channelViewModel.loadChannels()
+    }
+
+    // Observe avatar upload events
+    LaunchedEffect(Unit) {
+        profileViewModel.events.collect { event ->
+            when (event) {
+                is ProfileEvent.AvatarUploaded -> {
+                    android.widget.Toast.makeText(context, "تصویر پروفایل بروزرسانی شد", android.widget.Toast.LENGTH_SHORT).show()
+                }
+                is ProfileEvent.Error -> {
+                    android.widget.Toast.makeText(context, event.message, android.widget.Toast.LENGTH_SHORT).show()
+                }
+                else -> {}
+            }
+        }
     }
     
     // Admin Channels for Bio Selection
@@ -118,8 +167,84 @@ fun EditProfileScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Avatar Upload Section
+            item {
+                Box(
+                    modifier = Modifier.size(130.dp),
+                    contentAlignment = Alignment.BottomEnd
+                ) {
+                    // Use local URI first (immediate preview), fallback to server URL
+                    val displayImageUri: Any? = selectedAvatarUri
+                        ?: user?.avatarUrl?.let { com.Kelasor.app.util.UrlUtils.getFullUrl(it) }
+                    if (displayImageUri != null && (displayImageUri is Uri || (displayImageUri is String && displayImageUri.isNotBlank()))) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(displayImageUri)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "پروفایل",
+                            modifier = Modifier
+                                .size(130.dp)
+                                .clip(CircleShape)
+                                .clickable {
+                                    avatarPickerLauncher.launch(
+                                        androidx.activity.result.PickVisualMediaRequest(
+                                            ActivityResultContracts.PickVisualMedia.ImageOnly
+                                        )
+                                    )
+                                },
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        AvatarImage(
+                            imageUrl = null,
+                            name = user?.displayName ?: "?",
+                            size = com.Kelasor.app.ui.components.AvatarSize.LARGE,
+                            modifier = Modifier
+                                .size(130.dp)
+                                .clickable {
+                                    avatarPickerLauncher.launch(
+                                        androidx.activity.result.PickVisualMediaRequest(
+                                            ActivityResultContracts.PickVisualMedia.ImageOnly
+                                        )
+                                    )
+                                }
+                        )
+                    }
+                    // Camera icon overlay
+                    Surface(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .clickable {
+                                avatarPickerLauncher.launch(
+                                    androidx.activity.result.PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                                    )
+                                )
+                            },
+                        color = extendedColors.accent,
+                        shape = CircleShape
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CameraAlt,
+                            contentDescription = "تغییر تصویر",
+                            tint = Color.White,
+                            modifier = Modifier.padding(6.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "تغییر تصویر پروفایل",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = extendedColors.accent
+                )
+            }
+
             // Basic Info Section
             item {
                 SectionHeader("اطلاعات پایه", Icons.Default.Person)
@@ -136,10 +261,27 @@ fun EditProfileScreen(
                 
                 OutlinedTextField(
                     value = username,
-                    onValueChange = { username = it },
+                    onValueChange = { newValue ->
+                        username = newValue.lowercase().filter { c -> c.isLetterOrDigit() || c == '_' || c == '.' }
+                    },
                     label = { Text("نام کاربری (@)") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    isError = username.isNotEmpty() && username.length < 3,
+                    supportingText = {
+                        when {
+                            username.isEmpty() -> Text("حداقل ۳ کاراکتر، فقط حروف انگلیسی و عدد")
+                            username.length < 3 -> Text("نام کاربری باید حداقل ۳ کاراکتر باشد", color = MaterialTheme.colorScheme.error)
+                            else -> Text("✓ فرمت صحیح", color = androidx.compose.ui.graphics.Color(0xFF4CAF50))
+                        }
+                    },
+                    leadingIcon = {
+                        Text("@", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = if (username.length >= 3) androidx.compose.ui.graphics.Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = if (username.length >= 3) androidx.compose.ui.graphics.Color(0xFF4CAF50).copy(alpha = 0.5f) else MaterialTheme.colorScheme.outline
+                    )
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 

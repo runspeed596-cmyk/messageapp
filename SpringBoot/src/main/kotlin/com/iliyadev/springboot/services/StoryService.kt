@@ -17,7 +17,10 @@ class StoryService(
     private val groupRepository: GroupRepository,
     private val channelRepository: ChannelRepository,
     private val groupMemberRepository: GroupMemberRepository,
-    private val channelSubscriberRepository: ChannelSubscriberRepository
+    private val channelSubscriberRepository: ChannelSubscriberRepository,
+    private val storyReplyRepository: StoryReplyRepository,
+    private val chatService: ChatService,
+    private val messageService: MessageService
 ) {
 
     @Transactional
@@ -283,6 +286,40 @@ class StoryService(
                  stories = stories.map { it.toDto(userId) },
                  isCurrentUser = canManage
              )
-         }
+          }
+     }
+
+    @Transactional
+    fun replyToStory(userId: UUID, storyId: UUID, content: String): StoryReplyDto {
+        val user = userRepository.findById(userId).orElseThrow { IllegalArgumentException("User not found") }
+        val story = storyRepository.findById(storyId).orElseThrow { IllegalArgumentException("Story not found") }
+        val reply = StoryReply(
+            story = story,
+            user = user,
+            content = content,
+            createdAt = Instant.now()
+        )
+        val saved = storyReplyRepository.save(reply)
+        // Send the reply as a private chat message to the story owner
+        val storyOwnerId = story.user?.id
+        if (storyOwnerId != null && storyOwnerId != userId) {
+            try {
+                val chatDto = chatService.createPrivateChat(userId, storyOwnerId)
+                if (chatDto != null) {
+                    val msgContent = "\uD83D\uDCE9 پاسخ استوری:\n$content"
+                    val sendRequest = SendMessageRequest(content = msgContent)
+                    messageService.sendMessage(chatDto.id, userId, sendRequest)
+                }
+            } catch (e: Exception) {
+                // Log but don't fail the reply itself
+                println("WARN: Failed to send story reply as chat message: ${e.message}")
+            }
+        }
+        return saved.toDto()
+    }
+
+    @Transactional(readOnly = true)
+    fun getStoryReplies(storyId: UUID): List<StoryReplyDto> {
+        return storyReplyRepository.findByStoryIdOrderByCreatedAtDesc(storyId).map { it.toDto() }
     }
 }

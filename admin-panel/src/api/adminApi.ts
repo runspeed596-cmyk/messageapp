@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export const BASE_URL = import.meta.env.VITE_API_URL || 'http://46.249.100.239/api';
+export const BASE_URL = import.meta.env.VITE_API_URL || 'http://192.168.70.113:8080/api';
 export const getMediaUrl = (path: string) => {
     if (!path) return '';
     if (path.startsWith('http')) return path;

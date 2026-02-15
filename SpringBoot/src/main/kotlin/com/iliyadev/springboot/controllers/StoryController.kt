@@ -148,4 +148,26 @@ class StoryController(
         val stories = storyService.getChannelStoriesFeed(userId)
         return ResponseEntity.ok(stories)
     }
+
+    @PostMapping("/{id}/reply")
+    fun replyToStory(
+        @RequestAttribute("userId") userId: UUID,
+        @PathVariable id: UUID,
+        @RequestBody request: StoryReplyRequest
+    ): ResponseEntity<Any> {
+        return try {
+            val reply = storyService.replyToStory(userId, id, request.content)
+            ResponseEntity.ok(reply)
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to e.message))
+        }
+    }
+
+    @GetMapping("/{id}/replies")
+    fun getStoryReplies(
+        @PathVariable id: UUID
+    ): ResponseEntity<List<StoryReplyDto>> {
+        val replies = storyService.getStoryReplies(id)
+        return ResponseEntity.ok(replies)
+    }
 }

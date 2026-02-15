@@ -25,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -97,41 +98,30 @@ fun StoryItem(
     onClick: () -> Unit
 ) {
     val extendedColors = MessageAppTheme.extendedColors
-    
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(72.dp)
+        modifier = Modifier
+            .width(72.dp)
+            .clickable(onClick = onClick)
     ) {
         Box(
             modifier = Modifier
-                .size(68.dp)
-                .clickable(onClick = onClick),
+                .size(68.dp),
             contentAlignment = Alignment.Center
         ) {
             // Segmented Ring
             val numStories = storyUser.stories.size
             if (numStories > 0) {
-                // Determine ring color
-                // If all viewed -> Gray, If unviewed -> Accent/Gradient
-                // FIX: Keep active color for current user (My Story / Managed Group) even if viewed
                 val hasUnviewed = !storyUser.allViewed
                 val isMyActiveStory = storyUser.isCurrentUser
-                
-                val ringColor = if (hasUnviewed || isMyActiveStory) extendedColors.accent else Color.Gray.copy(alpha = 0.5f)
-                
                 Canvas(modifier = Modifier.size(68.dp)) {
-                    val strokeWidth = 2.5.dp.toPx() // Thinner ring
+                    val strokeWidth = 2.5.dp.toPx()
                     val gapAngle = if (numStories > 1) 5f else 0f
                     val sweepAngle = (360f - (numStories * gapAngle)) / numStories
-                    
                     for (i in 0 until numStories) {
                         val startAngle = -90f + (i * (sweepAngle + gapAngle))
                         val isStoryViewed = storyUser.stories[i].isViewed
-                        
-                        // Individual segment color
-                        // If it's my story, keep it active (red). If other's story, gray if viewed.
                         val segmentColor = if (isStoryViewed && !isMyActiveStory) Color.Gray.copy(alpha = 0.5f) else extendedColors.accent
-                        
                         drawArc(
                             color = segmentColor,
                             startAngle = startAngle,
@@ -142,18 +132,16 @@ fun StoryItem(
                     }
                 }
             }
-            
             // Avatar
             StoryAvatarImage(
                 model = storyUser.avatarUrl,
+                displayName = storyUser.displayName,
                 modifier = Modifier
-                    .size(60.dp) // Slightly smaller than ring container to leave gap
+                    .size(60.dp)
                     .clip(CircleShape)
             )
         }
-        
         Spacer(modifier = Modifier.height(4.dp))
-        
         Text(
             text = storyUser.displayName,
             style = MessageAppTypography.caption,
@@ -171,31 +159,31 @@ fun AddStoryItem(
     onClick: () -> Unit
 ) {
     val extendedColors = MessageAppTheme.extendedColors
-    
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(72.dp)
+        modifier = Modifier
+            .width(72.dp)
+            .clickable(onClick = onClick)
     ) {
         Box(
-            modifier = Modifier.size(68.dp).clickable(onClick = onClick),
+            modifier = Modifier.size(68.dp),
             contentAlignment = Alignment.Center
         ) {
-            // Avatar
             StoryAvatarImage(
                 model = currentUser?.avatarUrl,
+                displayName = currentUser?.displayName ?: "شما",
                 modifier = Modifier
                     .size(60.dp)
                     .clip(CircleShape)
             )
-            
             // Plus Badge
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .size(20.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.background) // Gap
-                    .padding(2.dp) // Gap size
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(2.dp)
                     .clip(CircleShape)
                     .background(extendedColors.accent),
                 contentAlignment = Alignment.Center
@@ -208,11 +196,9 @@ fun AddStoryItem(
                 )
             }
         }
-        
         Spacer(modifier = Modifier.height(4.dp))
-        
         Text(
-            text = "استوری شما",
+            text = currentUser?.displayName ?: "استوری شما",
             style = MessageAppTypography.caption,
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
@@ -221,16 +207,51 @@ fun AddStoryItem(
     }
 }
 
+/**
+ * Generates initials from a display name.
+ * "Dad 1" -> "D1", "علی رضایی" -> "عر", "John" -> "J"
+ */
+private fun generateInitials(displayName: String): String {
+    val parts = displayName.trim().split("\\s+".toRegex())
+    return when {
+        parts.size >= 2 -> "${parts.first().first()}${parts.last().first()}"
+        parts.isNotEmpty() && parts.first().isNotEmpty() -> parts.first().first().toString()
+        else -> "?"
+    }
+}
+
+/**
+ * Deterministic avatar background colors based on name hash.
+ */
+private val avatarColors: List<Color> = listOf(
+    Color(0xFF6C5CE7), // Purple
+    Color(0xFF00B894), // Green
+    Color(0xFFE17055), // Coral
+    Color(0xFF0984E3), // Blue
+    Color(0xFFFDAB3D), // Amber
+    Color(0xFFE84393), // Pink
+    Color(0xFF00CEC9), // Teal
+    Color(0xFFFF7675), // Red
+)
+
 @Composable
 fun StoryAvatarImage(
     model: Any?,
-    modifier: Modifier
+    displayName: String = "",
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    if (model != null) {
+    // Resolve URL: Prepend BASE_URL if relative path
+    val resolvedModel = remember(model) {
+        when (model) {
+            is String -> com.Kelasor.app.util.UrlUtils.getFullUrl(model)
+            else -> model
+        }
+    }
+    if (resolvedModel != null && resolvedModel.toString().isNotBlank()) {
         AsyncImage(
             model = ImageRequest.Builder(context)
-                .data(model)
+                .data(resolvedModel)
                 .crossfade(true)
                 .build(),
             contentDescription = null,
@@ -238,12 +259,20 @@ fun StoryAvatarImage(
             modifier = modifier
         )
     } else {
-        // Placeholder
+        // Initials fallback with colored background
+        val initials = generateInitials(displayName)
+        val bgColor = avatarColors[kotlin.math.abs(displayName.hashCode()) % avatarColors.size]
         Box(
-            modifier = modifier.background(Color.Gray.copy(alpha = 0.3f)),
+            modifier = modifier.background(bgColor),
             contentAlignment = Alignment.Center
         ) {
-            Text("?", color = Color.White)
+            Text(
+                text = initials,
+                color = Color.White,
+                style = MessageAppTypography.chatName,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
+

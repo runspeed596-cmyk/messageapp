@@ -100,11 +100,7 @@ fun MediaPreviewDialog(
     val extendedColors = MessageAppTheme.extendedColors
     
     // Resolve full URL
-    val fullUrl = if (mediaUrl.startsWith("http://") || mediaUrl.startsWith("https://")) {
-        mediaUrl
-    } else {
-        "${Constants.BASE_URL.removeSuffix("/")}$mediaUrl"
-    }
+    val fullUrl = com.Kelasor.app.util.UrlUtils.getFullUrl(mediaUrl) ?: ""
     
     var isLoading by remember { mutableStateOf(true) }
     var isSaving by remember { mutableStateOf(false) }

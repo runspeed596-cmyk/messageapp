@@ -90,11 +90,7 @@ fun OtpScreen(
         viewModel.events.collect { event ->
             when (event) {
                 is AuthEvent.LoginSuccess -> {
-                    if (event.isNewUser) {
-                        onNavigateToUserInfo()
-                    } else {
-                        onNavigateToMain()
-                    }
+                    onNavigateToMain()
                 }
                 is AuthEvent.Error -> { /* Error already in state */ }
                 else -> {}

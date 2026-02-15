@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
+import com.iliyadev.springboot.util.MessageUtils
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 👥 Group Service
@@ -35,7 +36,13 @@ class GroupService(
     }
     @Transactional
     fun createGroup(userId: UUID, request: CreateGroupRequest): GroupDto? {
-        val creator = userRepository.findById(userId).orElse(null) ?: return null
+        val creator = userRepository.findById(userId).orElse(null)
+        if (creator == null) {
+            val totalUsers = userRepository.count()
+            println("DEBUG: createGroup - FAILED. Creator not found: $userId")
+            println("DEBUG: createGroup - TOTAL USERS IN DATABASE: $totalUsers")
+            return null
+        }
         val inviteLink = generateInviteLink()
         val group = Group().apply {
             name = request.name
@@ -247,11 +254,12 @@ class GroupService(
             )
         }
     }
+    @Transactional(readOnly = true)
     fun getGroupMessages(groupId: UUID, userId: UUID, page: Int, size: Int): GroupMessageListResponse {
         val membership = groupMemberRepository.findByGroupIdAndUserId(groupId, userId)
             ?: throw IllegalAccessException("شما عضو این گروه نیستید")
         val pageable = PageRequest.of(page, size)
-        val messages = groupMessageRepository.findByGroupIdOrderByCreatedAtDesc(groupId, pageable)
+        val messages = groupMessageRepository.findWithReactionsByGroupId(groupId, pageable)
         return GroupMessageListResponse(
             messages = messages.content.map { msg -> msg.toDto(userId) },
             totalCount = messages.totalElements.toInt(),
@@ -296,19 +304,29 @@ class GroupService(
         val message = GroupMessage().apply {
             this.group = group
             this.sender = sender
-            type = request.type
+            
+            // Auto-detect Link type if TEXT
+            var finalType = request.type
+            if (finalType == MessageType.TEXT && MessageUtils.isLink(request.content)) {
+                finalType = MessageType.LINK
+            }
+            
+            type = finalType
             content = request.content
             mediaUrl = request.mediaUrl
             this.replyTo = replyTo
             this.poll = poll
             createdAt = Instant.now()
-            // Null-safe amplitudes handling
+            
+            // Null-safe amplitudes handling with size limit to prevent overflow
             if (!request.amplitudes.isNullOrEmpty()) {
-                this.amplitudes = request.amplitudes.toMutableList()
+                // Limit to 200 samples to prevent DB issues (postgres array limit or performance)
+                // and 500 ERROR if list is too huge
+                this.amplitudes = request.amplitudes.take(200).toMutableList()
             }
         }
         val savedMessage = groupMessageRepository.save(message)
-        
+
         // Broadcast message to all group members via WebSocket for real-time delivery
         logger.info("📤 Broadcasting group message ${savedMessage.id} to group $groupId")
         val wsMessage = WsMessage(
@@ -327,14 +345,22 @@ class GroupService(
             replyToSenderName = replyTo?.sender?.displayName,
             replyToContent = replyTo?.content
         )
-        
+
         val memberIds = groupMemberRepository.findByGroupId(groupId)
             .mapNotNull { it.user?.id }
             .filter { it != userId }  // Exclude sender
-        
+
         webSocketMessageHandler.broadcastGroupMessage(groupId, wsMessage, memberIds)
-        
+
         return savedMessage.toDto(userId)
+    }
+
+    private fun isLink(text: String): Boolean {
+        // Simple regex to detect if the whole message is a link or contains a link
+        // For "type=LINK", we usually mean the message IS a link or PRIMARILY a link.
+        // Let's check if it contains a URL.
+        val urlPattern = Regex("""((https?://|www\.)[^\s]+|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}[^\s]*)""", RegexOption.IGNORE_CASE)
+        return urlPattern.containsMatchIn(text)
     }
 
     @Transactional
@@ -516,6 +542,44 @@ class GroupService(
         )
     }
     private fun generateInviteLink(): String = "https://msgapp.com/g/${UUID.randomUUID().toString().take(8)}"
+    // ═══ PIN GROUP MESSAGE ═══
+    @Transactional
+    fun pinGroupMessage(groupId: UUID, messageId: UUID, userId: UUID, isPinned: Boolean): GroupMessageDto? {
+        val membership = groupMemberRepository.findByGroupIdAndUserId(groupId, userId) ?: return null
+        if (membership.role == MemberRole.MEMBER) return null
+        val message = groupMessageRepository.findById(messageId).orElse(null) ?: return null
+        if (message.group?.id != groupId) return null
+        message.isPinned = isPinned
+        message.pinnedAt = if (isPinned) Instant.now() else null
+        message.pinnedById = if (isPinned) userId else null
+        val saved = groupMessageRepository.save(message)
+        return saved.toDto(userId)
+    }
+    fun getPinnedGroupMessages(groupId: UUID, userId: UUID): List<GroupMessageDto> {
+        val membership = groupMemberRepository.findByGroupIdAndUserId(groupId, userId) ?: return emptyList()
+        return groupMessageRepository.findByGroupIdAndIsPinnedTrue(groupId).map { it.toDto(userId) }
+    }
+    // ═══ SCHEDULE GROUP MESSAGE ═══
+    @Transactional
+    fun scheduleGroupMessage(groupId: UUID, userId: UUID, request: ScheduleMessageRequest): GroupMessageDto? {
+        val membership = groupMemberRepository.findByGroupIdAndUserId(groupId, userId) ?: return null
+        val group = groupRepository.findById(groupId).orElse(null) ?: return null
+        val sender = userRepository.findById(userId).orElse(null) ?: return null
+        val message = GroupMessage().apply {
+            this.group = group
+            this.sender = sender
+            this.type = request.type
+            this.content = request.content
+            this.mediaUrl = request.mediaUrl
+            this.scheduledAt = request.scheduledAt
+            this.createdAt = Instant.now()
+            if (request.amplitudes != null) {
+                this.amplitudes = request.amplitudes.take(200).toMutableList()
+            }
+        }
+        val saved = groupMessageRepository.save(message)
+        return saved.toDto(userId)
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -655,6 +719,7 @@ class ChannelService(
         channelSubscriberRepository.deleteByChannelIdAndUserId(channelId, userId)
         return true
     }
+    @Transactional(readOnly = true)
     fun getPosts(channelId: UUID, userId: UUID, page: Int, size: Int): PostListResponse {
         val channel = channelRepository.findById(channelId).orElse(null)
             ?: throw IllegalArgumentException("کانال یافت نشد")
@@ -663,7 +728,7 @@ class ChannelService(
             if (subscription == null) throw IllegalAccessException("شما عضو این کانال نیستید")
         }
         val pageable = PageRequest.of(page, size)
-        val posts = channelPostRepository.findByChannelIdOrderByCreatedAtDesc(channelId, pageable)
+        val posts = channelPostRepository.findWithReactionsByChannelId(channelId, pageable)
         return PostListResponse(
             posts = posts.content.map { it.toDto(userId) },
             totalCount = posts.totalElements.toInt(),
@@ -706,7 +771,16 @@ class ChannelService(
         
         val post = ChannelPost().apply {
             this.channel = channel
-            type = try { MessageType.valueOf(request.type) } catch (e: Exception) { MessageType.TEXT }
+            
+            val requestType = try { MessageType.valueOf(request.type) } catch (e: Exception) { MessageType.TEXT }
+            
+            // Auto-detect Link type if TEXT
+            var finalType = requestType
+            if (finalType == MessageType.TEXT && MessageUtils.isLink(request.content)) {
+                finalType = MessageType.LINK
+            }
+            
+            type = finalType
             content = request.content
             
             // Poll Handling - prefer pollId lookup over mediaUrl JSON parsing
@@ -749,7 +823,7 @@ class ChannelService(
             createdAt = Instant.now()
             // Null-safe amplitudes handling
             if (!request.amplitudes.isNullOrEmpty()) {
-                this.amplitudes = request.amplitudes.toMutableList()
+                this.amplitudes = request.amplitudes.take(200).toMutableList()
             }
         }
         val savedPost = channelPostRepository.save(post)
@@ -1118,6 +1192,52 @@ class ChannelService(
     }
 
     private fun generateInviteLink(): String = "https://msgapp.com/c/${UUID.randomUUID().toString().take(8)}"
+    // ═══ PIN CHANNEL POST ═══
+    @Transactional
+    fun pinChannelPost(channelId: UUID, postId: UUID, userId: UUID, isPinned: Boolean): ChannelPostDto? {
+        val channel = channelRepository.findById(channelId).orElse(null) ?: return null
+        if (channel.owner?.id != userId) {
+            val subscription = channelSubscriberRepository.findByChannelIdAndUserId(channelId, userId)
+            if (subscription == null || !subscription.isAdmin) return null
+        }
+        val post = channelPostRepository.findById(postId).orElse(null) ?: return null
+        if (post.channel?.id != channelId) return null
+        post.isPinned = isPinned
+        post.pinnedAt = if (isPinned) Instant.now() else null
+        post.pinnedById = if (isPinned) userId else null
+        val saved = channelPostRepository.save(post)
+        return saved.toDto(userId)
+    }
+    fun getPinnedChannelPosts(channelId: UUID, userId: UUID): List<ChannelPostDto> {
+        val channel = channelRepository.findById(channelId).orElse(null) ?: return emptyList()
+        if (!channel.isPublic) {
+            val sub = channelSubscriberRepository.findByChannelIdAndUserId(channelId, userId)
+            if (sub == null) return emptyList()
+        }
+        return channelPostRepository.findByChannelIdAndIsPinnedTrue(channelId).map { it.toDto(userId) }
+    }
+    // ═══ SCHEDULE CHANNEL POST ═══
+    @Transactional
+    fun scheduleChannelPost(channelId: UUID, userId: UUID, request: ScheduleMessageRequest): ChannelPostDto? {
+        val channel = channelRepository.findById(channelId).orElse(null) ?: return null
+        if (channel.owner?.id != userId) {
+            val subscription = channelSubscriberRepository.findByChannelIdAndUserId(channelId, userId)
+            if (subscription == null || !subscription.isAdmin) return null
+        }
+        val post = ChannelPost().apply {
+            this.channel = channel
+            this.type = request.type
+            this.content = request.content
+            this.mediaUrl = request.mediaUrl
+            this.scheduledAt = request.scheduledAt
+            this.createdAt = Instant.now()
+            if (request.amplitudes != null) {
+                this.amplitudes = request.amplitudes.take(200).toMutableList()
+            }
+        }
+        val saved = channelPostRepository.save(post)
+        return saved.toDto(userId)
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

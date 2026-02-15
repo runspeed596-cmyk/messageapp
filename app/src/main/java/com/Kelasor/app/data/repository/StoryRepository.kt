@@ -336,4 +336,20 @@ class StoryRepository @Inject constructor(
             Result.failure(e)
         }
     }
+
+    suspend fun replyToStory(storyId: String, content: String): Result<Unit> {
+        return try {
+            val response = apiService.replyToStory(
+                storyId,
+                com.Kelasor.app.data.remote.api.StoryReplyRequestBody(content)
+            )
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Failed to reply: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

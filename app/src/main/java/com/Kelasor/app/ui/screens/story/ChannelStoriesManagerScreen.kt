@@ -180,9 +180,7 @@ fun ChannelStoriesManagerScreen(
                                         )
                                     },
                                     supportingContent = {
-                                        val formatter = DateTimeFormatter.ofPattern("HH:mm - dd MMM")
-                                            .withZone(ZoneId.systemDefault())
-                                        Text(formatter.format(story.createdAt))
+                                        Text(com.Kelasor.app.ui.util.PersianDateUtil.formatShamsi(story.createdAt))
                                     },
                                     leadingContent = {
                                         if (story.type == StoryType.VIDEO) {
@@ -290,14 +288,22 @@ fun ChannelStoriesManagerScreen(
             val selectedStoryUser by viewModel.selectedStoryUser.collectAsState()
             
             if (selectedStoryUser != null) {
-                StoryViewerScreen(
-                    viewModel = viewModel,
-                    storyUser = selectedStoryUser!!,
-                    initialStoryIndex = initialStoryIndex,
-                    onClose = { viewModel.closeStoryViewer() },
-                    onStoryViewed = { story -> viewModel.markStoryAsViewed(story.id) },
-                    onNavigateToProfile = { viewModel.closeStoryViewer() }
-                )
+                androidx.compose.ui.window.Dialog(
+                    onDismissRequest = { viewModel.closeStoryViewer() },
+                    properties = androidx.compose.ui.window.DialogProperties(
+                        usePlatformDefaultWidth = false,
+                        decorFitsSystemWindows = false
+                    )
+                ) {
+                    StoryViewerScreen(
+                        viewModel = viewModel,
+                        storyUser = selectedStoryUser!!,
+                        initialStoryIndex = initialStoryIndex,
+                        onClose = { viewModel.closeStoryViewer() },
+                        onStoryViewed = { story -> viewModel.markStoryAsViewed(story.id) },
+                        onNavigateToProfile = { viewModel.closeStoryViewer() }
+                    )
+                }
             }
         }
     }

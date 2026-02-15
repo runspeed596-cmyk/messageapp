@@ -45,7 +45,8 @@ data class PlaybackInfo(
     val currentPositionMs: Long = 0L,
     val durationMs: Long = 0L,
     val progress: Float = 0f,
-    val error: String? = null
+    val error: String? = null,
+    val playbackSpeed: Float = 1.0f
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -145,12 +146,16 @@ class AudioPlayerManager @Inject constructor(
             return
         }
 
-        // Initialize player if needed with OkHttpDataSource for authenticated requests
+        // Initialize player if needed with CacheDataSource for local caching
         if (exoPlayer == null) {
-            val dataSourceFactory = OkHttpDataSource.Factory(okHttpClient)
+            val upstreamFactory = OkHttpDataSource.Factory(okHttpClient)
+            val cache = com.Kelasor.app.data.media.MediaCacheProvider.getCache(context)
+            val cacheDataSourceFactory = androidx.media3.datasource.cache.CacheDataSource.Factory()
+                .setCache(cache)
+                .setUpstreamDataSourceFactory(upstreamFactory)
+                .setFlags(androidx.media3.datasource.cache.CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
             val mediaSourceFactory = DefaultMediaSourceFactory(context)
-                .setDataSourceFactory(dataSourceFactory)
-            
+                .setDataSourceFactory(cacheDataSourceFactory)
             exoPlayer = ExoPlayer.Builder(context)
                 .setMediaSourceFactory(mediaSourceFactory)
                 .build()
@@ -231,6 +236,31 @@ class AudioPlayerManager @Inject constructor(
         return _playbackInfo.value.currentUrl == url && 
                _playbackInfo.value.state == PlaybackState.PLAYING
     }
+
+    /**
+     * Set playback speed.
+     * @param speed Speed multiplier (0.5, 1.0, 1.5, 2.0)
+     */
+    fun setPlaybackSpeed(speed: Float) {
+        exoPlayer?.setPlaybackSpeed(speed)
+        _playbackInfo.value = _playbackInfo.value.copy(playbackSpeed = speed)
+    }
+
+    /**
+ * Cycle playback speed: 0.3 -> 0.5 -> 1.0 -> 1.5 -> 2.0 -> 3.0 -> 0.3
+ */
+fun cyclePlaybackSpeed() {
+    val currentSpeed = _playbackInfo.value.playbackSpeed
+    val nextSpeed = when {
+        currentSpeed < 0.4f -> 0.5f
+        currentSpeed < 0.8f -> 1.0f
+        currentSpeed < 1.3f -> 1.5f
+        currentSpeed < 1.8f -> 2.0f
+        currentSpeed < 2.5f -> 3.0f
+        else -> 0.3f
+    }
+    setPlaybackSpeed(nextSpeed)
+}
 
     /**
      * Release player resources.
