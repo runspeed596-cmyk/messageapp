@@ -12,6 +12,7 @@ import java.net.URLEncoder
 @Service
 class NajvaSmsService(
     @Value("\${najva.sms.api-key}") private val apiKey: String,
+    @Value("\${najva.sms.sender}") private val sender: String,
     @Value("\${najva.sms.template-name}") private val templateName: String,
     @Value("\${najva.sms.base-url}") private val baseUrl: String
 ) {
@@ -34,7 +35,8 @@ class NajvaSmsService(
         val encodedReceptor: String = URLEncoder.encode(phoneNumber, "UTF-8")
         val encodedTemplate: String = URLEncoder.encode(templateName, "UTF-8")
         val encodedToken: String = URLEncoder.encode(otpCode, "UTF-8")
-        val url: String = "$baseUrl/$apiKey/verify/lookup.json?receptor=$encodedReceptor&template=$encodedTemplate&token=$encodedToken"
+        val encodedSender: String = URLEncoder.encode(sender, "UTF-8")
+        val url: String = "$baseUrl/$apiKey/verify/lookup.json?receptor=$encodedReceptor&sender=$encodedSender&template=$encodedTemplate&token=$encodedToken"
         return try {
             logger.info("📱 Sending OTP SMS to $phoneNumber via Najva...")
             logger.info("📱 Request URL: $url")
