@@ -42,8 +42,12 @@ class AuthService(
             this.createdAt = Instant.now()
         }
         otpCodeRepository.save(otpCode)
-        // DEV MODE: Skip Najva SMS, just log the OTP code
-        println("🔑 [DEV] OTP for $normalizedPhone: $code")
+        // Send OTP via Najva SMS
+        println("🔑 OTP for $normalizedPhone: $code")
+        val smsSent: Boolean = najvaSmsService.sendOtpViaSms(normalizedPhone, code)
+        if (!smsSent) {
+            println("⚠️ Najva SMS failed for $normalizedPhone, OTP still saved in DB")
+        }
         return SendOtpResponse(
             success = true,
             message = "کد تأیید ارسال شد",
