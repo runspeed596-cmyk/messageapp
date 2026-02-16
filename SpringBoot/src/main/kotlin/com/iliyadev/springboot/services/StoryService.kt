@@ -2,6 +2,8 @@ package com.iliyadev.springboot.services
 
 import com.iliyadev.springboot.models.*
 import com.iliyadev.springboot.repositories.*
+import com.iliyadev.springboot.websocket.WebSocketMessageHandler
+import com.iliyadev.springboot.websocket.WsStoryEvent
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -20,7 +22,8 @@ class StoryService(
     private val channelSubscriberRepository: ChannelSubscriberRepository,
     private val storyReplyRepository: StoryReplyRepository,
     private val chatService: ChatService,
-    private val messageService: MessageService
+    private val messageService: MessageService,
+    private val webSocketMessageHandler: WebSocketMessageHandler
 ) {
 
     @Transactional
@@ -49,7 +52,10 @@ class StoryService(
             expiresAt = Instant.now().plusSeconds(24 * 3600)
         )
         
-        return storyRepository.save(story)
+        val savedStory = storyRepository.save(story)
+        // Broadcast to contacts in real-time
+        broadcastStoryEvent(savedStory, user, "STORY_CREATED")
+        return savedStory
     }
 
     @Transactional(readOnly = true)
@@ -170,12 +176,10 @@ class StoryService(
             throw IllegalArgumentException("Access denied")
         }
         
-        // Optional: Delete physical file if FileUploadService supports it
-        // fileUploadService.deleteFile(story.mediaUrl) 
-        
-        // Delete related views (if not cascaded automatically, usually JPA handles it if configured, or we delete here)
+        // Delete related views
         storyViewRepository.deleteByStory(story)
-        
+        // Broadcast deletion before removing from DB
+        broadcastStoryEvent(story, story.user!!, "STORY_DELETED")
         storyRepository.delete(story)
     }
 
@@ -321,5 +325,49 @@ class StoryService(
     @Transactional(readOnly = true)
     fun getStoryReplies(storyId: UUID): List<StoryReplyDto> {
         return storyReplyRepository.findByStoryIdOrderByCreatedAtDesc(storyId).map { it.toDto() }
+    }
+
+    /**
+     * Get contact IDs for a user (users they have private chats with).
+     */
+    private fun getContactIds(userId: UUID): List<UUID> {
+        val user = userRepository.findById(userId).orElse(null) ?: return emptyList()
+        val chats = chatRepository.findByParticipantsContainingAndType(
+            user, ChatType.PRIVATE, org.springframework.data.domain.Pageable.unpaged()
+        )
+        return chats.flatMap { chat ->
+            chat.participants.mapNotNull { it.id }
+        }.filter { it != userId }.distinct()
+    }
+
+    /**
+     * Broadcast a story event (created/deleted) to all contacts.
+     */
+    private fun broadcastStoryEvent(story: Story, user: User, eventType: String) {
+        try {
+            val contactIds = getContactIds(user.id!!)
+            if (contactIds.isEmpty()) return
+            val storyEvent = WsStoryEvent(
+                event = eventType,
+                storyId = story.id!!,
+                userId = user.id!!,
+                username = user.username,
+                displayName = user.displayName,
+                avatarUrl = user.avatarUrl,
+                mediaUrl = story.mediaUrl,
+                type = story.type.name,
+                caption = story.caption,
+                durationSeconds = story.durationSeconds,
+                createdAt = story.createdAt.toEpochMilli(),
+                expiresAt = story.expiresAt.toEpochMilli()
+            )
+            if (eventType == "STORY_CREATED") {
+                webSocketMessageHandler.broadcastNewStory(storyEvent, contactIds)
+            } else {
+                webSocketMessageHandler.notifyStoryDeleted(storyEvent, contactIds)
+            }
+        } catch (e: Exception) {
+            println("WARN: Failed to broadcast story event: ${e.message}")
+        }
     }
 }

@@ -76,6 +76,9 @@ import androidx.compose.foundation.border
 import androidx.compose.ui.text.input.TextFieldValue
 import android.widget.Toast
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 
 /**
  * Computes a Persian relative time string from an Instant.
@@ -110,6 +113,8 @@ fun StoryViewerScreen(
     var showViewersSheet by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var replyText by remember { mutableStateOf("") }
+    var isReplyFocused by remember { mutableStateOf(false) }
+    val replyFocusRequester = remember { FocusRequester() }
     val context = LocalContext.current
 
     // Listen for reply sent events
@@ -136,8 +141,8 @@ fun StoryViewerScreen(
     // Timer Logic
     var progress by remember(currentStory.id) { mutableStateOf(0f) }
     
-    LaunchedEffect(currentStory.id, isPaused, showViewersSheet) {
-        if (isPaused || showViewersSheet) return@LaunchedEffect
+    LaunchedEffect(currentStory.id, isPaused, showViewersSheet, isReplyFocused) {
+        if (isPaused || showViewersSheet || isReplyFocused) return@LaunchedEffect
         
         val durationMs = currentStory.durationSeconds * 1000L
         val updateInterval = 50L
@@ -397,20 +402,21 @@ fun StoryViewerScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
-                        .imePadding(),
+                        .padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextField(
                         value = replyText,
-                        onValueChange = {
-                            replyText = it
-                            isPaused = it.isNotEmpty()
+                        onValueChange = { replyText = it },
+                        placeholder = {
+                            Text(
+                                "پاسخ بدهید...",
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
                         },
-                        placeholder = { Text("پاسخ بدهید...", color = Color.White.copy(alpha = 0.5f)) },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.White.copy(alpha = 0.5f),
-                            unfocusedContainerColor = Color.White.copy(alpha = 0.35f),
+                            focusedContainerColor = Color(0xFF2A2A2A),
+                            unfocusedContainerColor = Color(0xFF1E1E1E).copy(alpha = 0.95f),
                             focusedTextColor = Color.White,
                             unfocusedTextColor = Color.White,
                             cursorColor = Color.White,
@@ -421,7 +427,15 @@ fun StoryViewerScreen(
                         singleLine = true,
                         modifier = Modifier
                             .weight(1f)
-                            .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(24.dp))
+                            .border(
+                                1.dp,
+                                Color.White.copy(alpha = 0.4f),
+                                RoundedCornerShape(24.dp)
+                            )
+                            .focusRequester(replyFocusRequester)
+                            .onFocusChanged { focusState ->
+                                isReplyFocused = focusState.isFocused
+                            }
                     )
                     if (replyText.isNotBlank()) {
                         Spacer(modifier = Modifier.width(8.dp))

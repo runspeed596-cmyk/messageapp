@@ -34,6 +34,7 @@ class StoryViewModel @Inject constructor(
     private val storyRepository: StoryRepository,
     private val userRepository: com.Kelasor.app.data.repository.UserRepository,
     private val userDao: com.Kelasor.app.data.local.dao.UserDao,
+    private val webSocketManager: com.Kelasor.app.data.websocket.WebSocketManager,
     @ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
 
@@ -65,6 +66,23 @@ class StoryViewModel @Inject constructor(
     init {
         loadStories()
         observeCurrentUser()
+        observeStoryEvents()
+    }
+
+    private fun observeStoryEvents() {
+        viewModelScope.launch {
+            webSocketManager.messages.collect { msg ->
+                when (msg) {
+                    is com.Kelasor.app.data.websocket.WebSocketMessage.StoryEvent -> {
+                        android.util.Log.d("StoryViewModel", "📸 Real-time story event: ${msg.event}")
+                        loadStories()
+                        loadGroupStories()
+                        loadChannelStories()
+                    }
+                    else -> { /* ignore non-story events */ }
+                }
+            }
+        }
     }
 
     private fun observeCurrentUser() {

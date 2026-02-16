@@ -58,6 +58,8 @@ sealed class WebSocketMessage {
     data class ChatCreated(val chat: ChatEntity) : WebSocketMessage()
     data class GroupCreated(val group: com.Kelasor.app.data.local.entity.GroupEntity) : WebSocketMessage()
     data class ChannelCreated(val channel: com.Kelasor.app.data.local.entity.ChannelEntity) : WebSocketMessage()
+    data class MessageDeleted(val chatId: String, val messageId: String) : WebSocketMessage()
+    data class StoryEvent(val event: String, val storyId: String, val userId: String) : WebSocketMessage()
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -85,7 +87,7 @@ class WebSocketManager @Inject constructor(
 ) {
     companion object {
         private const val TAG = "WebSocketManager"
-        private const val WS_BASE_URL = "ws://46.249.100.239/ws"
+        private const val WS_BASE_URL = "ws://46.249.100.239:8080/ws"
         private const val RECONNECT_DELAY_MS = 5000L
         private const val MAX_RECONNECT_ATTEMPTS = 5
     }
@@ -188,35 +190,28 @@ class WebSocketManager @Inject constructor(
     
     private suspend fun subscribeToUserQueues() {
         val session = stompSession ?: return
+        val userId = sessionManager.userId.firstOrNull()
+        
+        if (userId == null) {
+            Log.e(TAG, "❌ Cannot subscribe: userId is null")
+            return
+        }
         
         try {
-            // Subscribe to personal message queue
-            Log.i(TAG, "📡 Subscribing to /user/queue/messages")
+            // Subscribe to personal message topic — direct topic routing (no STOMP principal needed)
+            Log.i(TAG, "📡 Subscribing to /topic/user/$userId/messages")
             scope.launch {
                 try {
-                    session.subscribeText("/user/queue/messages").collect { frame ->
-                        Log.d(TAG, "📨 Received message from queue: $frame")
+                    session.subscribeText("/topic/user/$userId/messages").collect { frame ->
+                        Log.d(TAG, "📨 Received message from topic: $frame")
                         handleMessage(frame)
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error in /user/queue/messages subscription", e)
+                    Log.e(TAG, "Error in /topic/user/$userId/messages subscription", e)
                 }
             }
             
-            // Subscribe to chat updates (unread count, last message)
-            Log.i(TAG, "📡 Subscribing to /user/queue/chat-updates")
-            scope.launch {
-                try {
-                    session.subscribeText("/user/queue/chat-updates").collect { frame ->
-                        Log.d(TAG, "📨 Received chat update: $frame")
-                        handleChatUpdateFrame(frame)
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error in /user/queue/chat-updates subscription", e)
-                }
-            }
-            
-            // Subscribe to online status updates
+            // Subscribe to online status updates (broadcast topic — works for everyone)
             Log.i(TAG, "📡 Subscribing to /topic/online-status")
             scope.launch {
                 try {
@@ -229,45 +224,16 @@ class WebSocketManager @Inject constructor(
                 }
             }
             
-            // Subscribe to social notifications (follow, collaboration, etc.)
-            Log.i(TAG, "📡 Subscribing to /user/queue/notifications")
+            // Subscribe to social notifications (topic-based)
+            Log.i(TAG, "📡 Subscribing to /topic/user/$userId/notifications")
             scope.launch {
                 try {
-                    session.subscribeText("/user/queue/notifications").collect { frame ->
+                    session.subscribeText("/topic/user/$userId/notifications").collect { frame ->
                         Log.d(TAG, "🔔 Received social notification: $frame")
                         handleSocialNotification(frame)
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error in /user/queue/notifications subscription", e)
-                }
-            }
-
-            // Also subscribe to topic-based notifications as a fallback
-            val userId = sessionManager.userId.firstOrNull()
-            if (userId != null) {
-                Log.i(TAG, "📡 Subscribing to /topic/user/$userId/notifications")
-                scope.launch {
-                    try {
-                         session.subscribeText("/topic/user/$userId/notifications").collect { frame ->
-                             Log.d(TAG, "🔔 Received social notification (topic): $frame")
-                             handleSocialNotification(frame)
-                         }
-                    } catch (e: Exception) {
-                         Log.e(TAG, "Error in /topic/user/$userId/notifications subscription", e)
-                    }
-                }
-                
-                // REMOVED: topic-based messages fallback no longer needed (using user queue only)
-                // Log.i(TAG, "📡 Subscribing to /topic/user/$userId/messages (fallback)")
-                if (false) scope.launch {
-                    try {
-                         session.subscribeText("/topic/user/$userId/messages").collect { frame ->
-                             Log.d(TAG, "📨 Received message (topic fallback): $frame")
-                             handleMessage(frame)
-                         }
-                    } catch (e: Exception) {
-                         Log.e(TAG, "Error in /topic/user/$userId/messages subscription", e)
-                    }
+                    Log.e(TAG, "Error in /topic/user/$userId/notifications subscription", e)
                 }
             }
             
@@ -379,9 +345,11 @@ class WebSocketManager @Inject constructor(
                 "USER_ONLINE" -> handleUserOnline(json)
                 "TYPING" -> handleTyping(json)
                 "MESSAGE_READ" -> handleMessageRead(json)
-                "CHAT_UPDATE" -> handleChatEvent(json) // Use event/data wrapper if present
+                "MESSAGE_DELETED" -> handleMessageDeleted(json)
+                "CHAT_UPDATE" -> handleChatEvent(json)
                 "GROUP_MEMBER_UPDATE" -> handleGroupMemberUpdate(json)
                 "CHANNEL_SUBSCRIBER_UPDATE" -> handleChannelSubscriberUpdate(json)
+                "STORY_CREATED", "STORY_DELETED" -> handleStoryEvent(json)
                 else -> {
                     // Check for event field (CHAT_CREATED, etc)
                     val event = json.get("event")?.safeString()
@@ -1071,12 +1039,35 @@ class WebSocketManager @Inject constructor(
         _messages.emit(WebSocketMessage.MessageRead(chatId, messageId, readerId))
     }
     
+    private suspend fun handleMessageDeleted(json: com.google.gson.JsonObject) {
+        val data = if (json.has("data")) json.getAsJsonObject("data") else json
+        val chatId = data.get("chatId")?.safeString() ?: return
+        val messageId = data.get("messageId")?.safeString() ?: return
+        Log.d(TAG, "🗑️ MESSAGE_DELETED received: messageId=$messageId, chatId=$chatId")
+        // Remove from local database
+        messageDao.deleteMessageById(messageId)
+        // Also try group and channel tables
+        groupMessageDao.deleteMessageById(messageId)
+        Log.d(TAG, "✅ Message deleted from local database")
+        _messages.emit(WebSocketMessage.MessageDeleted(chatId, messageId))
+    }
+    
+    private suspend fun handleStoryEvent(json: com.google.gson.JsonObject) {
+        val type = json.get("type")?.safeString() ?: return
+        val data = if (json.has("data")) json.getAsJsonObject("data") else json
+        val storyId = data.get("storyId")?.safeString() ?: return
+        val userId = data.get("userId")?.safeString() ?: return
+        Log.d(TAG, "📸 Story event: $type, storyId=$storyId, userId=$userId")
+        _messages.emit(WebSocketMessage.StoryEvent(type, storyId, userId))
+    }
+    
     private suspend fun handleChatEvent(json: com.google.gson.JsonObject) {
         try {
             val data = if (json.has("data")) json.getAsJsonObject("data") else json
             val event = data.get("event")?.safeString() ?: return
             val id = data.get("id")?.safeString() ?: return
-            val type = data.get("type")?.safeString() ?: "PRIVATE"
+            // Backend sends chatType for entity type (PRIVATE/GROUP/CHANNEL) since type=CHAT_UPDATE is used for routing
+            val type = data.get("chatType")?.safeString() ?: data.get("type")?.safeString() ?: "PRIVATE"
             
             Log.i(TAG, "🔔 Chat Event: $event, Type: $type, ID: $id")
              

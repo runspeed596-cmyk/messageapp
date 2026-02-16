@@ -10,6 +10,24 @@ import org.springframework.stereotype.Controller
 import java.time.Instant
 import java.util.UUID
 
+/**
+ * DTO for story WebSocket events (new story, story deleted)
+ */
+data class WsStoryEvent(
+    val event: String, // "STORY_CREATED", "STORY_DELETED"
+    val storyId: UUID,
+    val userId: UUID,
+    val username: String,
+    val displayName: String,
+    val avatarUrl: String? = null,
+    val mediaUrl: String? = null,
+    val type: String? = null, // IMAGE, VIDEO, TEXT
+    val caption: String? = null,
+    val durationSeconds: Int = 15,
+    val createdAt: Long = System.currentTimeMillis(),
+    val expiresAt: Long = System.currentTimeMillis() + 86400000
+)
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // 📨 WebSocket Message DTOs
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -119,11 +137,10 @@ class WebSocketMessageHandler(
         // We broadcast to the channel topic
         messagingTemplate.convertAndSend("/topic/channel/$channelId/subscribers", event)
         
-        // Also send to individual user queues for redundancy if needed
+        // Also send to individual user topics for redundancy
         subscriberIds.forEach { userId ->
-             messagingTemplate.convertAndSendToUser(
-                userId.toString(),
-                "/queue/messages",
+            messagingTemplate.convertAndSend(
+                "/topic/user/$userId/messages",
                 mapOf(
                     "type" to "CHANNEL_SUBSCRIBER_UPDATE",
                     "data" to event
@@ -180,51 +197,67 @@ class WebSocketMessageHandler(
      */
     fun sendPrivateMessage(userId: UUID, message: WsMessage) {
         logger.info("📤 Sending private message to user: $userId, messageId: ${message.id}, chatId: ${message.chatId}")
-        messagingTemplate.convertAndSendToUser(
-            userId.toString(),
-            "/queue/messages",
+        messagingTemplate.convertAndSend(
+            "/topic/user/$userId/messages",
             message
         )
-        logger.info("✅ Private message sent to /user/$userId/queue/messages")
+        logger.info("✅ Private message sent to /topic/user/$userId/messages")
     }
     
     /**
      * Notify a user about a new chat being created with them.
-     * Called when another user initiates a private chat.
+     * Sends via /queue/messages with type=CHAT_CREATED so client's unified handler dispatches it.
      */
     fun notifyNewChat(userId: UUID, chatEvent: WsChatEvent) {
         logger.info("📤 Notifying new chat to user: $userId, chatId: ${chatEvent.id}")
-        
-        // Primary: User-specific queue
-        messagingTemplate.convertAndSendToUser(
-            userId.toString(),
-            "/queue/chats",
-            chatEvent
+        messagingTemplate.convertAndSend(
+            "/topic/user/$userId/messages",
+            mapOf(
+                "type" to "CHAT_UPDATE",
+                "event" to chatEvent.event,
+                "id" to chatEvent.id.toString(),
+                "chatType" to chatEvent.type,
+                "title" to chatEvent.title,
+                "avatarUrl" to chatEvent.avatarUrl,
+                "participants" to chatEvent.participants,
+                "lastMessageContent" to chatEvent.lastMessageContent,
+                "lastMessageTime" to chatEvent.lastMessageTime,
+                "unreadCount" to chatEvent.unreadCount,
+                "isPinned" to chatEvent.isPinned,
+                "isMuted" to chatEvent.isMuted,
+                "isArchived" to chatEvent.isArchived,
+                "updatedAt" to chatEvent.updatedAt
+            )
         )
-        
-        // Fallback: Direct topic broadcast (in case user queue doesn't work)
-        messagingTemplate.convertAndSend("/topic/user/$userId/chats", chatEvent)
-        
-        logger.info("✅ New chat notification sent via both user queue and topic fallback")
+        logger.info("✅ New chat notification sent to /topic/user/$userId/messages")
     }
     
     /**
      * Notify a user about chat updates (new message arrived, unread count changed).
+     * Sends via /queue/messages with type=CHAT_UPDATE so client's unified handler dispatches it.
      */
     fun notifyChatUpdate(userId: UUID, chatEvent: WsChatEvent) {
         logger.info("📤 Notifying chat update to user: $userId, chatId: ${chatEvent.id}, lastMessage: ${chatEvent.lastMessageContent?.take(20)}")
-        
-        // Primary: User-specific queue
-        messagingTemplate.convertAndSendToUser(
-            userId.toString(),
-            "/queue/chats",
-            chatEvent
+        messagingTemplate.convertAndSend(
+        "/topic/user/$userId/messages",
+        mapOf(
+            "type" to "CHAT_UPDATE",
+            "event" to chatEvent.event,
+            "id" to chatEvent.id.toString(),
+            "chatType" to chatEvent.type,
+            "title" to chatEvent.title,
+            "avatarUrl" to chatEvent.avatarUrl,
+            "participants" to chatEvent.participants,
+            "lastMessageContent" to chatEvent.lastMessageContent,
+            "lastMessageTime" to chatEvent.lastMessageTime,
+            "unreadCount" to chatEvent.unreadCount,
+            "isPinned" to chatEvent.isPinned,
+            "isMuted" to chatEvent.isMuted,
+            "isArchived" to chatEvent.isArchived,
+            "updatedAt" to chatEvent.updatedAt
         )
-        
-        // Fallback: Direct topic broadcast (in case user queue doesn't work)
-        messagingTemplate.convertAndSend("/topic/user/$userId/chats", chatEvent)
-        
-        logger.info("✅ Chat update notification sent via both user queue and topic fallback")
+    )
+    logger.info("✅ Chat update notification sent to /topic/user/$userId/messages")
     }
     
     /**
@@ -235,10 +268,9 @@ class WebSocketMessageHandler(
         logger.info("📤 Broadcasting message ${message.id} to ${recipientIds.size} recipients in chat $chatId")
         
         recipientIds.forEach { recipientId ->
-            logger.info("   → Sending to user queue: /user/$recipientId/queue/messages")
-            messagingTemplate.convertAndSendToUser(
-                recipientId.toString(),
-                "/queue/messages",
+            logger.info("   → Sending to topic: /topic/user/$recipientId/messages")
+            messagingTemplate.convertAndSend(
+                "/topic/user/$recipientId/messages",
                 message
             )
         }
@@ -247,7 +279,7 @@ class WebSocketMessageHandler(
     }
     
     fun sendOnlineStatus(status: WsOnlineStatus) {
-        messagingTemplate.convertAndSend("/topic/online", status)
+        messagingTemplate.convertAndSend("/topic/online-status", status)
     }
     
     /**
@@ -259,9 +291,8 @@ class WebSocketMessageHandler(
         
         memberIds.forEach { memberId ->
             logger.info("   → Sending group message to user: $memberId")
-            messagingTemplate.convertAndSendToUser(
-                memberId.toString(),
-                "/queue/messages",
+            messagingTemplate.convertAndSend(
+                "/topic/user/$memberId/messages",
                 message
             )
         }
@@ -278,9 +309,8 @@ class WebSocketMessageHandler(
         
         subscriberIds.forEach { subscriberId ->
             logger.info("   → Sending channel post to user: $subscriberId")
-            messagingTemplate.convertAndSendToUser(
-                subscriberId.toString(),
-                "/queue/messages",
+            messagingTemplate.convertAndSend(
+                "/topic/user/$subscriberId/messages",
                 post
             )
         }
@@ -300,12 +330,11 @@ class WebSocketMessageHandler(
      */
     fun sendReadReceiptToUser(userId: UUID, readEvent: Map<String, Any>) {
         logger.info("👁️ Sending read receipt to user: $userId, event: $readEvent")
-        messagingTemplate.convertAndSendToUser(
-            userId.toString(),
-            "/queue/messages",
+        messagingTemplate.convertAndSend(
+            "/topic/user/$userId/messages",
             readEvent
         )
-        logger.info("✅ Read receipt sent to /user/$userId/queue/messages")
+        logger.info("✅ Read receipt sent to /topic/user/$userId/messages")
     }
 
     /**
@@ -316,9 +345,8 @@ class WebSocketMessageHandler(
         logger.info("📤 Broadcasting group member update (${event.event}) to ${memberIds.size} members in group $groupId")
         memberIds.forEach { memberId ->
             logger.info("   → Sending member update to user: $memberId")
-            messagingTemplate.convertAndSendToUser(
-                memberId.toString(),
-                "/queue/messages",
+            messagingTemplate.convertAndSend(
+                "/topic/user/$memberId/messages",
                 mapOf(
                     "type" to "GROUP_MEMBER_UPDATE",
                     "data" to event
@@ -335,18 +363,67 @@ class WebSocketMessageHandler(
      */
     fun sendNotification(userId: UUID, notification: Any) {
         logger.info("🔔 Sending notification to user: $userId")
-        
-        // Method 1: User Queue
-        messagingTemplate.convertAndSendToUser(
-            userId.toString(),
-            "/queue/notifications",
-            notification
-        )
-        
-        // Method 2: Topic Broadcast (Fallback)
+        // Direct topic routing — no convertAndSendToUser
         messagingTemplate.convertAndSend("/topic/user/$userId/notifications", notification)
-        
-        logger.info("✅ Notification sent to /user/$userId/queue/notifications AND /topic/user/$userId/notifications")
+        logger.info("✅ Notification sent to /topic/user/$userId/notifications")
+    }
+    
+    /**
+     * Broadcast a message deletion to all participants in a chat.
+     * Enables real-time removal of deleted messages on all devices.
+     */
+    fun broadcastMessageDeletion(chatId: UUID, messageId: UUID, recipientIds: List<UUID>) {
+        logger.info("🗑️ Broadcasting message deletion: messageId=$messageId in chat $chatId to ${recipientIds.size} recipients")
+        val deleteEvent = mapOf(
+            "type" to "MESSAGE_DELETED",
+            "chatId" to chatId.toString(),
+            "messageId" to messageId.toString(),
+            "timestamp" to System.currentTimeMillis()
+        )
+        recipientIds.forEach { recipientId ->
+            messagingTemplate.convertAndSend(
+                "/topic/user/$recipientId/messages",
+                deleteEvent
+            )
+        }
+        logger.info("✅ Message deletion broadcast complete")
+    }
+    
+    /**
+     * Broadcast a new story event to all contacts/followers.
+     * Enables real-time story updates without polling.
+     */
+    fun broadcastNewStory(storyEvent: WsStoryEvent, recipientIds: List<UUID>) {
+        logger.info("📸 Broadcasting new story from ${storyEvent.userId} to ${recipientIds.size} recipients")
+        val payload = mapOf(
+            "type" to "STORY_CREATED",
+            "data" to storyEvent
+        )
+        recipientIds.forEach { recipientId ->
+            messagingTemplate.convertAndSend(
+                "/topic/user/$recipientId/messages",
+                payload
+            )
+        }
+        logger.info("✅ Story broadcast complete")
+    }
+    
+    /**
+     * Notify contacts that a story was deleted.
+     */
+    fun notifyStoryDeleted(storyEvent: WsStoryEvent, recipientIds: List<UUID>) {
+        logger.info("🗑️ Broadcasting story deletion: storyId=${storyEvent.storyId}")
+        val payload = mapOf(
+            "type" to "STORY_DELETED",
+            "data" to storyEvent
+        )
+        recipientIds.forEach { recipientId ->
+            messagingTemplate.convertAndSend(
+                "/topic/user/$recipientId/messages",
+                payload
+            )
+        }
+        logger.info("✅ Story deletion broadcast complete")
     }
 }
 

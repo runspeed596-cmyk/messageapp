@@ -13,6 +13,7 @@ import com.Kelasor.app.data.repository.UserResult
 import com.Kelasor.app.data.session.SessionManager
 import com.Kelasor.app.data.sync.MessageSyncManager
 import com.Kelasor.app.data.websocket.WebSocketManager
+import com.Kelasor.app.data.websocket.WebSocketMessage
 import com.Kelasor.app.domain.model.Chat
 import com.Kelasor.app.domain.model.ChatType
 import com.Kelasor.app.domain.model.Channel
@@ -66,7 +67,8 @@ class ChatListViewModel @Inject constructor(
     private val channelRepository: ChannelRepository,
     private val contactsRepository: ContactsRepository,
     private val userRepository: UserRepository,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val webSocketManager: WebSocketManager
 ) : ViewModel() {
     private val _state = MutableStateFlow(ChatListState())
     val state: StateFlow<ChatListState> = _state.asStateFlow()
@@ -80,6 +82,8 @@ class ChatListViewModel @Inject constructor(
         // ARCHITECTURE: Observe chats from Room database - this is the SINGLE SOURCE OF TRUTH
         observeChats()
         observeSyncStatus()
+        // Eagerly load device contacts for instant name resolution
+        loadContacts()
         
         // Trigger initial sync from server (results go to DB, then to UI via Flow)
         chatRepository.requestChatSync()
@@ -89,6 +93,33 @@ class ChatListViewModel @Inject constructor(
         // Assume repositories have auto-refresh or called elsewhere, or add calls here if needed.
         viewModelScope.launch {
             // channelRepository.getChannels() // trigger refresh
+        }
+        // Observe WebSocket online status to update chat list participants in real-time
+        viewModelScope.launch {
+            webSocketManager.messages.collect { message ->
+                if (message is WebSocketMessage.UserOnline) {
+                    _state.update { currentState ->
+                        currentState.copy(
+                            chats = currentState.chats.map { chat ->
+                                chat.copy(participants = chat.participants.map { p ->
+                                    if (p.id == message.userId) p.copy(
+                                        isOnline = message.isOnline,
+                                        displayOnlineStatus = message.isOnline
+                                    ) else p
+                                })
+                            },
+                            pinnedChats = currentState.pinnedChats.map { chat ->
+                                chat.copy(participants = chat.participants.map { p ->
+                                    if (p.id == message.userId) p.copy(
+                                        isOnline = message.isOnline,
+                                        displayOnlineStatus = message.isOnline
+                                    ) else p
+                                })
+                            }
+                        )
+                    }
+                }
+            }
         }
     }
     
@@ -512,14 +543,34 @@ class ConversationViewModel @Inject constructor(
             }
         }
         
-        // TODO: Observe typing status when implemented in WebSocketManager
-        // viewModelScope.launch {
-        //     webSocketManager.typingStatus.collect { status ->
-        //         if (status.chatId == currentChatId && status.userId != _state.value.currentUserId) {
-        //             _state.update { it.copy(isOtherUserTyping = status.isTyping) }
-        //         }
-        //     }
-        // }
+        // Observe WebSocket messages for typing and online status
+        viewModelScope.launch {
+            webSocketManager.messages.collect { message ->
+                when (message) {
+                    is WebSocketMessage.Typing -> {
+                        if (message.chatId == currentChatId && message.userId != _state.value.currentUserId) {
+                            _state.update { it.copy(isOtherUserTyping = message.isTyping) }
+                        }
+                    }
+                    is WebSocketMessage.UserOnline -> {
+                        // Update participant's isOnline in the current chat state
+                        val chat = _state.value.chat ?: return@collect
+                        val updatedParticipants = chat.participants.map { participant ->
+                            if (participant.id == message.userId) {
+                                participant.copy(
+                                    isOnline = message.isOnline,
+                                    displayOnlineStatus = message.isOnline,
+                                    lastSeen = message.lastSeen?.let { java.time.Instant.ofEpochMilli(it) }
+                                        ?: participant.lastSeen
+                                )
+                            } else participant
+                        }
+                        _state.update { it.copy(chat = chat.copy(participants = updatedParticipants)) }
+                    }
+                    else -> { /* handled elsewhere */ }
+                }
+            }
+        }
         
         // Observe sync status
         viewModelScope.launch {

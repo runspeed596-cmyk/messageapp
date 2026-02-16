@@ -782,6 +782,7 @@ fun SearchUserItem(
     user: com.Kelasor.app.domain.model.User,
     onClick: () -> Unit
 ) {
+    val resolvedName: String = user.contactName ?: user.displayName
      Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -791,14 +792,14 @@ fun SearchUserItem(
     ) {
         AvatarImage(
             imageUrl = user.displayAvatarUrl,
-            name = user.displayName,
+            name = resolvedName,
             size = AvatarSize.MEDIUM,
             isOnline = user.isOnline
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column {
             Text(
-                text = user.displayName,
+                text = resolvedName,
                 style = MessageAppTypography.chatName,
                 color = MaterialTheme.colorScheme.onBackground
             )

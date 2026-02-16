@@ -54,8 +54,8 @@ class WebSocketEventListener(
         val sessionId = accessor.sessionId ?: return
         val destination = accessor.destination ?: return
         
-        // Extract userId from user queue subscription
-        // Format: /user/{userId}/queue/messages or /topic/user/{userId}/chats
+        // Extract userId from topic subscription
+        // Format: /topic/user/{userId}/messages or /topic/user/{userId}/notifications
         val userIdMatch = Regex("/(?:user|topic/user)/([a-f0-9-]{36})/").find(destination)
         
         if (userIdMatch != null && !sessionUserMap.containsKey(sessionId)) {
@@ -133,7 +133,7 @@ class WebSocketEventListener(
             lastSeen = if (!isOnline) Instant.now() else null
         )
         
-        messagingTemplate.convertAndSend("/topic/online", status)
+        messagingTemplate.convertAndSend("/topic/online-status", status)
         logger.info("   📡 Broadcasted online status: $userId isOnline=$isOnline")
     }
 }

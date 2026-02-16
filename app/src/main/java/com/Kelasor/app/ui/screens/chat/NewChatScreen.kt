@@ -357,6 +357,7 @@ private fun ContactItem(
     showOnline: Boolean = true,
     onClick: () -> Unit
 ) {
+    val resolvedName: String = user.contactName ?: user.displayName
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -366,14 +367,14 @@ private fun ContactItem(
     ) {
         AvatarImage(
             imageUrl = avatarUrl,
-            name = user.displayName,
+            name = resolvedName,
             size = AvatarSize.MEDIUM,
             isOnline = if (showOnline) user.isOnline else false
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = user.displayName,
+                text = resolvedName,
                 style = MessageAppTypography.chatName,
                 color = MaterialTheme.colorScheme.onBackground
             )

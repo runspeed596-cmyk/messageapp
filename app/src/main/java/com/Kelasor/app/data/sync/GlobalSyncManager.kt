@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -76,12 +77,38 @@ class GlobalSyncManager @Inject constructor(
                     }
                     ConnectionState.DISCONNECTED -> {
                         Log.e(TAG, "⚠️ WebSocket disconnected")
+                        // Auto-reconnect after a short delay if we have a token
+                        scope.launch {
+                            kotlinx.coroutines.delay(3000)
+                            val currentToken = sessionManager.accessToken.first()
+                            if (currentToken != null) {
+                                Log.e(TAG, "🔄 Auto-reconnecting WebSocket after disconnect...")
+                                try {
+                                    webSocketManager.connect(currentToken)
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "❌ Auto-reconnect failed: ${e.message}")
+                                }
+                            }
+                        }
                     }
                     ConnectionState.CONNECTING -> {
                         Log.e(TAG, "🔄 WebSocket connecting...")
                     }
                     ConnectionState.ERROR -> {
                         Log.e(TAG, "❌ WebSocket connection error")
+                        // Also auto-reconnect on error
+                        scope.launch {
+                            kotlinx.coroutines.delay(5000)
+                            val currentToken = sessionManager.accessToken.first()
+                            if (currentToken != null) {
+                                Log.e(TAG, "🔄 Auto-reconnecting WebSocket after error...")
+                                try {
+                                    webSocketManager.connect(currentToken)
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "❌ Auto-reconnect failed: ${e.message}")
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -168,6 +195,12 @@ class GlobalSyncManager @Inject constructor(
                 }
                 is WebSocketMessage.ChannelCreated -> {
                     Log.d(TAG, "🆕 Channel created/updated: ${message.channel.id}")
+                }
+                is WebSocketMessage.MessageDeleted -> {
+                    Log.d(TAG, "🗑️ Message deleted: ${message.messageId} in chat ${message.chatId}")
+                }
+                is WebSocketMessage.StoryEvent -> {
+                    Log.d(TAG, "📸 Story event: ${message.event} by ${message.userId}")
                 }
             }
         } catch (e: Exception) {

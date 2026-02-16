@@ -33,16 +33,15 @@ class WebSocketNotificationWorker @AssistedInject constructor(
         private const val NOTIFICATION_ID = 999
         /**
          * Start the persistent WebSocket sync service.
-         * Using OneTimeWorkRequest with Expeditied/LongRunning policy.
+         * Using OneTimeWorkRequest with Expedited/LongRunning policy.
          */
         fun startService(context: Context) {
              val workRequest = androidx.work.OneTimeWorkRequest.Builder(WebSocketNotificationWorker::class.java)
                 .setExpedited(androidx.work.OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                 .build()
-
             WorkManager.getInstance(context).enqueueUniqueWork(
                 WORK_NAME,
-                androidx.work.ExistingWorkPolicy.REPLACE, // Restart if already running to ensure fresh connection
+                androidx.work.ExistingWorkPolicy.KEEP, // KEEP existing worker — never cancel a running worker
                 workRequest
             )
             Log.i(TAG, "🚀 Started WebSocket foreground service")
@@ -77,24 +76,20 @@ class WebSocketNotificationWorker @AssistedInject constructor(
                 Log.w(TAG, "⚠️ No access token available, finishing worker")
                 return Result.success()
             }
-
-            // Ensure WebSocket is connected
-            webSocketManager.connect(token)
-            Log.i(TAG, "✅ WebSocket connection initiated in background")
-            
+            // NOTE: Do NOT call webSocketManager.connect() here.
+            // GlobalSyncManager owns the WebSocket connection lifecycle.
+            // This worker only keeps the process alive via foreground service.
+            Log.i(TAG, "✅ WebSocket foreground service keeping process alive")
             // Keep the worker running indefinitely
-            // Monitor connection state or just wait for cancellation
             try {
-                // Wait until cancelled (app kill or stop)
-                // We can also monitor connection state here and reconnect if needed, 
-                // but WebSocketManager already handles reconnection logic.
-                // We just need to keep the process alive.
-                 kotlinx.coroutines.awaitCancellation()
+                kotlinx.coroutines.awaitCancellation()
             } catch (e: kotlinx.coroutines.CancellationException) {
-                Log.i(TAG, "🛑 Worker cancelled, disconnecting...")
-                webSocketManager.disconnect()
+                // IMPORTANT: Do NOT call webSocketManager.disconnect() here!
+                // GlobalSyncManager owns the WebSocket connection.
+                // If this worker is cancelled, the connection should stay alive
+                // as long as GlobalSyncManager is still running.
+                Log.i(TAG, "🛑 Worker cancelled (process still alive, WebSocket untouched)")
             }
-
             Result.success()
         } catch (e: Exception) {
             Log.e(TAG, "❌ WebSocket sync error: ${e.message}", e)
