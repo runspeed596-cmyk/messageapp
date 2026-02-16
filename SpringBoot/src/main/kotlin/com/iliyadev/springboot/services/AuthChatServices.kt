@@ -23,7 +23,8 @@ class AuthService(
     private val userRepository: UserRepository,
     private val otpCodeRepository: OtpCodeRepository,
     private val refreshTokenRepository: RefreshTokenRepository,
-    private val jwtTokenUtils: JwtTokenUtils
+    private val jwtTokenUtils: JwtTokenUtils,
+    private val najvaSmsService: NajvaSmsService
 ) {
     companion object {
         private const val OTP_EXPIRY_MINUTES = 5L
@@ -41,8 +42,10 @@ class AuthService(
             this.createdAt = Instant.now()
         }
         otpCodeRepository.save(otpCode)
-        // In production, send SMS here
-        println("OTP for $normalizedPhone: $code")
+        val smsSent: Boolean = najvaSmsService.sendOtpViaSms(normalizedPhone, code)
+        if (!smsSent) {
+            println("⚠️ SMS send failed for $normalizedPhone, OTP: $code")
+        }
         return SendOtpResponse(
             success = true,
             message = "کد تأیید ارسال شد",
