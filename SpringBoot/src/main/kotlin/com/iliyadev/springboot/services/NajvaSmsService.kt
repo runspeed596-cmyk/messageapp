@@ -10,7 +10,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 @Service
 class NajvaSmsService(
     @Value("\${najva.sms.api-key}") private val apiKey: String,
-    @Value("\${najva.sms.sender}") private val sender: String,
     @Value("\${najva.sms.template-name}") private val templateName: String,
     @Value("\${najva.sms.base-url}") private val baseUrl: String
 ) {
@@ -29,7 +28,6 @@ class NajvaSmsService(
         val url: String = UriComponentsBuilder
             .fromHttpUrl("$baseUrl/$apiKey/verify/lookup.json")
             .queryParam("receptor", phoneNumber)
-            .queryParam("sender", sender)
             .queryParam("template", templateName)
             .queryParam("token", otpCode)
             .toUriString()
