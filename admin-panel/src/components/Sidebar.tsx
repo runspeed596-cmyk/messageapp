@@ -1,4 +1,5 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
     Users,
@@ -6,12 +7,16 @@ import {
     LogOut,
     ShieldCheck,
     ChevronLeft,
-    Home,
+    ChevronDown,
     Image,
-    GraduationCap,
     Film,
     Percent,
-    Trophy
+    Trophy,
+    BookOpen,
+    Megaphone,
+    FolderOpen,
+    Settings,
+    Building2
 } from 'lucide-react';
 
 interface SidebarItemProps {
@@ -40,11 +45,17 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ to, icon, label }) => (
     </NavLink>
 );
 
+const CONTENT_ROUTES: string[] = ['/banners', '/universities', '/world-of-science-settings', '/entertainment', '/discounts', '/competitions'];
+
 const Sidebar = () => {
     const { logout } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
 
-    const handleLogout = () => {
+    const isContentActive: boolean = CONTENT_ROUTES.some(r => location.pathname === r);
+    const [contentOpen, setContentOpen] = useState<boolean>(isContentActive);
+
+    const handleLogout = (): void => {
         logout();
         navigate('/login');
     };
@@ -63,21 +74,45 @@ const Sidebar = () => {
 
             <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
                 <SidebarItem to="/" icon={<LayoutDashboard size={20} />} label="پیشخوان" />
-                <SidebarItem to="/home" icon={<Home size={20} />} label="مدیریت خانه" />
                 <SidebarItem to="/users" icon={<Users size={20} />} label="کاربران" />
 
-                <div className="pt-8 pb-2 px-4 text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">
-                    مدیریت محتوا
-                </div>
-                <SidebarItem to="/banners" icon={<Image size={20} />} label="بنر تبلیغاتی" />
-                <SidebarItem to="/universities" icon={<GraduationCap size={20} />} label="جهان علم" />
-                <SidebarItem to="/entertainment" icon={<Film size={20} />} label="سرگرمی" />
-                <SidebarItem to="/discounts" icon={<Percent size={20} />} label="دنیای تخفیف" />
-                <SidebarItem to="/competitions" icon={<Trophy size={20} />} label="قله علم" />
+                {/* Collapsible Content Management */}
+                <button
+                    onClick={() => setContentOpen(!contentOpen)}
+                    className={`flex items-center justify-between w-full p-4 rounded-2xl transition-all duration-300 group ${isContentActive && !contentOpen
+                        ? 'bg-indigo-600/30 text-white'
+                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                        }`}
+                >
+                    <div className="flex items-center gap-4">
+                        <div className="transition-transform group-hover:scale-110">
+                            <FolderOpen size={20} />
+                        </div>
+                        <span className="text-sm font-bold">مدیریت محتوا</span>
+                    </div>
+                    <ChevronDown
+                        size={14}
+                        className={`opacity-40 transition-transform duration-300 ${contentOpen ? 'rotate-180' : ''}`}
+                    />
+                </button>
+
+                {contentOpen && (
+                    <div className="mr-4 space-y-1 border-r border-white/5 pr-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <SidebarItem to="/banners" icon={<Image size={18} />} label="بنر تبلیغاتی" />
+                        <SidebarItem to="/universities" icon={<Building2 size={18} />} label="جهان علم — بخش اصلی" />
+                        <SidebarItem to="/world-of-science-settings" icon={<Settings size={18} />} label="جهان علم — تنظیمات" />
+                        <SidebarItem to="/entertainment" icon={<Film size={18} />} label="سرگرمی" />
+                        <SidebarItem to="/discounts" icon={<Percent size={18} />} label="دنیای تخفیف" />
+                        <SidebarItem to="/competitions" icon={<Trophy size={18} />} label="قله علم" />
+                    </div>
+                )}
 
                 <div className="pt-8 pb-2 px-4 text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">
                     تنظیمات سیستم
                 </div>
+                <SidebarItem to="/user-profiles" icon={<BookOpen size={20} />} label="پروفایل کاربران" />
+                <SidebarItem to="/official-channels-groups" icon={<Megaphone size={20} />} label="کانال‌ها و گروه‌ها" />
+                <SidebarItem to="/advertisements" icon={<Megaphone size={20} />} label="تبلیغات" />
             </nav>
 
             <div className="p-6 border-t border-white/5">
