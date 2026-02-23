@@ -440,9 +440,7 @@ fun SettingsScreen(
                     )
                     Spacer(modifier = Modifier.height(32.dp))
                 }
-            }
-
-            com.Kelasor.app.ui.components.SystemBarBackdrop()
+        }
         }
     }
 

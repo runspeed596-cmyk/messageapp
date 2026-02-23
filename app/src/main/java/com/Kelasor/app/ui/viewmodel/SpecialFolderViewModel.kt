@@ -1,0 +1,83 @@
+package com.Kelasor.app.ui.viewmodel
+
+import android.util.Log
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.Kelasor.app.data.remote.api.ApiService
+import com.Kelasor.app.data.remote.dto.AiBotDto
+import com.Kelasor.app.data.remote.dto.SpecialChannelDto
+import com.Kelasor.app.data.remote.dto.SpecialFolderDto
+import com.Kelasor.app.data.remote.dto.SpecialGroupDto
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ⭐ Special Folder ViewModel
+// ═══════════════════════════════════════════════════════════════════════════════
+
+data class SpecialFolderState(
+    val isLoading: Boolean = false,
+    val aiBots: List<AiBotDto> = emptyList(),
+    val channels: List<SpecialChannelDto> = emptyList(),
+    val groups: List<SpecialGroupDto> = emptyList(),
+    val supportChannels: List<SpecialChannelDto> = emptyList(),
+    val supportGroups: List<SpecialGroupDto> = emptyList(),
+    val supportChatId: String? = null,
+    val isProfileComplete: Boolean = true,
+    val error: String? = null
+)
+
+@HiltViewModel
+class SpecialFolderViewModel @Inject constructor(
+    private val apiService: ApiService
+) : ViewModel() {
+    private val _state: MutableStateFlow<SpecialFolderState> = MutableStateFlow(SpecialFolderState())
+    val state: StateFlow<SpecialFolderState> = _state.asStateFlow()
+    init {
+        Log.d("SpecialFolderVM", "🔥 ViewModel created, calling loadSpecialFolder()")
+        loadSpecialFolder()
+    }
+    fun loadSpecialFolder() {
+        viewModelScope.launch {
+            Log.d("SpecialFolderVM", "🚀 loadSpecialFolder() started")
+            _state.update { it.copy(isLoading = true, error = null) }
+            try {
+                val response = apiService.getSpecialFolder()
+                Log.d("SpecialFolderVM", "📡 API response: code=${response.code()}, success=${response.isSuccessful}")
+                if (response.isSuccessful) {
+                    val folderData: SpecialFolderDto? = response.body()?.data
+                    if (folderData != null) {
+                        Log.d("SpecialFolderVM", "✅ Data received: bots=${folderData.aiBots.size}, channels=${folderData.channels.size}, groups=${folderData.groups.size}")
+                        _state.update {
+                            it.copy(
+                                isLoading = false,
+                                aiBots = folderData.aiBots,
+                                channels = folderData.channels,
+                                groups = folderData.groups,
+                                supportChannels = folderData.supportChannels,
+                                supportGroups = folderData.supportGroups,
+                                supportChatId = folderData.supportChatId,
+                                isProfileComplete = folderData.isProfileComplete
+                            )
+                        }
+                    } else {
+                        Log.w("SpecialFolderVM", "⚠️ Response body data was null")
+                        _state.update { it.copy(isLoading = false, error = "داده‌ای دریافت نشد") }
+                    }
+                } else {
+                    Log.e("SpecialFolderVM", "❌ API error: ${response.code()} - ${response.errorBody()?.string()}")
+                    _state.update { it.copy(isLoading = false, error = "خطا: ${response.code()}") }
+                }
+            } catch (e: Exception) {
+                Log.e("SpecialFolderVM", "💥 Exception in loadSpecialFolder", e)
+                _state.update { it.copy(isLoading = false, error = "خطا در اتصال: ${e.message}") }
+            }
+        }
+    }
+}
+

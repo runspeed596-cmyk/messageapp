@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Schedule
@@ -107,7 +108,8 @@ fun MessageActionsOverlay(
     onCopyLinkClick: (() -> Unit)? = null,
     onSelectClick: (() -> Unit)? = null,
     onLockContentClick: (() -> Unit)? = null, // Feature 2: Lock content (UI only)
-    onEditScheduleClick: (() -> Unit)? = null // Edit scheduled time
+    onEditScheduleClick: (() -> Unit)? = null, // Edit scheduled time
+    onAdClick: (() -> Unit)? = null // Advertisement feature
 ) {
     val extendedColors = MessageAppTheme.extendedColors
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -294,6 +296,10 @@ fun MessageActionsOverlay(
                                 it.invoke()
                                 onDismiss()
                             } },
+                            onAdClick = onAdClick?.let { {
+                                it.invoke()
+                                onDismiss()
+                            } },
                             onLockContentClick = onLockContentClick?.let { {
                                 it.invoke()
                                 onDismiss()
@@ -464,6 +470,7 @@ private fun ActionMenuCard(
     onPinClick: (() -> Unit)? = null,
     onCopyLinkClick: (() -> Unit)? = null,
     onForwardClick: (() -> Unit)? = null,
+    onAdClick: (() -> Unit)? = null,
     onLockContentClick: (() -> Unit)? = null,
     onEditClick: (() -> Unit)? = null,
     onEditScheduleClick: (() -> Unit)? = null,
@@ -518,6 +525,15 @@ private fun ActionMenuCard(
                     icon = Icons.Default.Share,
                     text = "فوروارد",
                     onClick = onForwardClick
+                )
+            }
+            // Advertisement
+            if (onAdClick != null) {
+                ActionMenuItem(
+                    icon = Icons.Default.Campaign,
+                    text = "تبلیغات",
+                    iconTint = Color(0xFFFFA726),
+                    onClick = onAdClick
                 )
             }
             // Lock Content (Feature 2 - UI only)

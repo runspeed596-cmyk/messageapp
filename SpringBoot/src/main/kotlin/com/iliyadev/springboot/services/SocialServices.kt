@@ -34,6 +34,11 @@ class ProfileDetailsService(
         request.achievements?.let { details.achievements = it.joinToString(",") }
         request.skills?.let { details.skills = it.joinToString(",") }
         request.workExperience?.let { details.workExperience = it }
+        request.isTeacher?.let { details.isTeacher = it }
+        request.teachingField?.let { details.teachingField = it }
+        request.teachingUniversity?.let { details.teachingUniversity = it }
+        request.province?.let { details.province = it }
+        request.city?.let { details.city = it }
         details.updatedAt = Instant.now()
         return profileDetailsRepository.save(details).toDto()
     }

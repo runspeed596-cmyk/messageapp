@@ -220,11 +220,27 @@ class ChannelRepository @Inject constructor(
         isPublic: Boolean,
         publicId: String? = null,
         memberIds: List<String> = emptyList(),
-        avatarFile: java.io.File? = null
+        avatarFile: java.io.File? = null,
+        targetProvince: String? = null,
+        targetCity: String? = null,
+        targetUniversity: String? = null,
+        targetFieldOfStudy: String? = null,
+        targetEducationLevel: String? = null
     ): Flow<ChannelResult<Channel>> = flow {
         emit(ChannelResult.Loading)
         try {
-            val response = apiService.createChannel(CreateChannelRequest(name, description, isPublic, publicId, memberIds))
+            val response = apiService.createChannel(CreateChannelRequest(
+                name = name,
+                description = description,
+                isPublic = isPublic,
+                publicId = publicId,
+                memberIds = memberIds,
+                targetProvince = targetProvince,
+                targetCity = targetCity,
+                targetUniversity = targetUniversity,
+                targetFieldOfStudy = targetFieldOfStudy,
+                targetEducationLevel = targetEducationLevel
+            ))
             if (response.isSuccessful && response.body()?.success == true) {
                 var channelDto = response.body()?.data
                 

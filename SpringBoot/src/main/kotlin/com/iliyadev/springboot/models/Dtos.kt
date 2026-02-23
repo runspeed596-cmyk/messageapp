@@ -66,7 +66,14 @@ data class UserDto(
     val bioChannelId1: UUID? = null,
     val bioChannelId2: UUID? = null,
     // Feature 4: Premium status
-    val isPremium: Boolean = false
+    val isPremium: Boolean = false,
+    // Teacher role
+    val isTeacher: Boolean = false,
+    val teachingField: String? = null,
+    val teachingUniversity: String? = null,
+    // Location for targeting
+    val province: String? = null,
+    val city: String? = null
 )
 
 fun User.toDto(): UserDto = UserDto(
@@ -92,7 +99,12 @@ fun User.toDto(): UserDto = UserDto(
     achievements = profileDetails?.achievements,
     bioChannelId1 = bioChannelId1,
     bioChannelId2 = bioChannelId2,
-    isPremium = isPremium
+    isPremium = isPremium,
+    isTeacher = profileDetails?.isTeacher ?: false,
+    teachingField = profileDetails?.teachingField,
+    teachingUniversity = profileDetails?.teachingUniversity,
+    province = profileDetails?.province,
+    city = profileDetails?.city
 )
 
 /**
@@ -155,7 +167,12 @@ fun User.toRestrictedDto(isContact: Boolean): UserDto {
         achievements = if (showProfile) profileDetails?.achievements else null,
         bioChannelId1 = if (showProfile) bioChannelId1 else null,
         bioChannelId2 = if (showProfile) bioChannelId2 else null,
-        isPremium = isPremium
+        isPremium = isPremium,
+        isTeacher = profileDetails?.isTeacher ?: false,
+        teachingField = if (showProfile) profileDetails?.teachingField else null,
+        teachingUniversity = if (showProfile) profileDetails?.teachingUniversity else null,
+        province = if (showProfile) profileDetails?.province else null,
+        city = if (showProfile) profileDetails?.city else null
     )
 }
 
@@ -455,7 +472,8 @@ data class GroupDto(
     val unreadCount: Int,
     val isMuted: Boolean = false,
     val isPinned: Boolean = false,
-    val isArchived: Boolean = false
+    val isArchived: Boolean = false,
+    val hideMembers: Boolean = false
 )
 
 data class CreateGroupRequest(
@@ -463,7 +481,12 @@ data class CreateGroupRequest(
     val description: String? = null,
     val isPublic: Boolean = false,
     val memberIds: List<UUID> = emptyList(),
-    val avatarUrl: String? = null
+    val avatarUrl: String? = null,
+    val targetProvince: String? = null,
+    val targetCity: String? = null,
+    val targetUniversity: String? = null,
+    val targetFieldOfStudy: String? = null,
+    val targetEducationLevel: String? = null
 )
 
 data class UpdateGroupRequest(
@@ -637,7 +660,12 @@ data class CreateChannelRequest(
     val isPublic: Boolean = true,
     val publicId: String? = null, // Optional unique public identifier
     val memberIds: List<UUID> = emptyList(),
-    val avatarUrl: String? = null
+    val avatarUrl: String? = null,
+    val targetProvince: String? = null,
+    val targetCity: String? = null,
+    val targetUniversity: String? = null,
+    val targetFieldOfStudy: String? = null,
+    val targetEducationLevel: String? = null
 )
 
 data class UpdateChannelRequest(
@@ -669,7 +697,10 @@ data class ChannelPostDto(
     val isPinned: Boolean = false,
     val pinnedAt: Instant? = null,
     val forwardedFrom: String? = null,
-    val scheduledAt: Instant? = null
+    val scheduledAt: Instant? = null,
+    val isAd: Boolean = false,
+    val adLabel: String? = null,
+    val adSourceChannelId: UUID? = null
 )
 
 data class CreatePostRequest(
@@ -710,7 +741,12 @@ data class UpdateUserRequest(
     val workExperience: String?,
     val achievements: String?,
     val bioChannelId1: UUID?,
-    val bioChannelId2: UUID?
+    val bioChannelId2: UUID?,
+    val isTeacher: Boolean? = null,
+    val teachingField: String? = null,
+    val teachingUniversity: String? = null,
+    val province: String? = null,
+    val city: String? = null
 )
 
 data class UserSearchResult(
@@ -753,7 +789,10 @@ fun ChannelPost.toDto(userId: UUID? = null): ChannelPostDto = ChannelPostDto(
     isPinned = isPinned,
     pinnedAt = pinnedAt,
     forwardedFrom = forwardedFrom,
-    scheduledAt = scheduledAt
+    scheduledAt = scheduledAt,
+    isAd = isAd,
+    adLabel = adLabel,
+    adSourceChannelId = adSourceChannelId
 )
 
 fun ChannelPost.toMessageDto(userId: UUID? = null): MessageDto = MessageDto(
@@ -958,6 +997,11 @@ data class ProfileDetailsDto(
     val achievements: List<String>,
     val skills: List<String>,
     val workExperience: String?,
+    val isTeacher: Boolean = false,
+    val teachingField: String? = null,
+    val teachingUniversity: String? = null,
+    val province: String? = null,
+    val city: String? = null,
     val updatedAt: Instant?
 )
 
@@ -968,7 +1012,12 @@ data class UpdateProfileDetailsRequest(
     val interests: List<String>?,
     val achievements: List<String>?,
     val skills: List<String>?,
-    val workExperience: String?
+    val workExperience: String?,
+    val isTeacher: Boolean? = null,
+    val teachingField: String? = null,
+    val teachingUniversity: String? = null,
+    val province: String? = null,
+    val city: String? = null
 )
 
 fun UserProfileDetails.toDto(): ProfileDetailsDto {
@@ -985,6 +1034,11 @@ fun UserProfileDetails.toDto(): ProfileDetailsDto {
         achievements = achievementsList,
         skills = skillsList,
         workExperience = workExperience,
+        isTeacher = isTeacher,
+        teachingField = teachingField,
+        teachingUniversity = teachingUniversity,
+        province = province,
+        city = city,
         updatedAt = updatedAt
     )
 }
@@ -1192,4 +1246,272 @@ data class SetUsernameRequest(
 data class UsernameAvailabilityResponse(
     val username: String,
     val isAvailable: Boolean
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ⭐ Special Folder DTOs
+// ═══════════════════════════════════════════════════════════════════════════════
+
+data class SpecialFolderDto(
+    val aiBots: List<AiBotDto>,
+    val channels: List<SpecialChannelDto>,
+    val groups: List<SpecialGroupDto>,
+    val supportChannels: List<SpecialChannelDto> = emptyList(),
+    val supportGroups: List<SpecialGroupDto> = emptyList(),
+    val supportChatId: String?,
+    val isProfileComplete: Boolean = true
+)
+
+data class AiBotDto(
+    val id: String,
+    val name: String,
+    val botType: String,
+    val category: String,
+    val description: String?,
+    val avatarUrl: String?,
+    val displayOrder: Int
+)
+
+fun AiBot.toDto(): AiBotDto = AiBotDto(
+    id = id.toString(),
+    name = name,
+    botType = botType,
+    category = category,
+    description = description,
+    avatarUrl = avatarUrl,
+    displayOrder = displayOrder
+)
+
+data class SpecialChannelDto(
+    val id: String,
+    val name: String,
+    val avatarUrl: String?,
+    val category: String,
+    val subscriberCount: Int
+)
+
+data class SpecialGroupDto(
+    val id: String,
+    val name: String,
+    val avatarUrl: String?,
+    val category: String,
+    val memberCount: Int
+)
+
+data class CreateAiBotRequest(
+    val name: String,
+    val botType: String,
+    val description: String? = null,
+    val avatarUrl: String? = null,
+    val displayOrder: Int = 0
+)
+
+data class CreateOfficialGroupRequest(
+    val name: String,
+    val description: String? = null,
+    val avatarUrl: String? = null,
+    val category: OfficialGroupCategory,
+    val hideMembers: Boolean = false,
+    val displayMode: String = "SPECIAL",
+    val targetFieldOfStudy: String? = null,
+    val targetEducationLevel: String? = null,
+    val targetProvince: String? = null,
+    val targetCity: String? = null,
+    val targetUniversity: String? = null,
+    val adminIds: List<String>? = null
+)
+
+data class CreateOfficialChannelRequest(
+    val name: String,
+    val description: String? = null,
+    val avatarUrl: String? = null,
+    val category: OfficialChannelCategory,
+    val displayMode: String = "SPECIAL",
+    val targetFieldOfStudy: String? = null,
+    val targetEducationLevel: String? = null,
+    val targetProvince: String? = null,
+    val targetCity: String? = null,
+    val targetUniversity: String? = null,
+    val adminIds: List<String>? = null
+)
+
+data class AddOfficialAdminRequest(
+    val userId: UUID
+)
+
+data class OfficialChannelAdminDto(
+    val id: String,
+    val name: String,
+    val description: String?,
+    val avatarUrl: String?,
+    val category: String,
+    val subscriberCount: Int,
+    val admins: List<UserDto>,
+    val displayMode: String = "SPECIAL",
+    val targetFieldOfStudy: String? = null,
+    val targetEducationLevel: String? = null,
+    val targetProvince: String? = null,
+    val targetCity: String? = null,
+    val targetUniversity: String? = null
+)
+
+data class OfficialGroupAdminDto(
+    val id: String,
+    val name: String,
+    val description: String?,
+    val avatarUrl: String?,
+    val category: String,
+    val hideMembers: Boolean,
+    val memberCount: Int,
+    val admins: List<UserDto>,
+    val displayMode: String = "SPECIAL",
+    val targetFieldOfStudy: String? = null,
+    val targetEducationLevel: String? = null,
+    val targetProvince: String? = null,
+    val targetCity: String? = null,
+    val targetUniversity: String? = null
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📚 Reference Data DTOs
+// ═══════════════════════════════════════════════════════════════════════════════
+
+data class FieldOfStudyDto(
+    val id: String,
+    val name: String,
+    val educationLevel: String,
+    val displayOrder: Int
+)
+
+fun FieldOfStudy.toDto(): FieldOfStudyDto = FieldOfStudyDto(
+    id = id.toString(),
+    name = name,
+    educationLevel = educationLevel,
+    displayOrder = displayOrder
+)
+
+data class EducationLevelDto(
+    val id: String,
+    val name: String,
+    val displayOrder: Int
+)
+
+fun EducationLevel.toDto(): EducationLevelDto = EducationLevelDto(
+    id = id.toString(),
+    name = name,
+    displayOrder = displayOrder
+)
+
+data class FacultyDto(
+    val id: String,
+    val name: String,
+    val displayOrder: Int
+)
+
+fun Faculty.toDto(): FacultyDto = FacultyDto(
+    id = id.toString(),
+    name = name,
+    displayOrder = displayOrder
+)
+
+data class UniversitySimpleDto(
+    val id: String,
+    val name: String,
+    val city: String?,
+    val province: String?
+)
+
+fun University.toSimpleDto(): UniversitySimpleDto = UniversitySimpleDto(
+    id = id.toString(),
+    name = name,
+    city = city,
+    province = province
+)
+
+data class ReferenceDataDto(
+    val universities: List<UniversitySimpleDto>,
+    val fieldsOfStudy: List<FieldOfStudyDto>,
+    val educationLevels: List<EducationLevelDto>,
+    val faculties: List<FacultyDto>
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🤖 AI Bot Chat DTOs
+// ═══════════════════════════════════════════════════════════════════════════════
+
+data class AiBotMessageDto(
+    val id: String,
+    val botId: String,
+    val content: String,
+    val role: String, // USER or ASSISTANT
+    val createdAt: String
+)
+
+fun AiBotMessage.toDto(): AiBotMessageDto = AiBotMessageDto(
+    id = id.toString(),
+    botId = botId.toString(),
+    content = content,
+    role = role,
+    createdAt = createdAt.toString()
+)
+
+data class SendAiBotMessageRequest(
+    val content: String
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📢 Advertisement DTOs
+// ═══════════════════════════════════════════════════════════════════════════════
+
+data class AdRequestDto(
+    val id: UUID,
+    val requesterId: UUID,
+    val requesterName: String,
+    val requesterAvatar: String?,
+    val sourceMessageId: String,
+    val sourceType: String,
+    val sourceId: String?,
+    val targetChannelId: UUID,
+    val targetChannelName: String,
+    val targetChannelAvatar: String?,
+    val messageContent: String,
+    val messageMediaUrl: String?,
+    val messageType: String,
+    val status: String,
+    val createdAt: Instant,
+    val reviewedAt: Instant?
+)
+
+data class CreateAdRequest(
+    val messageContent: String,
+    val targetChannelId: UUID,
+    val sourceType: String = "CHAT",
+    val sourceId: String? = null,
+    val sourceMessageId: String = "",
+    val messageMediaUrl: String? = null,
+    val messageType: String = "TEXT"
+)
+
+data class AdRequestListResponse(
+    val adRequests: List<AdRequestDto>,
+    val totalCount: Int
+)
+
+fun AdRequest.toDto(): AdRequestDto = AdRequestDto(
+    id = id!!,
+    requesterId = requester?.id ?: UUID.randomUUID(),
+    requesterName = requester?.displayName ?: "Unknown",
+    requesterAvatar = requester?.avatarUrl,
+    sourceMessageId = sourceMessageId,
+    sourceType = sourceType,
+    sourceId = sourceId,
+    targetChannelId = targetChannel?.id ?: UUID.randomUUID(),
+    targetChannelName = targetChannel?.name ?: "Unknown",
+    targetChannelAvatar = targetChannel?.avatarUrl,
+    messageContent = messageContent,
+    messageMediaUrl = messageMediaUrl,
+    messageType = messageType.name,
+    status = status.name,
+    createdAt = createdAt,
+    reviewedAt = reviewedAt
 )

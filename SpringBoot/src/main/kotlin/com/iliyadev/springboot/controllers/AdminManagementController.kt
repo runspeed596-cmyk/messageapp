@@ -16,7 +16,10 @@ class AdminManagementController(
     private val movieRepository: EntertainmentMovieRepository,
     private val musicRepository: EntertainmentMusicRepository,
     private val riddleRepository: EntertainmentRiddleRepository,
-    private val discountRepository: DiscountRepository
+    private val discountRepository: DiscountRepository,
+    private val fieldOfStudyRepository: FieldOfStudyRepository,
+    private val educationLevelRepository: EducationLevelRepository,
+    private val facultyRepository: FacultyRepository
 ) {
 
     // 👤 User Management
@@ -53,13 +56,62 @@ class AdminManagementController(
         ResponseEntity.ok(ApiResponse(true, "Success", universityRepository.findAll()))
 
     @PostMapping("/universities")
-    fun createUniversity(@RequestBody university: University): ResponseEntity<ApiResponse<University>> =
-        ResponseEntity.ok(ApiResponse(true, "University created", universityRepository.save(university)))
+    fun createUniversity(@RequestBody university: University): ResponseEntity<ApiResponse<University>> {
+        val existing = universityRepository.findByNameIgnoreCase(university.name.trim())
+            .filter { it.id != university.id }
+        if (existing.isNotEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResponse(false, "این دانشگاه قبلاً اضافه شده است"))
+        }
+        university.name = university.name.trim()
+        return ResponseEntity.ok(ApiResponse(true, "University created", universityRepository.save(university)))
+    }
 
     @DeleteMapping("/universities/{id}")
     fun deleteUniversity(@PathVariable id: UUID): ResponseEntity<ApiResponse<Unit>> {
         universityRepository.deleteById(id)
         return ResponseEntity.ok(ApiResponse(true, "University deleted"))
+    }
+
+    // 📚 Field of Study Management
+    @GetMapping("/fields-of-study")
+    fun getFieldsOfStudy(): ResponseEntity<ApiResponse<List<FieldOfStudy>>> =
+        ResponseEntity.ok(ApiResponse(true, "Success", fieldOfStudyRepository.findAllByOrderByDisplayOrderAsc()))
+
+    @PostMapping("/fields-of-study")
+    fun createFieldOfStudy(@RequestBody field: FieldOfStudy): ResponseEntity<ApiResponse<FieldOfStudy>> {
+        if (field.educationLevel.isBlank()) {
+            return ResponseEntity.badRequest().body(ApiResponse(false, "تعیین مقطع تحصیلی الزامی است"))
+        }
+        val existing = fieldOfStudyRepository.findByNameIgnoreCaseAndEducationLevelIgnoreCase(
+            field.name.trim(), field.educationLevel.trim()
+        ).filter { it.id != field.id }
+        if (existing.isNotEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResponse(false, "این رشته با این مقطع قبلاً اضافه شده است"))
+        }
+        field.name = field.name.trim()
+        field.educationLevel = field.educationLevel.trim()
+        return ResponseEntity.ok(ApiResponse(true, "Field created", fieldOfStudyRepository.save(field)))
+    }
+
+    @DeleteMapping("/fields-of-study/{id}")
+    fun deleteFieldOfStudy(@PathVariable id: UUID): ResponseEntity<ApiResponse<Unit>> {
+        fieldOfStudyRepository.deleteById(id)
+        return ResponseEntity.ok(ApiResponse(true, "Field deleted"))
+    }
+
+    // 🎓 Education Level Management
+    @GetMapping("/education-levels")
+    fun getEducationLevels(): ResponseEntity<ApiResponse<List<EducationLevel>>> =
+        ResponseEntity.ok(ApiResponse(true, "Success", educationLevelRepository.findAllByOrderByDisplayOrderAsc()))
+
+    @PostMapping("/education-levels")
+    fun createEducationLevel(@RequestBody level: EducationLevel): ResponseEntity<ApiResponse<EducationLevel>> =
+        ResponseEntity.ok(ApiResponse(true, "Level created", educationLevelRepository.save(level)))
+
+    @DeleteMapping("/education-levels/{id}")
+    fun deleteEducationLevel(@PathVariable id: UUID): ResponseEntity<ApiResponse<Unit>> {
+        educationLevelRepository.deleteById(id)
+        return ResponseEntity.ok(ApiResponse(true, "Level deleted"))
     }
 
     // 🎬 Movie Management
@@ -121,4 +173,27 @@ class AdminManagementController(
         discountRepository.deleteById(id)
         return ResponseEntity.ok(ApiResponse(true, "Discount deleted"))
     }
+
+    // 🏛️ Faculty Management
+    @GetMapping("/faculties")
+    fun getFaculties(): ResponseEntity<ApiResponse<List<Faculty>>> =
+        ResponseEntity.ok(ApiResponse(true, "Success", facultyRepository.findAllByOrderByDisplayOrderAsc()))
+
+    @PostMapping("/faculties")
+    fun createFaculty(@RequestBody faculty: Faculty): ResponseEntity<ApiResponse<Faculty>> {
+        val existing = facultyRepository.findByNameIgnoreCase(faculty.name.trim())
+            .filter { it.id != faculty.id }
+        if (existing.isNotEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResponse(false, "این دانشکده قبلاً اضافه شده است"))
+        }
+        faculty.name = faculty.name.trim()
+        return ResponseEntity.ok(ApiResponse(true, "Faculty created", facultyRepository.save(faculty)))
+    }
+
+    @DeleteMapping("/faculties/{id}")
+    fun deleteFaculty(@PathVariable id: UUID): ResponseEntity<ApiResponse<Unit>> {
+        facultyRepository.deleteById(id)
+        return ResponseEntity.ok(ApiResponse(true, "Faculty deleted"))
+    }
 }
+

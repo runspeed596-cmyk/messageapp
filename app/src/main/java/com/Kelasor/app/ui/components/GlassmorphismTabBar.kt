@@ -36,6 +36,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import com.Kelasor.app.ui.theme.MessageAppTheme
 
 /**
@@ -55,6 +58,7 @@ fun GlassmorphismTabBar(
     val pillShape = RoundedCornerShape(11.dp)
     val tabCount = tabs.size
 
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -183,4 +187,5 @@ fun GlassmorphismTabBar(
             }
         }
     }
+    } // end CompositionLocalProvider
 }

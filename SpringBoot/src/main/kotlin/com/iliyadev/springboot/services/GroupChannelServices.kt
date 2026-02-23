@@ -29,9 +29,13 @@ class GroupService(
     fun getGroupsForUser(userId: UUID, page: Int, size: Int): GroupListResponse {
         val pageable = PageRequest.of(page, size)
         val groups = groupRepository.findByMemberId(userId, pageable)
+        // Filter out official groups with SPECIAL or SUPPORT displayMode (they belong in Special Folder only)
+        val filteredGroups = groups.content.filter { group ->
+            !group.isOfficial || group.displayMode == OfficialDisplayMode.TAB
+        }
         return GroupListResponse(
-            groups = groups.content.map { group -> groupToDto(group, userId) },
-            totalCount = groups.totalElements.toInt()
+            groups = filteredGroups.map { group -> groupToDto(group, userId) },
+            totalCount = filteredGroups.size
         )
     }
     @Transactional
@@ -47,11 +51,16 @@ class GroupService(
         val group = Group().apply {
             name = request.name
             description = request.description
-            isPublic = false // Force private as per requirement
+            isPublic = request.isPublic
             avatarUrl = request.avatarUrl
             this.inviteLink = inviteLink
             createdBy = creator
             createdAt = Instant.now()
+            targetProvince = request.targetProvince
+            targetCity = request.targetCity
+            targetUniversity = request.targetUniversity
+            targetFieldOfStudy = request.targetFieldOfStudy
+            targetEducationLevel = request.targetEducationLevel
         }
         val savedGroup = groupRepository.save(group)
         val ownerMember = GroupMember().apply {
@@ -242,7 +251,16 @@ class GroupService(
         val group = groupRepository.findById(groupId).orElse(null) ?: return null
         val membership = groupMemberRepository.findByGroupIdAndUserId(groupId, userId)
         if (membership == null && !group.isPublic) return null
-        return groupMemberRepository.findByGroupId(groupId).map { member ->
+        val allMembers: List<GroupMember> = groupMemberRepository.findByGroupId(groupId)
+        // If hideMembers is true and user is a regular member, only show admins/owner
+        val visibleMembers: List<GroupMember> = if (group.hideMembers
+            && (membership == null || membership.role == MemberRole.MEMBER)
+        ) {
+            allMembers.filter { it.role == MemberRole.OWNER || it.role == MemberRole.ADMIN }
+        } else {
+            allMembers
+        }
+        return visibleMembers.map { member ->
             GroupMemberDto(
                 user = member.user!!.toDto(),
                 role = member.role,
@@ -538,7 +556,8 @@ class GroupService(
             unreadCount = 0, // TODO: Implement unread count
             isMuted = myMembership?.isMuted ?: false,
             isPinned = myMembership?.isPinned ?: false,
-            isArchived = myMembership?.isArchived ?: false
+            isArchived = myMembership?.isArchived ?: false,
+            hideMembers = group.hideMembers
         )
     }
     private fun generateInviteLink(): String = "https://msgapp.com/g/${UUID.randomUUID().toString().take(8)}"
@@ -601,11 +620,15 @@ class ChannelService(
     fun getChannelsForUser(userId: UUID, page: Int, size: Int): ChannelListResponse {
         val pageable = PageRequest.of(page, size)
         val channels = channelRepository.findBySubscriberId(userId, pageable)
+        // Filter out official channels with SPECIAL or SUPPORT displayMode (they belong in Special Folder only)
+        val filteredChannels = channels.content.filter { channel ->
+            !channel.isOfficial || channel.displayMode == OfficialDisplayMode.TAB
+        }
         return ChannelListResponse(
-            channels = channels.content.map { channel ->
+            channels = filteredChannels.map { channel ->
                 channelToDto(channel, userId)
             },
-            totalCount = channels.totalElements.toInt()
+            totalCount = filteredChannels.size
         )
     }
     @Transactional
@@ -630,6 +653,11 @@ class ChannelService(
             this.owner = owner
             avatarUrl = request.avatarUrl
             createdAt = Instant.now()
+            targetProvince = request.targetProvince
+            targetCity = request.targetCity
+            targetUniversity = request.targetUniversity
+            targetFieldOfStudy = request.targetFieldOfStudy
+            targetEducationLevel = request.targetEducationLevel
         }
         val savedChannel = channelRepository.save(channel)
         val ownerSubscription = ChannelSubscriber().apply {

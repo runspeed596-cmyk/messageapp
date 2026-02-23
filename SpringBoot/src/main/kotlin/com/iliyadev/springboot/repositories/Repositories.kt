@@ -78,6 +78,8 @@ interface GroupRepository : JpaRepository<Group, UUID> {
     @Query("SELECT g FROM Group g WHERE LOWER(g.name) LIKE LOWER(CONCAT('%', :query, '%'))")
     fun searchByName(@Param("query") query: String, pageable: Pageable): Page<Group>
     fun findByInviteLink(inviteLink: String): Group?
+    fun findByIsOfficialTrue(): List<Group>
+    fun findByIsOfficialTrueAndOfficialCategory(category: OfficialGroupCategory): List<Group>
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -128,6 +130,9 @@ interface ChannelRepository : JpaRepository<Channel, UUID> {
     fun findByInviteLink(inviteLink: String): Channel?
     fun findByPublicId(publicId: String): Channel? // For public channel ID lookups
     fun findByOwnerId(ownerId: UUID): List<Channel>
+    fun findByIsOfficialTrue(): List<Channel>
+    fun findByIsOfficialTrueAndOfficialCategory(category: OfficialChannelCategory): List<Channel>
+    fun findByClassificationIn(classifications: List<ChannelClassification>): List<Channel>
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -215,3 +220,208 @@ interface StoryReplyRepository : JpaRepository<StoryReply, UUID> {
     fun countByStoryId(storyId: UUID): Long
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📋 Teacher Verification Request Repository (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Repository
+interface TeacherVerificationRequestRepository : JpaRepository<TeacherVerificationRequest, UUID> {
+    fun findByUserId(userId: UUID): List<TeacherVerificationRequest>
+    fun findByStatus(status: VerificationStatus, pageable: Pageable): Page<TeacherVerificationRequest>
+    fun findTopByUserIdOrderByCreatedAtDesc(userId: UUID): TeacherVerificationRequest?
+    fun existsByUserIdAndStatus(userId: UUID, status: VerificationStatus): Boolean
+    fun countByStatus(status: VerificationStatus): Long
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🏛️ Institution Repository (Elm Club — Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Repository
+interface InstitutionRepository : JpaRepository<Institution, UUID> {
+    fun findByOwnerId(ownerId: UUID): List<Institution>
+    fun findByVerificationStatus(status: VerificationStatus, pageable: Pageable): Page<Institution>
+    fun findByIsActiveTrue(pageable: Pageable): Page<Institution>
+    fun findByProvinceAndIsActiveTrue(province: String): List<Institution>
+    fun existsByRegistrationNumber(registrationNumber: String): Boolean
+    fun countByIsActiveTrue(): Long
+    fun countByVerificationStatus(status: VerificationStatus): Long
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 💳 Subscription Plan Repository (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Repository
+interface SubscriptionPlanRepository : JpaRepository<SubscriptionPlan, UUID> {
+    fun findByIsActiveTrue(): List<SubscriptionPlan>
+    fun findByTierAndIsActiveTrue(tier: SubscriptionTier): List<SubscriptionPlan>
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 💳 User Subscription Repository (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Repository
+interface UserSubscriptionRepository : JpaRepository<UserSubscription, UUID> {
+    fun findByUserIdAndIsActiveTrue(userId: UUID): UserSubscription?
+    fun findByUserIdOrderByCreatedAtDesc(userId: UUID, pageable: Pageable): Page<UserSubscription>
+    @Query("SELECT us FROM UserSubscription us WHERE us.isActive = true AND us.expiresAt < :now")
+    fun findExpiredSubscriptions(@Param("now") now: Instant): List<UserSubscription>
+    fun countByIsActiveTrue(): Long
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 💰 Wallet Repository (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Repository
+interface WalletRepository : JpaRepository<Wallet, UUID> {
+    fun findByUserId(userId: UUID): Wallet?
+    fun existsByUserId(userId: UUID): Boolean
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 💰 Wallet Transaction Repository (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Repository
+interface WalletTransactionRepository : JpaRepository<WalletTransaction, UUID> {
+    fun findByWalletIdOrderByCreatedAtDesc(walletId: UUID, pageable: Pageable): Page<WalletTransaction>
+    fun findByWalletIdAndType(walletId: UUID, type: TransactionType, pageable: Pageable): Page<WalletTransaction>
+    fun countByType(type: TransactionType): Long
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📚 Course Repository (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Repository
+interface CourseRepository : JpaRepository<Course, UUID> {
+    fun findByOrganizerId(organizerId: UUID, pageable: Pageable): Page<Course>
+    fun findByStatusAndIsPublicTrue(status: CourseStatus, pageable: Pageable): Page<Course>
+    fun findByInstitutionId(institutionId: UUID, pageable: Pageable): Page<Course>
+    @Query("SELECT c FROM Course c WHERE c.status = 'PUBLISHED' AND c.startsAt > :now ORDER BY c.startsAt ASC")
+    fun findUpcomingCourses(@Param("now") now: Instant, pageable: Pageable): Page<Course>
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📚 Course Enrollment Repository (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Repository
+interface CourseEnrollmentRepository : JpaRepository<CourseEnrollment, UUID> {
+    fun findByCourseIdAndUserId(courseId: UUID, userId: UUID): CourseEnrollment?
+    fun existsByCourseIdAndUserId(courseId: UUID, userId: UUID): Boolean
+    fun countByCourseIdAndIsActiveTrue(courseId: UUID): Long
+    fun findByUserIdAndIsActiveTrue(userId: UUID, pageable: Pageable): Page<CourseEnrollment>
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📚 Course Material Repository (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Repository
+interface CourseMaterialRepository : JpaRepository<CourseMaterial, UUID> {
+    fun findByCourseIdOrderBySortOrderAsc(courseId: UUID): List<CourseMaterial>
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📝 Exam Repository (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Repository
+interface ExamRepository : JpaRepository<Exam, UUID> {
+    fun findByCreatorId(creatorId: UUID, pageable: Pageable): Page<Exam>
+    fun findByChannelId(channelId: UUID, pageable: Pageable): Page<Exam>
+    fun findByCourseId(courseId: UUID): List<Exam>
+    @Query("SELECT e FROM Exam e WHERE e.status = 'ACTIVE' AND e.endsAt < :now")
+    fun findExpiredActiveExams(@Param("now") now: Instant): List<Exam>
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📝 Exam Question Repository (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Repository
+interface ExamQuestionRepository : JpaRepository<ExamQuestion, UUID> {
+    fun findByExamIdOrderBySortOrderAsc(examId: UUID): List<ExamQuestion>
+    fun countByExamId(examId: UUID): Long
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📝 Exam Attempt Repository (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Repository
+interface ExamAttemptRepository : JpaRepository<ExamAttempt, UUID> {
+    fun findByExamIdAndUserId(examId: UUID, userId: UUID): ExamAttempt?
+    fun findByExamId(examId: UUID, pageable: Pageable): Page<ExamAttempt>
+    fun countByExamIdAndIsSubmittedTrue(examId: UUID): Long
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📝 Exam Answer Repository (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Repository
+interface ExamAnswerRepository : JpaRepository<ExamAnswer, UUID> {
+    fun findByAttemptId(attemptId: UUID): List<ExamAnswer>
+    fun findByAttemptIdAndQuestionId(attemptId: UUID, questionId: UUID): ExamAnswer?
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🔒 Locked Content Repository (DRM — Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Repository
+interface LockedContentRepository : JpaRepository<LockedContent, UUID> {
+    fun findByChannelId(channelId: UUID, pageable: Pageable): Page<LockedContent>
+    fun findByUploaderId(uploaderId: UUID, pageable: Pageable): Page<LockedContent>
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🔒 Content Purchase Repository (DRM — Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Repository
+interface ContentPurchaseRepository : JpaRepository<ContentPurchase, UUID> {
+    fun findByContentIdAndUserId(contentId: UUID, userId: UUID): ContentPurchase?
+    fun existsByContentIdAndUserId(contentId: UUID, userId: UUID): Boolean
+    fun findByUserIdOrderByPurchasedAtDesc(userId: UUID, pageable: Pageable): Page<ContentPurchase>
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// #️⃣ Official Hashtag Repository (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Repository
+interface OfficialHashtagRepository : JpaRepository<OfficialHashtag, UUID> {
+    fun findByTag(tag: String): OfficialHashtag?
+    fun findByIsActiveTrue(): List<OfficialHashtag>
+    fun findByCategory(category: String): List<OfficialHashtag>
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// #️⃣ Hashtag Promotion Repository (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Repository
+interface HashtagPromotionRepository : JpaRepository<HashtagPromotion, UUID> {
+    fun findByModerationStatus(status: ModerationStatus, pageable: Pageable): Page<HashtagPromotion>
+    fun findByUserIdOrderByCreatedAtDesc(userId: UUID, pageable: Pageable): Page<HashtagPromotion>
+    fun findByHashtagIdAndModerationStatus(hashtagId: UUID, status: ModerationStatus, pageable: Pageable): Page<HashtagPromotion>
+    @Query("SELECT COUNT(hp) FROM HashtagPromotion hp WHERE hp.user.id = :userId AND hp.createdAt > :since")
+    fun countTodayPromotions(@Param("userId") userId: UUID, @Param("since") since: Instant): Long
+    fun countByModerationStatus(status: ModerationStatus): Long
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📁 Smart Folder Rule Repository (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Repository
+interface SmartFolderRuleRepository : JpaRepository<SmartFolderRule, UUID> {
+    fun findByIsActiveTrueOrderByDisplayOrderAsc(): List<SmartFolderRule>
+    fun findByFolderTypeAndIsActiveTrue(folderType: FolderType): List<SmartFolderRule>
+}

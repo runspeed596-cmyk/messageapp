@@ -26,7 +26,7 @@ import androidx.room.TypeConverters
         StoryUserEntity::class,
         CourseEntity::class
     ],
-    version = 3, // Bumped for isPinned/pinnedAt/scheduledAt columns
+    version = 4, // Bumped for teacher role columns (isTeacher, teachingField, teachingUniversity)
     exportSchema = false
 )
 @TypeConverters(Converters::class)

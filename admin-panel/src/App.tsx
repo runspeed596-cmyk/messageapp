@@ -106,7 +106,7 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter basename="/admin">
+      <BrowserRouter basename="/ca978112ca">
         <AppContent />
       </BrowserRouter>
     </AuthProvider>

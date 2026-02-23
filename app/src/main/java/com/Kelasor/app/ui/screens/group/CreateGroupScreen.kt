@@ -28,13 +28,18 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -228,7 +233,64 @@ fun CreateGroupScreen(
                         )
                     )
                 }
-                // Public toggle removed - groups are always private
+                // Public/Private toggle
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = CardShapes.inputField,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "\u06AF\u0631\u0648\u0647 \u0639\u0645\u0648\u0645\u06CC",
+                                    style = MessageAppTypography.chatName,
+                                    fontFamily = VazirFontFamily,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = if (state.isPublic) "\u0647\u0631\u06A9\u0633\u06CC \u0645\u06CC\u200C\u062A\u0648\u0627\u0646\u062F \u0627\u06CC\u0646 \u06AF\u0631\u0648\u0647 \u0631\u0627 \u067E\u06CC\u062F\u0627 \u06A9\u0646\u062F" else "\u0641\u0642\u0637 \u0628\u0627 \u0644\u06CC\u0646\u06A9 \u062F\u0639\u0648\u062A",
+                                    style = MessageAppTypography.chatTime,
+                                    fontFamily = VazirFontFamily,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = state.isPublic,
+                                onCheckedChange = { viewModel.setIsPublic(it) },
+                                colors = SwitchDefaults.colors(checkedTrackColor = extendedColors.accent)
+                            )
+                        }
+                    }
+                }
+                // Targeting section
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TargetingSection(
+                        targetProvince = state.targetProvince,
+                        targetCity = state.targetCity,
+                        targetUniversity = state.targetUniversity,
+                        targetFieldOfStudy = state.targetFieldOfStudy,
+                        targetEducationLevel = state.targetEducationLevel,
+                        provinces = state.provinces,
+                        cities = state.cities,
+                        isLoadingProvinces = state.isLoadingProvinces,
+                        isLoadingCities = state.isLoadingCities,
+                        onProvinceSelected = { viewModel.setTargetProvince(it) },
+                        onCitySelected = { viewModel.setTargetCity(it) },
+                        onUniversityChanged = { viewModel.setTargetUniversity(it) },
+                        onFieldOfStudyChanged = { viewModel.setTargetFieldOfStudy(it) },
+                        onEducationLevelSelected = { viewModel.setTargetEducationLevel(it) },
+                        onLoadProvinces = { viewModel.loadProvinces() },
+                        extendedColors = extendedColors
+                    )
+                }
                 // Selected members
                 item {
                     Spacer(modifier = Modifier.height(24.dp))
@@ -433,5 +495,216 @@ private fun UserSelectionItem(
                 checkedColor = extendedColors.accent
             )
         )
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🎯 Targeting Section Composable
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TargetingSection(
+    targetProvince: String?,
+    targetCity: String?,
+    targetUniversity: String?,
+    targetFieldOfStudy: String?,
+    targetEducationLevel: String?,
+    provinces: List<String>,
+    cities: List<String>,
+    isLoadingProvinces: Boolean,
+    isLoadingCities: Boolean,
+    onProvinceSelected: (String?) -> Unit,
+    onCitySelected: (String?) -> Unit,
+    onUniversityChanged: (String?) -> Unit,
+    onFieldOfStudyChanged: (String?) -> Unit,
+    onEducationLevelSelected: (String?) -> Unit,
+    onLoadProvinces: () -> Unit,
+    extendedColors: com.Kelasor.app.ui.theme.ExtendedColors
+) {
+    val educationLevels: List<String> = listOf("دیپلم", "کاردانی", "کارشناسی", "کارشناسی ارشد", "دکتری")
+    var isExpanded: Boolean by remember { mutableStateOf(false) }
+
+    // Load provinces on first composition
+    LaunchedEffect(Unit) {
+        onLoadProvinces()
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = CardShapes.inputField,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Section header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { isExpanded = !isExpanded },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = null,
+                    tint = extendedColors.accent
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "هدف‌گذاری",
+                        style = MessageAppTypography.chatName,
+                        fontFamily = VazirFontFamily,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "تعیین مخاطبان بر اساس مشخصات پروفایل",
+                        style = MessageAppTypography.chatTime,
+                        fontFamily = VazirFontFamily,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp
+                        else Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            AnimatedVisibility(visible = isExpanded) {
+                Column {
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Province dropdown
+                    TargetingDropdown(
+                        label = "استان",
+                        selectedValue = targetProvince,
+                        options = provinces,
+                        isLoading = isLoadingProvinces,
+                        onSelected = onProvinceSelected,
+                        extendedColors = extendedColors
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // City dropdown (dependent on province)
+                    TargetingDropdown(
+                        label = "شهر",
+                        selectedValue = targetCity,
+                        options = cities,
+                        isLoading = isLoadingCities,
+                        onSelected = onCitySelected,
+                        enabled = targetProvince != null,
+                        extendedColors = extendedColors
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // University (free text)
+                    OutlinedTextField(
+                        value = targetUniversity ?: "",
+                        onValueChange = { onUniversityChanged(it.ifBlank { null }) },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("دانشگاه", fontFamily = VazirFontFamily) },
+                        placeholder = { Text("اختیاری", fontFamily = VazirFontFamily) },
+                        singleLine = true,
+                        shape = CardShapes.inputField,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = extendedColors.accent,
+                            focusedLabelColor = extendedColors.accent
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Field of study (free text)
+                    OutlinedTextField(
+                        value = targetFieldOfStudy ?: "",
+                        onValueChange = { onFieldOfStudyChanged(it.ifBlank { null }) },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("رشته تحصیلی", fontFamily = VazirFontFamily) },
+                        placeholder = { Text("اختیاری", fontFamily = VazirFontFamily) },
+                        singleLine = true,
+                        shape = CardShapes.inputField,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = extendedColors.accent,
+                            focusedLabelColor = extendedColors.accent
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Education level dropdown
+                    TargetingDropdown(
+                        label = "مقطع تحصیلی",
+                        selectedValue = targetEducationLevel,
+                        options = educationLevels,
+                        isLoading = false,
+                        onSelected = onEducationLevelSelected,
+                        extendedColors = extendedColors
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TargetingDropdown(
+    label: String,
+    selectedValue: String?,
+    options: List<String>,
+    isLoading: Boolean,
+    onSelected: (String?) -> Unit,
+    enabled: Boolean = true,
+    extendedColors: com.Kelasor.app.ui.theme.ExtendedColors
+) {
+    var expanded: Boolean by remember { mutableStateOf(false) }
+    val displayText: String = selectedValue ?: "همه"
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { if (enabled && !isLoading) expanded = it }
+    ) {
+        OutlinedTextField(
+            value = if (isLoading) "در حال بارگذاری..." else displayText,
+            onValueChange = {},
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(),
+            label = { Text(label, fontFamily = VazirFontFamily) },
+            readOnly = true,
+            enabled = enabled,
+            singleLine = true,
+            shape = CardShapes.inputField,
+            trailingIcon = {
+                if (selectedValue != null) {
+                    IconButton(onClick = { onSelected(null); expanded = false }) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "پاک کردن",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                } else {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                }
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = extendedColors.accent,
+                focusedLabelColor = extendedColors.accent
+            )
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { option: String ->
+                DropdownMenuItem(
+                    text = { Text(option, fontFamily = VazirFontFamily) },
+                    onClick = {
+                        onSelected(option)
+                        expanded = false
+                    }
+                )
+            }
+        }
     }
 }

@@ -148,6 +148,25 @@ sealed class Routes(val route: String) {
         fun createRoute(messageIds: String, sourceType: String = "CHAT", sourceId: String = ""): String =
             "forwardTarget/$messageIds/$sourceType/$sourceId"
     }
+    // ─────────────────────────────────────────────────────────────────────────────
+    // AI Bot Screens
+    // ─────────────────────────────────────────────────────────────────────────────
+    data object AiBotList : Routes("aiBotList")
+    data object AiBotChat : Routes("aiBotChat/{botId}/{botName}/{botType}") {
+        fun createRoute(botId: String, botName: String, botType: String): String =
+            "aiBotChat/$botId/${java.net.URLEncoder.encode(botName, "UTF-8")}/${java.net.URLEncoder.encode(botType, "UTF-8")}"
+    }
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Exam Screens
+    // ─────────────────────────────────────────────────────────────────────────────
+    data object ExamCreation : Routes("examCreation?channelId={channelId}") {
+        fun createRoute(channelId: String? = null): String =
+            if (channelId != null) "examCreation?channelId=$channelId" else "examCreation"
+    }
+    data object ExamTaking : Routes("examTaking/{examId}") {
+        fun createRoute(examId: String): String = "examTaking/$examId"
+    }
+    data object ExamHistory : Routes("examHistory")
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

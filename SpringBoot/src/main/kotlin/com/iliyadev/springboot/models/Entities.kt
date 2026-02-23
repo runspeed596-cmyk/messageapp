@@ -76,13 +76,83 @@ enum class NotificationType {
     SYSTEM
 }
 
-enum class EducationLevel {
-    HIGH_SCHOOL,
-    ASSOCIATE,
-    BACHELOR,
-    MASTER,
-    DOCTORATE,
-    OTHER
+enum class OfficialGroupCategory {
+    STUDENTS_IRAN,        // گروه رسمی دانشجویان ایران زمین
+    MY_FIELD,             // گروه کشوری رشته من
+    MY_UNIVERSITY,        // گروه رسمی دانشگاه من
+    MY_FIELD_UNIVERSITY,  // گروه رسمی رشته دانشگاه من
+    MY_UNION,             // گروه رسمی شورای صنفی من
+    TEACHERS,             // گروه دبیران
+    QA_SCIENCE            // گروه پرسش و پاسخ علمی
+}
+
+enum class OfficialDisplayMode {
+    SPECIAL,   // Show in Special Folder
+    TAB,       // Show in regular Groups/Channels tab only
+    SUPPORT    // Show in Support contact section
+}
+
+enum class OfficialChannelCategory {
+    STUDENTS_IRAN,       // کانال رسمی دانشجویان ایران زمین
+    MY_FIELD,            // کانال کشوری رشته من
+    MY_UNIVERSITY,       // کانال رسمی دانشگاه من
+    MY_UNION,            // کانال رسمی شورای صنفی من
+    FREELANCING,         // کانال رسمی فریلنسری دانشجویی
+    PODCAST,             // کانال رسمی پادکست دانشجویی
+    JOURNAL,             // کانال رسمی نشریه دانشجویی
+    RESEARCH,            // کانال رسمی پروژه‌های تحقیقاتی
+    COMPETITIONS,        // کانال مسابقات، جشنواره‌ها و کنگره‌ها
+    SCIENCE_TECH,        // کانال رسمی علم + تکنولوژی
+    EDUCATION,           // کانال رسمی آموزش
+    STUDENT_NEWS,        // کانال اخبار دانشجویی کلاسور
+    ENTERTAINMENT,       // کانال تفریح و سرگرمی
+    APP_OFFICIAL,        // کانال رسمی اپلیکیشن کلاسور
+    LOTTERY_DISCOUNT     // کانال رسمی قرعه‌کشی و تخفیفات
+}
+
+enum class VerificationStatus {
+    NONE, PENDING_VERIFICATION, APPROVED, REJECTED
+}
+
+enum class SubscriptionTier {
+    NONE, BASIC, PREMIUM, INSTITUTIONAL
+}
+
+enum class CourseStatus {
+    DRAFT, PUBLISHED, ACTIVE, COMPLETED, CANCELLED
+}
+
+enum class ExamStatus {
+    DRAFT, SCHEDULED, ACTIVE, ENDED, GRADED
+}
+
+enum class QuestionType {
+    MULTIPLE_CHOICE, FILL_BLANK, SHORT_ANSWER, DESCRIPTIVE, IMAGE_BASED
+}
+
+enum class ContentLockStatus {
+    UNLOCKED, LOCKED, ARCHIVED
+}
+
+enum class ModerationStatus {
+    PENDING, APPROVED, REJECTED
+}
+
+enum class TransactionType {
+    DEPOSIT, WITHDRAWAL, PURCHASE, REFUND, SUBSCRIPTION, INTERNAL_TEST_PURCHASE
+}
+
+enum class ChannelClassification {
+    GENERAL, VERIFIED_TEACHER, ELM_CLUB_INSTITUTION,
+    COURSE_CHANNEL, HASHTAG_NATIONAL, HASHTAG_UNIVERSITY, HASHTAG_BRANCH
+}
+
+enum class FolderType {
+    TEACHERS, ELM_CLUB, COURSES, PURCHASED
+}
+
+enum class UserRole {
+    NORMAL, TEACHER, INSTITUTION, ADMIN, SUPER_ADMIN
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -114,6 +184,10 @@ class User(
     var bioChannelId2: UUID? = null,
     // Premium status for story limit - Feature 4
     var isPremium: Boolean = false,
+    // Mosbat Elm: Role system
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'NORMAL'")
+    var role: UserRole = UserRole.NORMAL,
     // Privacy settings
     @Enumerated(EnumType.STRING)
     var profileVisibility: VisibilityOption = VisibilityOption.EVERYONE,
@@ -227,7 +301,23 @@ class Group(
     var messages: MutableList<GroupMessage> = mutableListOf(),
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
-    var createdBy: User? = null
+    var createdBy: User? = null,
+    // Special Folder (Official) fields
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    var isOfficial: Boolean = false,
+    @Enumerated(EnumType.STRING)
+    var officialCategory: OfficialGroupCategory? = null,
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    var hideMembers: Boolean = false,
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'SPECIAL'")
+    var displayMode: OfficialDisplayMode = OfficialDisplayMode.SPECIAL,
+    // Audience targeting fields (all null = عمومی/public)
+    var targetFieldOfStudy: String? = null,
+    var targetEducationLevel: String? = null,
+    var targetProvince: String? = null,
+    var targetCity: String? = null,
+    var targetUniversity: String? = null
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -330,7 +420,28 @@ class Channel(
     @OneToMany(mappedBy = "channel", cascade = [CascadeType.ALL], orphanRemoval = true)
     var subscribers: MutableList<ChannelSubscriber> = mutableListOf(),
     @OneToMany(mappedBy = "channel", cascade = [CascadeType.ALL], orphanRemoval = true)
-    var posts: MutableList<ChannelPost> = mutableListOf()
+    var posts: MutableList<ChannelPost> = mutableListOf(),
+    // Special Folder (Official) fields
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    var isOfficial: Boolean = false,
+    @Enumerated(EnumType.STRING)
+    var officialCategory: OfficialChannelCategory? = null,
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'SPECIAL'")
+    var displayMode: OfficialDisplayMode = OfficialDisplayMode.SPECIAL,
+    // Audience targeting fields (all null = عمومی/public)
+    var targetFieldOfStudy: String? = null,
+    var targetEducationLevel: String? = null,
+    var targetProvince: String? = null,
+    var targetCity: String? = null,
+    var targetUniversity: String? = null,
+    // Mosbat Elm: Channel classification & DRM
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "VARCHAR(30) DEFAULT 'GENERAL'")
+    var classification: ChannelClassification = ChannelClassification.GENERAL,
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    var isVerifiedTeacher: Boolean = false,
+    var institutionId: UUID? = null
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -401,7 +512,12 @@ class ChannelPost(
     var pinnedAt: Instant? = null,
     var pinnedById: UUID? = null,
     // Scheduled messages
-    var scheduledAt: Instant? = null
+    var scheduledAt: Instant? = null,
+    // Advertisement support
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    var isAd: Boolean = false,
+    var adLabel: String? = null,
+    var adSourceChannelId: UUID? = null
 )
 
 @Entity
@@ -640,6 +756,13 @@ class UserProfileDetails(
     var skills: String? = null,
     @Column(length = 5000)
     var workExperience: String? = null,
+    // Teacher role
+    var isTeacher: Boolean = false,
+    var teachingField: String? = null,
+    var teachingUniversity: String? = null,
+    // Location for targeting
+    var province: String? = null,
+    var city: String? = null,
     var updatedAt: Instant = Instant.now()
 )
 
@@ -715,7 +838,12 @@ class Notification(
     var actorName: String? = null,
     var actorAvatarUrl: String? = null,
     var isRead: Boolean = false,
-    var createdAt: Instant = Instant.now()
+    var createdAt: Instant = Instant.now(),
+    // Mosbat Elm: Subscription notification tier
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    var isSubscriptionNotification: Boolean = false,
+    @Column(nullable = false, columnDefinition = "VARCHAR(10) DEFAULT 'NORMAL'")
+    var notificationTier: String = "NORMAL"  // NORMAL (red) or GOLDEN (subscription)
 )
 
 
@@ -778,6 +906,20 @@ class University(
     
     var imageUrl: String? = null,
     var websiteUrl: String? = null,
+    
+    // Extended fields
+    @Column(length = 5000)
+    var honors: String? = null, // افتخارات
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
+    var professorCount: Int = 0, // تعداد اساتید
+    @Column(length = 5000)
+    var professorNames: String? = null, // نام اساتید هر رشته
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
+    var publicationCount: Int = 0, // تعداد مجلات و نشریات
+    @Column(length = 5000)
+    var studentOrgs: String? = null, // انجمن‌ها، کانون‌ها و مجموعه‌های دانشجویی
+    @Column(length = 5000)
+    var lastAdmissionCapacity: String? = null, // آخرین ظرفیت پذیرش هر رشته
     var createdAt: Instant = Instant.now()
 )
 
@@ -884,4 +1026,684 @@ class StoryReply(
     @Column(length = 2000)
     var content: String = "",
     var createdAt: Instant = Instant.now()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🤖 AI Bot Entity (Special Folder)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "ai_bots")
+class AiBot(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    var name: String = "",
+    var botType: String = "",
+    var category: String = "GENERAL", // GENERAL or SPECIALIST
+    @Column(length = 500)
+    var description: String? = null,
+    var avatarUrl: String? = null,
+    var displayOrder: Int = 0,
+    var isActive: Boolean = true,
+    var createdAt: Instant = Instant.now()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🤖 AI Bot Message Entity
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "ai_bot_messages")
+class AiBotMessage(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @Column(nullable = false)
+    var botId: UUID = UUID.randomUUID(),
+    @Column(nullable = false)
+    var userId: UUID = UUID.randomUUID(),
+    @Column(columnDefinition = "TEXT", nullable = false)
+    var content: String = "",
+    @Column(nullable = false)
+    var role: String = "USER", // USER or ASSISTANT
+    var createdAt: Instant = Instant.now()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📚 Field of Study Entity (Admin-managed)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "fields_of_study")
+class FieldOfStudy(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @Column(nullable = false)
+    var name: String = "",
+    @Column(nullable = false, columnDefinition = "VARCHAR(255) DEFAULT ''")
+    var educationLevel: String = "", // e.g. کارشناسی, کارشناسی ارشد, دکتری
+    var displayOrder: Int = 0,
+    var createdAt: Instant = Instant.now()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🎓 Education Level Entity (Admin-managed)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "education_levels")
+class EducationLevel(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @Column(nullable = false)
+    var name: String = "", // e.g. کاردانی, کارشناسی, کارشناسی ارشد, دکتری
+    var displayOrder: Int = 0,
+    var createdAt: Instant = Instant.now()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🏛️ Faculty Entity (Admin-managed reference data for World of Science)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "faculties")
+class Faculty(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @Column(nullable = false, unique = true)
+    var name: String = "",
+    var displayOrder: Int = 0,
+    var createdAt: Instant = Instant.now()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📋 Teacher Verification Request Entity (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "teacher_verification_requests")
+class TeacherVerificationRequest(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    var user: User? = null,
+    var fullName: String = "",
+    @Column(length = 10)
+    var nationalCode: String = "",
+    var teachingField: String = "",
+    var institution: String? = null,
+    @ElementCollection
+    @CollectionTable(name = "teacher_verif_documents", joinColumns = [JoinColumn(name = "request_id")])
+    @Column(name = "document_url")
+    var documentUrls: MutableList<String> = mutableListOf(),
+    @Enumerated(EnumType.STRING)
+    var status: VerificationStatus = VerificationStatus.PENDING_VERIFICATION,
+    @Column(length = 1000)
+    var adminNote: String? = null,
+    var reviewedBy: UUID? = null,
+    var reviewedAt: Instant? = null,
+    var createdAt: Instant = Instant.now(),
+    var updatedAt: Instant = Instant.now()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🏛️ Institution Entity (Elm Club — Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "institutions")
+class Institution(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    var name: String = "",
+    var type: String = "",  // ASSOCIATION, ACADEMY, INSTITUTE, COMMUNITY
+    var registrationNumber: String? = null,
+    var contactPhone: String? = null,
+    var contactEmail: String? = null,
+    var province: String? = null,
+    var city: String? = null,
+    @Column(length = 1000)
+    var address: String? = null,
+    var logoUrl: String? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_user_id")
+    var owner: User? = null,
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "channel_id")
+    var channel: Channel? = null,
+    @Enumerated(EnumType.STRING)
+    var verificationStatus: VerificationStatus = VerificationStatus.PENDING_VERIFICATION,
+    @Column(length = 1000)
+    var adminNote: String? = null,
+    var reviewedBy: UUID? = null,
+    var reviewedAt: Instant? = null,
+    var isActive: Boolean = true,
+    var createdAt: Instant = Instant.now(),
+    var updatedAt: Instant = Instant.now()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 💳 Subscription Plan Entity (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "subscription_plans")
+class SubscriptionPlan(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    var name: String = "",
+    @Enumerated(EnumType.STRING)
+    var tier: SubscriptionTier = SubscriptionTier.BASIC,
+    var priceRials: Long = 0,
+    var durationDays: Int = 30,
+    var maxPromotions: Int = 1,
+    @Column(columnDefinition = "TEXT DEFAULT '{}'")
+    var features: String = "{}",  // JSON
+    var isActive: Boolean = true,
+    var createdAt: Instant = Instant.now()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 💳 User Subscription Entity (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "user_subscriptions")
+class UserSubscription(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    var user: User? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "plan_id")
+    var plan: SubscriptionPlan? = null,
+    var startsAt: Instant = Instant.now(),
+    var expiresAt: Instant = Instant.now(),
+    var isActive: Boolean = true,
+    var autoRenew: Boolean = false,
+    var transactionId: UUID? = null,
+    var createdAt: Instant = Instant.now()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 💰 Wallet Entity (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "wallets")
+class Wallet(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", unique = true)
+    var user: User? = null,
+    var balance: Long = 0,  // in Rials
+    var isActive: Boolean = true,
+    var createdAt: Instant = Instant.now(),
+    var updatedAt: Instant = Instant.now()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 💰 Wallet Transaction Entity (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "wallet_transactions")
+class WalletTransaction(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "wallet_id")
+    var wallet: Wallet? = null,
+    @Enumerated(EnumType.STRING)
+    var type: TransactionType = TransactionType.PURCHASE,
+    var amount: Long = 0,
+    var balanceAfter: Long = 0,
+    @Column(length = 500)
+    var description: String? = null,
+    var referenceId: UUID? = null,
+    var referenceType: String? = null,  // CONTENT, COURSE, SUBSCRIPTION, EXAM
+    var gatewayRef: String? = null,
+    var createdAt: Instant = Instant.now()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📚 Course Entity (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "courses")
+class Course(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @Column(length = 500)
+    var title: String = "",
+    @Column(columnDefinition = "TEXT")
+    var description: String? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "organizer_id")
+    var organizer: User? = null,
+    var institutionId: UUID? = null,
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "channel_id")
+    var channel: Channel? = null,
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "group_id")
+    var group: Group? = null,
+    var coverImageUrl: String? = null,
+    var fieldOfStudy: String? = null,
+    var educationLevel: String? = null,
+    var startsAt: Instant = Instant.now(),
+    var endsAt: Instant = Instant.now(),
+    var enrollmentLimit: Int? = null,
+    var isPublic: Boolean = true,
+    @Enumerated(EnumType.STRING)
+    var status: CourseStatus = CourseStatus.DRAFT,
+    var priceRials: Long = 0,
+    @ElementCollection
+    @CollectionTable(name = "course_tags", joinColumns = [JoinColumn(name = "course_id")])
+    @Column(name = "tag")
+    var tags: MutableList<String> = mutableListOf(),
+    var createdAt: Instant = Instant.now(),
+    var updatedAt: Instant = Instant.now()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📚 Course Enrollment Entity (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(
+    name = "course_enrollments",
+    uniqueConstraints = [UniqueConstraint(columnNames = ["course_id", "user_id"])]
+)
+class CourseEnrollment(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "course_id")
+    var course: Course? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    var user: User? = null,
+    var enrolledAt: Instant = Instant.now(),
+    var isActive: Boolean = true
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📚 Course Material Entity (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "course_materials")
+class CourseMaterial(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "course_id")
+    var course: Course? = null,
+    var title: String = "",
+    @Column(columnDefinition = "TEXT")
+    var description: String? = null,
+    var contentUrl: String? = null,
+    var contentType: String? = null,  // VIDEO, PDF, AUDIO, TEXT
+    var sortOrder: Int = 0,
+    var isLocked: Boolean = false,
+    var createdAt: Instant = Instant.now()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📝 Exam Entity (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "exams")
+class Exam(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @Column(length = 500)
+    var title: String = "",
+    @Column(columnDefinition = "TEXT")
+    var description: String? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "creator_id")
+    var creator: User? = null,
+    var courseId: UUID? = null,
+    var channelId: UUID? = null,
+    var startsAt: Instant = Instant.now(),
+    var endsAt: Instant = Instant.now(),
+    var durationMinutes: Int = 60,
+    @Column(precision = 10, scale = 2)
+    var totalScore: java.math.BigDecimal = java.math.BigDecimal.ZERO,
+    @Column(precision = 10, scale = 2)
+    var passScore: java.math.BigDecimal? = null,
+    @Enumerated(EnumType.STRING)
+    var status: ExamStatus = ExamStatus.DRAFT,
+    var isPublic: Boolean = false,
+    var shuffleQuestions: Boolean = false,
+    var shuffleOptions: Boolean = false,
+    var showResultsAfter: Boolean = true,
+    var maxAttempts: Int = 1,
+    var createdAt: Instant = Instant.now(),
+    var updatedAt: Instant = Instant.now()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📝 Exam Access Rule Entity (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "exam_access_rules")
+class ExamAccessRule(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "exam_id")
+    var exam: Exam? = null,
+    var ruleType: String = "PUBLIC",  // PUBLIC, CHANNEL_MEMBERS, SELECTED_USERS
+    var channelId: UUID? = null,
+    var userId: UUID? = null
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📝 Exam Question Entity (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "exam_questions")
+class ExamQuestion(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "exam_id")
+    var exam: Exam? = null,
+    @Enumerated(EnumType.STRING)
+    var questionType: QuestionType = QuestionType.MULTIPLE_CHOICE,
+    @Column(columnDefinition = "TEXT")
+    var questionText: String = "",
+    var imageUrl: String? = null,
+    @Column(precision = 10, scale = 2)
+    var points: java.math.BigDecimal = java.math.BigDecimal.ZERO,
+    var sortOrder: Int = 0,
+    @Column(columnDefinition = "TEXT")
+    var correctAnswer: String? = null,
+    @OneToMany(mappedBy = "question", cascade = [CascadeType.ALL], orphanRemoval = true)
+    @OrderBy("sortOrder ASC")
+    var options: MutableList<ExamQuestionOption> = mutableListOf(),
+    var createdAt: Instant = Instant.now()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📝 Exam Question Option Entity (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "exam_question_options")
+class ExamQuestionOption(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "question_id")
+    var question: ExamQuestion? = null,
+    @Column(columnDefinition = "TEXT")
+    var optionText: String = "",
+    @Column(length = 5)
+    var optionLabel: String = "",  // A, B, C, D
+    var isCorrect: Boolean = false,
+    var sortOrder: Int = 0
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📝 Exam Attempt Entity (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(
+    name = "exam_attempts",
+    uniqueConstraints = [UniqueConstraint(columnNames = ["exam_id", "user_id"])]
+)
+class ExamAttempt(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "exam_id")
+    var exam: Exam? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    var user: User? = null,
+    var startedAt: Instant = Instant.now(),
+    var submittedAt: Instant? = null,
+    var isSubmitted: Boolean = false,
+    @Column(precision = 10, scale = 2)
+    var autoScore: java.math.BigDecimal? = null,
+    @Column(precision = 10, scale = 2)
+    var manualScore: java.math.BigDecimal? = null,
+    @Column(precision = 10, scale = 2)
+    var finalScore: java.math.BigDecimal? = null,
+    var durationSeconds: Int? = null,
+    @Column(length = 45)
+    var ipAddress: String? = null,
+    @Column(length = 500)
+    var deviceInfo: String? = null
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📝 Exam Answer Entity (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(
+    name = "exam_answers",
+    uniqueConstraints = [UniqueConstraint(columnNames = ["attempt_id", "question_id"])]
+)
+class ExamAnswer(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "attempt_id")
+    var attempt: ExamAttempt? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "question_id")
+    var question: ExamQuestion? = null,
+    @Column(columnDefinition = "TEXT")
+    var answerText: String? = null,
+    @Column(length = 5)
+    var selectedOption: String? = null,
+    var isCorrect: Boolean? = null,
+    @Column(precision = 10, scale = 2)
+    var score: java.math.BigDecimal? = null,
+    var gradedBy: UUID? = null,
+    var gradedAt: Instant? = null
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🔒 Locked Content Entity (DRM — Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "locked_contents")
+class LockedContent(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "channel_id")
+    var channel: Channel? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "uploader_id")
+    var uploader: User? = null,
+    @Column(length = 500)
+    var title: String = "",
+    @Column(columnDefinition = "TEXT")
+    var description: String? = null,
+    var contentType: String = "",  // VIDEO, AUDIO, FILE, TEXT, IMAGE
+    @Column(length = 500)
+    var storageKey: String = "",
+    @Column(length = 500)
+    var encryptionKey: String = "",
+    var thumbnailUrl: String? = null,
+    var priceRials: Long = 0,
+    @Enumerated(EnumType.STRING)
+    var lockStatus: ContentLockStatus = ContentLockStatus.LOCKED,
+    var viewCount: Int = 0,
+    var purchaseCount: Int = 0,
+    var createdAt: Instant = Instant.now(),
+    var updatedAt: Instant = Instant.now()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🔒 Content Purchase Entity (DRM — Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(
+    name = "content_purchases",
+    uniqueConstraints = [UniqueConstraint(columnNames = ["content_id", "user_id"])]
+)
+class ContentPurchase(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "content_id")
+    var content: LockedContent? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    var user: User? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "transaction_id")
+    var transaction: WalletTransaction? = null,
+    var purchasedAt: Instant = Instant.now(),
+    var expiresAt: Instant? = null
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// #️⃣ Official Hashtag Entity (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "official_hashtags")
+class OfficialHashtag(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @Column(unique = true)
+    var tag: String = "",
+    var displayNameFa: String = "",
+    var category: String? = null,
+    var nationalChannelId: UUID? = null,
+    var universityChannelId: UUID? = null,
+    var branchChannelId: UUID? = null,
+    var isActive: Boolean = true,
+    var createdAt: Instant = Instant.now()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// #️⃣ Hashtag Promotion Entity (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "hashtag_promotions")
+class HashtagPromotion(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "hashtag_id")
+    var hashtag: OfficialHashtag? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    var user: User? = null,
+    @Column(columnDefinition = "TEXT")
+    var contentText: String = "",
+    @ElementCollection
+    @CollectionTable(name = "promotion_media_urls", joinColumns = [JoinColumn(name = "promotion_id")])
+    @Column(name = "media_url")
+    var mediaUrls: MutableList<String> = mutableListOf(),
+    @Enumerated(EnumType.STRING)
+    var moderationStatus: ModerationStatus = ModerationStatus.PENDING,
+    var moderatedBy: UUID? = null,
+    var moderatedAt: Instant? = null,
+    @Column(length = 500)
+    var rejectionReason: String? = null,
+    var publishedAt: Instant? = null,
+    var subscriptionId: UUID? = null,
+    var createdAt: Instant = Instant.now()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📁 Smart Folder Rule Entity (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "smart_folder_rules")
+class SmartFolderRule(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @Enumerated(EnumType.STRING)
+    var folderType: FolderType = FolderType.TEACHERS,
+    @Enumerated(EnumType.STRING)
+    var classification: ChannelClassification = ChannelClassification.VERIFIED_TEACHER,
+    var displayOrder: Int = 0,
+    var iconName: String? = null,
+    var labelFa: String = "",
+    var isActive: Boolean = true
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📢 Advertisement Request
+// ═══════════════════════════════════════════════════════════════════════════════
+
+enum class AdRequestStatus {
+    PENDING, APPROVED, REJECTED
+}
+
+@Entity
+@Table(name = "ad_requests")
+class AdRequest(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "requester_id")
+    var requester: User? = null,
+    var sourceMessageId: String = "",
+    var sourceType: String = "", // CHAT, GROUP, CHANNEL
+    var sourceId: String? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "target_channel_id")
+    var targetChannel: Channel? = null,
+    @Column(length = 10000)
+    var messageContent: String = "",
+    var messageMediaUrl: String? = null,
+    @Enumerated(EnumType.STRING)
+    var messageType: MessageType = MessageType.TEXT,
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'PENDING'")
+    var status: AdRequestStatus = AdRequestStatus.PENDING,
+    var createdAt: Instant = Instant.now(),
+    var reviewedAt: Instant? = null,
+    var reviewedBy: UUID? = null
 )

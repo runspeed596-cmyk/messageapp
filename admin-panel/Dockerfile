@@ -30,14 +30,14 @@ FROM nginx:alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built files from builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html/admin
+COPY --from=builder /app/dist /usr/share/nginx/html/ca978112ca
 
 # Expose nginx port
 EXPOSE 80
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
-    CMD wget -q --spider http://localhost/admin/ || exit 1
+    CMD wget -q --spider http://localhost/ca978112ca/ || exit 1
 
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]

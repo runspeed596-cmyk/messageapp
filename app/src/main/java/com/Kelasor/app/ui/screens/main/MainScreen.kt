@@ -55,9 +55,17 @@ import com.Kelasor.app.ui.navigation.Routes
 import com.Kelasor.app.ui.screens.bazaar.BazaarScreen
 import com.Kelasor.app.ui.screens.channel.ChannelListScreen
 import com.Kelasor.app.ui.screens.chat.ChatListScreen
-import com.Kelasor.app.ui.screens.course.CourseListScreen
+import com.Kelasor.app.ui.screens.special.SpecialFolderScreen
 import com.Kelasor.app.ui.screens.group.GroupListScreen
+import com.Kelasor.app.ui.screens.smartfolder.SmartFolderTabContent
+import com.Kelasor.app.ui.viewmodel.SmartFolderViewModel
 import com.Kelasor.app.ui.screens.home.HomeScreen
+import com.Kelasor.app.ui.viewmodel.SpecialFolderViewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import com.Kelasor.app.ui.screens.treasure.TreasureScreen
 import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.viewmodel.ChatListViewModel
@@ -90,6 +98,8 @@ fun MainScreen(
     onNavigateToAllRiddles: () -> Unit = {},
     onNavigateToRiddleDetail: (String) -> Unit = {},
     onPlayVideo: (String) -> Unit = {},
+    onNavigateToAiBotList: () -> Unit = {},
+    onNavigateToEditProfile: () -> Unit = {},
     onLogout: () -> Unit,
     chatListViewModel: ChatListViewModel = hiltViewModel(),
     // notificationViewModel: com.Kelasor.app.ui.viewmodel.NotificationViewModel = hiltViewModel()
@@ -153,6 +163,8 @@ fun MainScreen(
                     onNavigateToArchivedChats = onNavigateToArchivedChats,
                     onNavigateToUserProfile = onNavigateToUserProfile,
                     onNavigateToNotifications = onNavigateToNotifications,
+                    onNavigateToAiBotList = onNavigateToAiBotList,
+                    onNavigateToEditProfile = onNavigateToEditProfile,
                     chatListViewModel = chatListViewModel
                 )
             }
@@ -241,14 +253,19 @@ fun MessagingContent(
     onNavigateToArchivedChats: () -> Unit,
     onNavigateToUserProfile: (String) -> Unit,
     onNavigateToNotifications: () -> Unit,
-    chatListViewModel: ChatListViewModel
+    onNavigateToAiBotList: () -> Unit = {},
+    onNavigateToEditProfile: () -> Unit = {},
+    chatListViewModel: ChatListViewModel,
+    specialFolderViewModel: SpecialFolderViewModel = hiltViewModel(),
+    smartFolderViewModel: SmartFolderViewModel = hiltViewModel()
 ) {
     val extendedColors = MessageAppTheme.extendedColors
+    val specialFolderState by specialFolderViewModel.state.collectAsState()
     var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
-    val tabs = listOf("پیام‌ها", "گروه‌ها", "کانال‌ها", "دوره‌ها")
+    val tabs = listOf("پیام‌ها", "گروه‌ها", "کانال‌ها", "اساتید", "دوره‌ها", "ویژه")
     var isSearchActive by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
-    val courseViewModel: com.Kelasor.app.ui.viewmodel.CourseViewModel = hiltViewModel()
+
     // Story row expand/collapse state — driven by search activity
     val isStoryRowExpanded = !isSearchActive && searchQuery.isEmpty()
 
@@ -390,6 +407,39 @@ fun MessagingContent(
                     }
                 }
 
+                // Profile Completion Banner (compact, above tabs)
+                if (!specialFolderState.isProfileComplete) {
+                    androidx.compose.foundation.layout.Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onNavigateToEditProfile)
+                            .background(Color(0xFFFFF3E0))
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            tint = Color(0xFFE65100),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "پروفایل خود را تکمیل کنید!",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFE65100),
+                            modifier = Modifier.weight(1f)
+                        )
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = Color(0xFFE65100),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+
                 // Row 3: Glassmorphism Tab Bar
                 com.Kelasor.app.ui.components.GlassmorphismTabBar(
                     tabs = tabs,
@@ -453,9 +503,32 @@ fun MessagingContent(
                         )
                     }
                     3 -> {
-                        CourseListScreen(
-                            onNavigateToCourse = onNavigateToChannelView,
-                            viewModel = courseViewModel
+                        SmartFolderTabContent(
+                            folderType = "TEACHERS",
+                            title = "اساتید",
+                            emptyIcon = Icons.Default.Person,
+                            emptyMessage = "هنوز کانالی از اساتید تایید شده ثبت نشده",
+                            accentColor = Color(0xFF1565C0),
+                            onChannelClick = onNavigateToChannelView,
+                            viewModel = smartFolderViewModel
+                        )
+                    }
+                    4 -> {
+                        SmartFolderTabContent(
+                            folderType = "COURSES",
+                            title = "دوره‌ها",
+                            emptyIcon = Icons.Default.Person,
+                            emptyMessage = "هنوز دوره‌ای ثبت نشده",
+                            accentColor = Color(0xFFE65100),
+                            onChannelClick = onNavigateToChannelView,
+                            viewModel = smartFolderViewModel
+                        )
+                    }
+                    5 -> {
+                        SpecialFolderScreen(
+                            onNavigateToChannel = onNavigateToChannelView,
+                            onNavigateToGroup = onNavigateToGroupChat,
+                            onNavigateToAiBotList = onNavigateToAiBotList
                         )
                     }
                 }

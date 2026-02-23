@@ -42,12 +42,8 @@ class AuthService(
             this.createdAt = Instant.now()
         }
         otpCodeRepository.save(otpCode)
-        // Send OTP via Najva SMS
-        println("🔑 OTP for $normalizedPhone: $code")
-        val smsSent: Boolean = najvaSmsService.sendOtpViaSms(normalizedPhone, code)
-        if (!smsSent) {
-            println("⚠️ Najva SMS failed for $normalizedPhone, OTP still saved in DB")
-        }
+        // DEV MODE: Skip Najva SMS, just log the OTP code
+        println("🔑 [DEV] OTP for $normalizedPhone: $code")
         return SendOtpResponse(
             success = true,
             message = "کد تأیید ارسال شد",
@@ -159,7 +155,10 @@ class AuthService(
 @Service
 class UserService(
     private val userRepository: UserRepository,
-    private val chatRepository: ChatRepository
+    private val chatRepository: ChatRepository,
+    private val specialFolderService: SpecialFolderService,
+    private val channelService: ChannelService,
+    private val channelRepository: com.iliyadev.springboot.repositories.ChannelRepository
 ) {
     fun getUserById(userId: UUID): User? = userRepository.findById(userId).orElse(null)
     fun getUserByPhoneNumber(phoneNumber: String): User? = userRepository.findByPhoneNumber(phoneNumber)
@@ -176,9 +175,11 @@ class UserService(
         if (request.bio != null) user.bio = request.bio
 
         // Profile Enhancements - Persistent update
+        var profileFieldsChanged = false
         if (request.university != null || request.fieldOfStudy != null || request.education != null || 
             request.skills != null || request.interests != null || request.workExperience != null || 
-            request.achievements != null) {
+            request.achievements != null || request.isTeacher != null || request.teachingField != null ||
+            request.teachingUniversity != null || request.province != null || request.city != null) {
             
             var details = user.profileDetails
             if (details == null) {
@@ -186,14 +187,18 @@ class UserService(
                 user.profileDetails = details
             }
             
-            if (request.university != null) details.university = request.university
-            if (request.fieldOfStudy != null) details.fieldOfStudy = request.fieldOfStudy
+            if (request.university != null) { details.university = request.university; profileFieldsChanged = true }
+            if (request.fieldOfStudy != null) { details.fieldOfStudy = request.fieldOfStudy; profileFieldsChanged = true }
             if (request.education != null) details.education = request.education
             if (request.skills != null) details.skills = request.skills
             if (request.interests != null) details.interests = request.interests
             if (request.workExperience != null) details.workExperience = request.workExperience
             if (request.achievements != null) details.achievements = request.achievements
-            if (request.achievements != null) details.achievements = request.achievements
+            if (request.isTeacher != null) details.isTeacher = request.isTeacher
+            if (request.teachingField != null) details.teachingField = request.teachingField
+            if (request.teachingUniversity != null) details.teachingUniversity = request.teachingUniversity
+            if (request.province != null) { details.province = request.province; profileFieldsChanged = true }
+            if (request.city != null) { details.city = request.city; profileFieldsChanged = true }
             details.updatedAt = Instant.now()
         }
 
@@ -201,7 +206,25 @@ class UserService(
         if (request.bioChannelId1 != null) user.bioChannelId1 = request.bioChannelId1
         if (request.bioChannelId2 != null) user.bioChannelId2 = request.bioChannelId2
 
-        return userRepository.save(user)
+        val savedUser: User = userRepository.save(user)
+        // Auto-subscribe to official channels/groups when profile fields change
+        if (profileFieldsChanged) {
+            specialFolderService.autoSubscribeUser(savedUser)
+        }
+        // Auto-create channel when user becomes a teacher
+        if (request.isTeacher == true) {
+            val existingChannels = channelRepository.findByOwnerId(savedUser.id!!)
+            if (existingChannels.isEmpty()) {
+                val channelRequest = CreateChannelRequest(
+                    name = "کانال ${savedUser.displayName}",
+                    description = "کانال رسمی استاد ${savedUser.displayName}",
+                    isPublic = true
+                )
+                channelService.createChannel(savedUser.id!!, channelRequest)
+                println("📢 Auto-created teacher channel for user ${savedUser.id}")
+            }
+        }
+        return savedUser
     }
 
     @Transactional

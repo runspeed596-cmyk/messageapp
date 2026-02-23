@@ -3,6 +3,9 @@ package com.Kelasor.app.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.Kelasor.app.data.remote.api.ApiService
+import com.Kelasor.app.data.remote.dto.EducationLevelDto
+import com.Kelasor.app.data.remote.dto.FieldOfStudyDto
+import com.Kelasor.app.data.remote.dto.UniversitySimpleDto
 import com.Kelasor.app.data.repository.UserRepository
 import com.Kelasor.app.data.repository.UserResult
 import com.Kelasor.app.domain.model.User
@@ -19,7 +22,13 @@ data class ProfileState(
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
     val followerCount: Int = 0,
-    val followingCount: Int = 0
+    val followingCount: Int = 0,
+    val universities: List<UniversitySimpleDto> = emptyList(),
+    val fieldsOfStudy: List<FieldOfStudyDto> = emptyList(),
+    val educationLevels: List<EducationLevelDto> = emptyList(),
+    val isReferenceDataLoading: Boolean = false,
+    val provinces: List<String> = emptyList(),
+    val cities: List<String> = emptyList()
 )
 
 sealed class ProfileEvent {
@@ -40,6 +49,7 @@ class ProfileViewModel @Inject constructor(
     init {
         loadCurrentUser()
         observeCurrentUser()
+        loadProvinces()
     }
     private fun observeCurrentUser() {
         viewModelScope.launch {
@@ -87,6 +97,31 @@ class ProfileViewModel @Inject constructor(
             }
         }
     }
+    fun loadReferenceData() {
+        viewModelScope.launch {
+            _state.update { it.copy(isReferenceDataLoading = true) }
+            try {
+                val response = apiService.getReferenceData()
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val data = response.body()?.data
+                    if (data != null) {
+                        _state.update {
+                            it.copy(
+                                universities = data.universities,
+                                fieldsOfStudy = data.fieldsOfStudy,
+                                educationLevels = data.educationLevels,
+                                isReferenceDataLoading = false
+                            )
+                        }
+                    }
+                } else {
+                    _state.update { it.copy(isReferenceDataLoading = false) }
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(isReferenceDataLoading = false) }
+            }
+        }
+    }
     fun updateProfile(
         username: String?,
         displayName: String?,
@@ -99,13 +134,20 @@ class ProfileViewModel @Inject constructor(
         workExperience: String? = null,
         achievements: String? = null,
         bioChannelId1: String? = null,
-        bioChannelId2: String? = null
+        bioChannelId2: String? = null,
+        isTeacher: Boolean? = null,
+        teachingField: String? = null,
+        teachingUniversity: String? = null,
+        province: String? = null,
+        city: String? = null
     ) {
         viewModelScope.launch {
             userRepository.updateProfile(
                 username, displayName, bio,
                 university, fieldOfStudy, education, skills, interests, workExperience, achievements,
-                bioChannelId1, bioChannelId2
+                bioChannelId1, bioChannelId2,
+                isTeacher, teachingField, teachingUniversity,
+                province, city
             ).collect { result ->
                 when (result) {
                     is UserResult.Loading -> {
@@ -150,5 +192,31 @@ class ProfileViewModel @Inject constructor(
     }
     fun resetSaveSuccess() {
         _state.update { it.copy(saveSuccess = false) }
+    }
+    fun loadProvinces() {
+        viewModelScope.launch {
+            try {
+                val response = apiService.getProvinces("ایران")
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val data: List<String> = response.body()?.data ?: emptyList()
+                    _state.update { it.copy(provinces = data) }
+                }
+            } catch (_: Exception) {
+                // Silently fail, provinces will remain empty
+            }
+        }
+    }
+    fun loadCities(province: String) {
+        viewModelScope.launch {
+            try {
+                val response = apiService.getCities(province)
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val data: List<String> = response.body()?.data ?: emptyList()
+                    _state.update { it.copy(cities = data) }
+                }
+            } catch (_: Exception) {
+                // Silently fail, cities will remain empty
+            }
+        }
     }
 }

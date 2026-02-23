@@ -110,7 +110,12 @@ class GroupRepository @Inject constructor(
         description: String?,
         isPublic: Boolean,
         memberIds: List<String>,
-        avatarFile: java.io.File? = null
+        avatarFile: java.io.File? = null,
+        targetProvince: String? = null,
+        targetCity: String? = null,
+        targetUniversity: String? = null,
+        targetFieldOfStudy: String? = null,
+        targetEducationLevel: String? = null
     ): Flow<GroupResult<Group>> = flow {
         emit(GroupResult.Loading)
         try {
@@ -129,7 +134,18 @@ class GroupRepository @Inject constructor(
                 }
             }
             
-            val response = apiService.createGroup(CreateGroupRequest(name, description, isPublic, memberIds, avatarUrl))
+            val response = apiService.createGroup(CreateGroupRequest(
+                name = name,
+                description = description,
+                isPublic = isPublic,
+                memberIds = memberIds,
+                avatarUrl = avatarUrl,
+                targetProvince = targetProvince,
+                targetCity = targetCity,
+                targetUniversity = targetUniversity,
+                targetFieldOfStudy = targetFieldOfStudy,
+                targetEducationLevel = targetEducationLevel
+            ))
             if (response.isSuccessful && response.body()?.success == true) {
                 val groupDto = response.body()?.data
                 if (groupDto != null) {

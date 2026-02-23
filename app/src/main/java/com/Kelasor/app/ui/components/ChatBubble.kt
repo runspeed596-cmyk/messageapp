@@ -291,7 +291,7 @@ fun ChatBubble(
                         append(annotatedMessage)
                         // Add invisible spacer to reserve room for the time overlay
                         withStyle(SpanStyle(fontSize = 10.sp, color = Color.Transparent)) {
-                            append("     $timeLabel  ")
+                            append("  \u00A0\u00A0\u00A0\u00A0$timeLabel\u00A0\u00A0\u00A0")
                         }
                     },
                     style = MessageAppTypography.messageText.copy(

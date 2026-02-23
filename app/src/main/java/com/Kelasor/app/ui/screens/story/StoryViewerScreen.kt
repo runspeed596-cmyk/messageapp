@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -219,6 +220,22 @@ fun StoryViewerScreen(
             isPaused = isPaused
         )
         
+        // Dark gradient overlay at top so icons/progress bars are visible on white stories
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(160.dp)
+                .align(Alignment.TopCenter)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Black.copy(alpha = 0.6f),
+                            Color.Black.copy(alpha = 0.3f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
         // OVERLAYS (Progress, User Info, Caption)
         Column(
             modifier = Modifier
@@ -302,20 +319,38 @@ fun StoryViewerScreen(
                         isPaused = true // Pause story while dialog is open
                         showDeleteDialog = true 
                     }) {
-                        Icon(
-                            imageVector = androidx.compose.material.icons.Icons.Default.Delete,
-                            contentDescription = "Delete",
-                            tint = Color.White
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(Color.Black.copy(alpha = 0.4f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.Delete,
+                                contentDescription = "Delete",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
                 
                 IconButton(onClick = onClose) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close",
-                        tint = Color.White
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.4f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
             
@@ -553,26 +588,24 @@ fun StoryContent(
             error = androidx.compose.ui.graphics.painter.ColorPainter(Color.Red) // Show RED if error
         )
     } else {
-        // Video Player
-        val exoPlayer = remember {
+        // Video Player — keyed on story.id to prevent echo/reuse across stories
+        val exoPlayer = remember(story.id) {
             ExoPlayer.Builder(context).build().apply {
                 val mediaItem = MediaItem.fromUri(story.mediaUrl)
                 setMediaItem(mediaItem)
+                repeatMode = androidx.media3.common.Player.REPEAT_MODE_OFF
                 prepare()
                 playWhenReady = true
             }
         }
-        
         // Handle Pause/Resume
         LaunchedEffect(isPaused) {
             if (isPaused) exoPlayer.pause() else exoPlayer.play()
         }
-        
-        // Clean up
-        DisposableEffect(Unit) {
+        // Clean up when story changes or composable leaves
+        DisposableEffect(story.id) {
             onDispose { exoPlayer.release() }
         }
-        
         AndroidView(
             factory = {
                 PlayerView(context).apply {

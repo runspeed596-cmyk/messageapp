@@ -174,6 +174,7 @@ fun NavGraph(
                     navController.navigate("channelStories/$id/${java.net.URLEncoder.encode(name, "UTF-8")}")
                 },
                 onNavigateToGroupChat = { groupId -> navController.navigate(Routes.GroupConversation.createRoute(groupId)) },
+                onNavigateToGroupDetail = { groupId -> navController.navigate(Routes.GroupDetail.createRoute(groupId)) },
                 onNavigateToChannelView = { channelId -> navController.navigate("channelView/$channelId") },
                 onNavigateToProfile = { navController.navigate(Routes.Profile.route) },
                 onNavigateToSettings = { navController.navigate(Routes.Settings.route) },
@@ -187,6 +188,8 @@ fun NavGraph(
                 onPlayVideo = { url -> 
                     navController.navigate(Routes.FullScreenVideo.createRoute(url))
                 },
+                onNavigateToAiBotList = { navController.navigate(Routes.AiBotList.route) },
+                onNavigateToEditProfile = { navController.navigate(Routes.EditProfile.route) },
                 onLogout = { 
                     // context.getSharedPreferences("auth", android.content.Context.MODE_PRIVATE)
                     //     .edit().clear().apply()
@@ -375,6 +378,9 @@ fun NavGraph(
                 },
                 onNavigateToForward = { messageIds, sourceType, sourceId ->
                     navController.navigate(Routes.ForwardTarget.createRoute(messageIds, sourceType, sourceId))
+                },
+                onNavigateToExamCreation = {
+                    navController.navigate(Routes.ExamCreation.createRoute(null))
                 }
             )
         }
@@ -447,6 +453,9 @@ fun NavGraph(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToChannelSettings = {
                     navController.navigate(Routes.ChannelSettings.createRoute(channelId))
+                },
+                onNavigateToExamCreation = {
+                    navController.navigate(Routes.ExamCreation.createRoute(channelId))
                 }
             )
         }
@@ -481,6 +490,39 @@ fun NavGraph(
         ) {
             ForwardTargetScreen(
                 onBackPress = { navController.popBackStack() }
+            )
+        }
+        // ─────────────────────────────────────────────────────────────────────────
+        // AI Bot Screens
+        // ─────────────────────────────────────────────────────────────────────────
+        composable(Routes.AiBotList.route) {
+            com.Kelasor.app.ui.screens.special.AiBotListScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onBotClick = { botId, botName, botType ->
+                    navController.navigate(Routes.AiBotChat.createRoute(botId, botName, botType))
+                }
+            )
+        }
+        composable(
+            route = Routes.AiBotChat.route,
+            arguments = listOf(
+                navArgument("botId") { type = NavType.StringType },
+                navArgument("botName") { type = NavType.StringType },
+                navArgument("botType") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val botId: String = backStackEntry.arguments?.getString("botId") ?: ""
+            val botName: String = java.net.URLDecoder.decode(
+                backStackEntry.arguments?.getString("botName") ?: "", "UTF-8"
+            )
+            val botType: String = java.net.URLDecoder.decode(
+                backStackEntry.arguments?.getString("botType") ?: "", "UTF-8"
+            )
+            com.Kelasor.app.ui.screens.special.AiBotChatScreen(
+                botId = botId,
+                botName = botName,
+                botType = botType,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
         // ─────────────────────────────────────────────────────────────────────────
@@ -696,6 +738,47 @@ fun NavGraph(
             com.Kelasor.app.ui.screens.player.FullScreenVideoScreen(
                 videoUrl = videoUrl,
                 onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        // ─────────────────────────────────────────────────────────────────────────
+        // Exam Screens
+        // ─────────────────────────────────────────────────────────────────────────
+        composable(
+            route = Routes.ExamCreation.route,
+            arguments = listOf(
+                navArgument("channelId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            val channelId = backStackEntry.arguments?.getString("channelId")
+            com.Kelasor.app.ui.screens.exam.ExamCreationScreen(
+                channelId = channelId,
+                onNavigateBack = { navController.popBackStack() },
+                onExamCreated = { examId ->
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable(
+            route = Routes.ExamTaking.route,
+            arguments = listOf(navArgument("examId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val examId = backStackEntry.arguments?.getString("examId") ?: ""
+            com.Kelasor.app.ui.screens.exam.ExamTakingScreen(
+                examId = examId,
+                onNavigateBack = { navController.popBackStack() },
+                onExamSubmitted = { navController.popBackStack() }
+            )
+        }
+        composable(Routes.ExamHistory.route) {
+            com.Kelasor.app.ui.screens.exam.ExamHistoryScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onExamClick = { examId ->
+                    navController.navigate(Routes.ExamTaking.createRoute(examId))
+                }
             )
         }
     }

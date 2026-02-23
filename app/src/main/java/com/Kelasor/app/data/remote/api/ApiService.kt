@@ -504,4 +504,169 @@ interface ApiService {
     suspend fun checkUsernameAvailability(
         @Query("username") username: String
     ): Response<UsernameAvailabilityResponse>
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // ⭐ Special Folder Endpoints
+    // ═══════════════════════════════════════════════════════════════════════════════
+    @GET("api/special-folder")
+    suspend fun getSpecialFolder(): Response<ApiResponse<SpecialFolderDto>>
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // 📚 Reference Data Endpoints
+    // ═══════════════════════════════════════════════════════════════════════════════
+    @GET("api/reference-data")
+    suspend fun getReferenceData(): Response<ApiResponse<ReferenceDataDto>>
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // 🤖 AI Bot Chat Endpoints
+    // ═══════════════════════════════════════════════════════════════════════════════
+    @GET("api/special-folder/ai-bots/{botId}/messages")
+    suspend fun getAiBotMessages(
+        @Path("botId") botId: String,
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 50
+    ): Response<ApiResponse<List<AiBotMessageDto>>>
+
+    @POST("api/special-folder/ai-bots/{botId}/messages")
+    suspend fun sendAiBotMessage(
+        @Path("botId") botId: String,
+        @Body request: SendAiBotMessageRequest
+    ): Response<ApiResponse<List<AiBotMessageDto>>>
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // 📍 Location Endpoints
+    // ═══════════════════════════════════════════════════════════════════════════════
+    @GET("api/locations/provinces/{country}")
+    suspend fun getProvinces(
+        @Path("country") country: String
+    ): Response<ApiResponse<List<String>>>
+
+    @GET("api/locations/cities/{province}")
+    suspend fun getCities(
+        @Path("province") province: String
+    ): Response<ApiResponse<List<String>>>
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // 📁 Smart Folder Endpoints
+    // ═══════════════════════════════════════════════════════════════════════════════
+    @GET("api/smart-folders")
+    suspend fun getSmartFolders(): Response<ApiResponse<List<SmartFolderDto>>>
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // 📚 Course Endpoints
+    // ═══════════════════════════════════════════════════════════════════════════════
+    @GET("api/mosbat-elm/courses")
+    suspend fun getCourses(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 20
+    ): Response<ApiResponse<List<CourseDto>>>
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // 📝 Exam Endpoints
+    // ═══════════════════════════════════════════════════════════════════════════════
+    @POST("api/exams")
+    suspend fun createExam(
+        @Body request: CreateExamRequest
+    ): Response<ApiResponse<ExamDto>>
+
+    @PUT("api/exams/{id}")
+    suspend fun updateExam(
+        @Path("id") examId: String,
+        @Body request: CreateExamRequest
+    ): Response<ApiResponse<ExamDto>>
+
+    @POST("api/exams/{id}/activate")
+    suspend fun activateExam(
+        @Path("id") examId: String
+    ): Response<ApiResponse<ExamDto>>
+
+    @POST("api/exams/{id}/end")
+    suspend fun endExam(
+        @Path("id") examId: String
+    ): Response<ApiResponse<ExamDto>>
+
+    @GET("api/exams/{id}")
+    suspend fun getExam(
+        @Path("id") examId: String
+    ): Response<ApiResponse<ExamDto>>
+
+    @GET("api/exams/my")
+    suspend fun getMyExams(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 20
+    ): Response<ApiResponse<PageResponse<ExamDto>>>
+
+    @GET("api/exams/channel/{channelId}")
+    suspend fun getChannelExams(
+        @Path("channelId") channelId: String,
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 20
+    ): Response<ApiResponse<PageResponse<ExamDto>>>
+
+    @POST("api/exams/{id}/questions")
+    suspend fun addExamQuestion(
+        @Path("id") examId: String,
+        @Body request: AddQuestionRequest
+    ): Response<ApiResponse<ExamQuestionDto>>
+
+    @DELETE("api/exams/questions/{questionId}")
+    suspend fun deleteExamQuestion(
+        @Path("questionId") questionId: String
+    ): Response<ApiResponse<Unit>>
+
+    @GET("api/exams/{id}/questions")
+    suspend fun getExamQuestions(
+        @Path("id") examId: String
+    ): Response<ApiResponse<List<ExamQuestionDto>>>
+
+    @POST("api/exams/{id}/start")
+    suspend fun startExamAttempt(
+        @Path("id") examId: String
+    ): Response<ApiResponse<ExamAttemptDto>>
+
+    @POST("api/exams/attempts/{attemptId}/answer")
+    suspend fun submitExamAnswer(
+        @Path("attemptId") attemptId: String,
+        @Body request: SubmitAnswerRequest
+    ): Response<ApiResponse<ExamAnswerDto>>
+
+    @POST("api/exams/attempts/{attemptId}/submit")
+    suspend fun submitExam(
+        @Path("attemptId") attemptId: String
+    ): Response<ApiResponse<ExamAttemptDto>>
+
+    @GET("api/exams/attempts/{attemptId}/results")
+    suspend fun getExamResults(
+        @Path("attemptId") attemptId: String
+    ): Response<ApiResponse<ExamResultDto>>
+
+    @GET("api/exams/{id}/attempts")
+    suspend fun getExamAttempts(
+        @Path("id") examId: String,
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 20
+    ): Response<ApiResponse<PageResponse<ExamAttemptDto>>>
+
+    @POST("api/exams/answers/{answerId}/grade")
+    suspend fun gradeExamAnswer(
+        @Path("answerId") answerId: String,
+        @Query("score") score: Double
+    ): Response<ApiResponse<ExamAnswerDto>>
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // 📢 Advertisement Endpoints
+    // ═══════════════════════════════════════════════════════════════════════════════
+
+    @POST("api/ads")
+    suspend fun submitAdRequest(
+        @Body request: CreateAdRequestDto
+    ): Response<ApiResponse<AdRequestResponseDto>>
+
+    @GET("api/channels/search")
+    suspend fun searchPublicChannels(
+        @Query("query") query: String,
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 20
+    ): Response<ChannelListResponse>
 }
+

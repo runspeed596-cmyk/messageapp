@@ -247,6 +247,29 @@ fun CreateChannelScreen(
                     }
                 }
                 
+                // Targeting section
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    com.Kelasor.app.ui.screens.group.TargetingSection(
+                        targetProvince = state.targetProvince,
+                        targetCity = state.targetCity,
+                        targetUniversity = state.targetUniversity,
+                        targetFieldOfStudy = state.targetFieldOfStudy,
+                        targetEducationLevel = state.targetEducationLevel,
+                        provinces = state.provinces,
+                        cities = state.cities,
+                        isLoadingProvinces = state.isLoadingProvinces,
+                        isLoadingCities = state.isLoadingCities,
+                        onProvinceSelected = { viewModel.setTargetProvince(it) },
+                        onCitySelected = { viewModel.setTargetCity(it) },
+                        onUniversityChanged = { viewModel.setTargetUniversity(it) },
+                        onFieldOfStudyChanged = { viewModel.setTargetFieldOfStudy(it) },
+                        onEducationLevelSelected = { viewModel.setTargetEducationLevel(it) },
+                        onLoadProvinces = { viewModel.loadProvinces() },
+                        extendedColors = extendedColors
+                    )
+                }
+
                 // Member Selection Section
                 item {
                     Spacer(modifier = Modifier.height(24.dp))

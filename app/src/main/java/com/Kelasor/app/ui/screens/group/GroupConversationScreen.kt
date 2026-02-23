@@ -110,6 +110,7 @@ fun GroupConversationScreen(
     onNavigateToGroupSettings: (String) -> Unit = {},
     onNavigateToUserProfile: (String) -> Unit = {},
     onNavigateToForward: (messageIds: String, sourceType: String, sourceId: String) -> Unit = { _, _, _ -> },
+    onNavigateToExamCreation: () -> Unit = {},
     viewModel: GroupConversationViewModel = hiltViewModel()
 ) {
     val extendedColors = MessageAppTheme.extendedColors
@@ -529,6 +530,11 @@ fun GroupConversationScreen(
                 },
                 onLockContentClick = {
                     Toast.makeText(context, "به زودی!", Toast.LENGTH_SHORT).show()
+                },
+                onAdClick = {
+                    selectedMsgForOverlay?.let { msg ->
+                        Toast.makeText(context, "تبلیغات: ${msg.content.take(30)}...", Toast.LENGTH_SHORT).show()
+                    }
                 }
             )
             
@@ -767,6 +773,10 @@ fun GroupConversationScreen(
             onPollClick = {
                 showAttachmentMenu = false
                 showPollCreator = true
+            },
+            onExamClick = {
+                showAttachmentMenu = false
+                onNavigateToExamCreation()
             }
         )
         

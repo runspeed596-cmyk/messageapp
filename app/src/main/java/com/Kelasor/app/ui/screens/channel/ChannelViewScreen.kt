@@ -66,6 +66,7 @@ fun ChannelViewScreen(
     initialMessageId: String? = null,
     onNavigateBack: () -> Unit,
     onNavigateToChannelSettings: () -> Unit = {},
+    onNavigateToExamCreation: () -> Unit = {},
     viewModel: ChannelViewViewModel = hiltViewModel()
 ) {
     val extendedColors = MessageAppTheme.extendedColors
@@ -206,7 +207,16 @@ fun ChannelViewScreen(
                 )
             } else {
                 CenterAlignedTopAppBar(
-                    title = { Text(state.channel?.name ?: "کانال") },
+                    title = {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(state.channel?.name ?: "کانال")
+                            Text(
+                                text = "${state.channel?.subscriberCount ?: 0} عضو",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                         containerColor = MaterialTheme.colorScheme.background
                     ),
@@ -456,6 +466,11 @@ fun ChannelViewScreen(
                 },
                 onLockContentClick = {
                     Toast.makeText(context, "به زودی!", Toast.LENGTH_SHORT).show()
+                },
+                onAdClick = {
+                    selectedPost?.let { post ->
+                        Toast.makeText(context, "تبلیغات: ${post.content.take(30)}...", Toast.LENGTH_SHORT).show()
+                    }
                 }
             )
             
@@ -625,6 +640,10 @@ fun ChannelViewScreen(
             onPollClick = {
                 showAttachmentMenu = false
                 showPollCreator = true
+            },
+            onExamClick = {
+                showAttachmentMenu = false
+                onNavigateToExamCreation()
             }
         )
         

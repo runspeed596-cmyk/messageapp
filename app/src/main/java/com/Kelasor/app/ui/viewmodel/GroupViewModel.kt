@@ -1061,13 +1061,25 @@ data class CreateGroupState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val createdGroupId: String? = null,
-    val groupImageUri: android.net.Uri? = null
+    val groupImageUri: android.net.Uri? = null,
+    // Targeting fields
+    val targetProvince: String? = null,
+    val targetCity: String? = null,
+    val targetUniversity: String? = null,
+    val targetFieldOfStudy: String? = null,
+    val targetEducationLevel: String? = null,
+    // Location data for dropdowns
+    val provinces: List<String> = emptyList(),
+    val cities: List<String> = emptyList(),
+    val isLoadingProvinces: Boolean = false,
+    val isLoadingCities: Boolean = false
 )
 
 @HiltViewModel
 class CreateGroupViewModel @Inject constructor(
     private val groupRepository: GroupRepository,
     private val userRepository: com.Kelasor.app.data.repository.UserRepository,
+    private val apiService: com.Kelasor.app.data.remote.api.ApiService,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
     
@@ -1141,6 +1153,65 @@ class CreateGroupViewModel @Inject constructor(
         _state.update { it.copy(groupImageUri = uri) }
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 🎯 Targeting Methods
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    fun loadProvinces() {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoadingProvinces = true) }
+            try {
+                val response = apiService.getProvinces("iran")
+                if (response.isSuccessful && response.body()?.success == true) {
+                    _state.update { it.copy(provinces = response.body()?.data ?: emptyList(), isLoadingProvinces = false) }
+                } else {
+                    _state.update { it.copy(isLoadingProvinces = false) }
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(isLoadingProvinces = false) }
+            }
+        }
+    }
+
+    fun loadCities(province: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoadingCities = true) }
+            try {
+                val response = apiService.getCities(province)
+                if (response.isSuccessful && response.body()?.success == true) {
+                    _state.update { it.copy(cities = response.body()?.data ?: emptyList(), isLoadingCities = false) }
+                } else {
+                    _state.update { it.copy(isLoadingCities = false) }
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(isLoadingCities = false) }
+            }
+        }
+    }
+
+    fun setTargetProvince(province: String?) {
+        _state.update { it.copy(targetProvince = province, targetCity = null, cities = emptyList()) }
+        if (province != null) {
+            loadCities(province)
+        }
+    }
+
+    fun setTargetCity(city: String?) {
+        _state.update { it.copy(targetCity = city) }
+    }
+
+    fun setTargetUniversity(university: String?) {
+        _state.update { it.copy(targetUniversity = university) }
+    }
+
+    fun setTargetFieldOfStudy(fieldOfStudy: String?) {
+        _state.update { it.copy(targetFieldOfStudy = fieldOfStudy) }
+    }
+
+    fun setTargetEducationLevel(educationLevel: String?) {
+        _state.update { it.copy(targetEducationLevel = educationLevel) }
+    }
+
     private fun getFileFromUri(uri: android.net.Uri): java.io.File? {
         return try {
             val contentResolver = context.contentResolver
@@ -1173,7 +1244,12 @@ class CreateGroupViewModel @Inject constructor(
                 description = currentState.description.ifBlank { null },
                 isPublic = currentState.isPublic,
                 memberIds = currentState.selectedMembers.map { it.id },
-                avatarFile = avatarFile
+                avatarFile = avatarFile,
+                targetProvince = currentState.targetProvince,
+                targetCity = currentState.targetCity,
+                targetUniversity = currentState.targetUniversity,
+                targetFieldOfStudy = currentState.targetFieldOfStudy,
+                targetEducationLevel = currentState.targetEducationLevel
             ).collect { result ->
                 when (result) {
                     is GroupResult.Success -> {

@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Poll
+import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -78,6 +79,7 @@ fun AttachmentMenu(
     onAudioClick: () -> Unit,
     onLocationClick: () -> Unit = {},
     onPollClick: (() -> Unit)? = null,
+    onExamClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val extendedColors = MessageAppTheme.extendedColors
@@ -114,6 +116,12 @@ fun AttachmentMenu(
             label = "نظرسنجی",
             backgroundColor = Color(0xFFE91E63),
             onClick = onPollClick
+        ) else null,
+        if (onExamClick != null) AttachmentOption(
+            icon = Icons.Default.Assignment,
+            label = "برگزاری آزمون",
+            backgroundColor = Color(0xFFAB47BC),
+            onClick = onExamClick
         ) else null
     )
 

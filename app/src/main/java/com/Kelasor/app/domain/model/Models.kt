@@ -26,6 +26,14 @@ data class User(
     val workExperience: String? = null,
     val achievements: String? = null,
     
+    // Teacher role
+    val isTeacher: Boolean = false,
+    val teachingField: String? = null,
+    val teachingUniversity: String? = null,
+    // Location for targeting
+    val province: String? = null,
+    val city: String? = null,
+    
     // Bio Channels
     val bioChannelId1: String? = null,
     val bioChannelId2: String? = null,

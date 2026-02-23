@@ -76,7 +76,12 @@ class UserRepository @Inject constructor(
         workExperience: String? = null,
         achievements: String? = null,
         bioChannelId1: String? = null,
-        bioChannelId2: String? = null
+        bioChannelId2: String? = null,
+        isTeacher: Boolean? = null,
+        teachingField: String? = null,
+        teachingUniversity: String? = null,
+        province: String? = null,
+        city: String? = null
     ): Flow<UserResult<User>> = flow {
         emit(UserResult.Loading)
         try {
@@ -84,7 +89,9 @@ class UserRepository @Inject constructor(
                 username, displayName, bio,
                 university, fieldOfStudy, education, skills, interests, workExperience, achievements,
                 null, // avatarUrl
-                bioChannelId1, bioChannelId2
+                bioChannelId1, bioChannelId2,
+                isTeacher, teachingField, teachingUniversity,
+                province, city
             ))
             if (response.isSuccessful && response.body()?.success == true) {
                 val userDto = response.body()?.data

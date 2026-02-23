@@ -11,6 +11,15 @@ data class ApiResponse<T>(
     val data: T? = null
 )
 
+data class PageResponse<T>(
+    val content: List<T> = emptyList(),
+    val totalElements: Long = 0,
+    val totalPages: Int = 0,
+    val number: Int = 0,
+    val size: Int = 20,
+    val hasNext: Boolean = false
+)
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // 👤 Auth & User DTOs
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -65,6 +74,14 @@ data class UserDto(
     // Feature 4: Premium status
     val isPremium: Boolean = false,
 
+    // Teacher role
+    val isTeacher: Boolean = false,
+    val teachingField: String? = null,
+    val teachingUniversity: String? = null,
+    // Location for targeting
+    val province: String? = null,
+    val city: String? = null,
+
     // Privacy Settings
     val profileVisibility: String? = null,
     val onlineVisibility: String? = null,
@@ -86,7 +103,13 @@ data class UpdateUserRequest(
     val avatarUrl: String? = null,
     // Feature 3: Bio channels
     val bioChannelId1: String? = null,
-    val bioChannelId2: String? = null
+    val bioChannelId2: String? = null,
+    // Teacher role
+    val isTeacher: Boolean? = null,
+    val teachingField: String? = null,
+    val teachingUniversity: String? = null,
+    val province: String? = null,
+    val city: String? = null
 )
 
 data class UpdatePrivacyRequest(
@@ -200,7 +223,8 @@ data class GroupDto(
     // Sync settings
     val isMuted: Boolean = false,
     val isPinned: Boolean = false,
-    val isArchived: Boolean = false
+    val isArchived: Boolean = false,
+    val hideMembers: Boolean = false
 )
 
 data class GroupListResponse(
@@ -212,7 +236,12 @@ data class CreateGroupRequest(
     val description: String? = null,
     val isPublic: Boolean = false,
     val memberIds: List<String> = emptyList(),
-    val avatarUrl: String? = null
+    val avatarUrl: String? = null,
+    val targetProvince: String? = null,
+    val targetCity: String? = null,
+    val targetUniversity: String? = null,
+    val targetFieldOfStudy: String? = null,
+    val targetEducationLevel: String? = null
 )
 
 data class UpdateGroupRequest(
@@ -327,7 +356,12 @@ data class CreateChannelRequest(
     val description: String? = null,
     val isPublic: Boolean = true,
     val publicId: String? = null,
-    val memberIds: List<String> = emptyList()
+    val memberIds: List<String> = emptyList(),
+    val targetProvince: String? = null,
+    val targetCity: String? = null,
+    val targetUniversity: String? = null,
+    val targetFieldOfStudy: String? = null,
+    val targetEducationLevel: String? = null
 )
 
 data class UpdateChannelRequest(
@@ -357,7 +391,10 @@ data class ChannelPostDto(
     val pinnedAt: String? = null,
     val scheduledAt: String? = null,
     val forwardedFrom: String? = null,
-    val isEdited: Boolean = false
+    val isEdited: Boolean = false,
+    val isAd: Boolean = false,
+    val adLabel: String? = null,
+    val adSourceChannelId: String? = null
 )
 
 data class PostListResponse(
@@ -451,7 +488,9 @@ data class ProfileDetailsDto(
     val skills: String? = null,
     val interests: String? = null,
     val workExperience: String? = null,
-    val achievements: String? = null
+    val achievements: String? = null,
+    val province: String? = null,
+    val city: String? = null
 )
 
 data class UpdateProfileDetailsRequest(
@@ -461,7 +500,9 @@ data class UpdateProfileDetailsRequest(
     val skills: String? = null,
     val interests: String? = null,
     val workExperience: String? = null,
-    val achievements: String? = null
+    val achievements: String? = null,
+    val province: String? = null,
+    val city: String? = null
 )
 
 data class FollowDto(
@@ -722,4 +763,272 @@ data class SetUsernameRequest(
 data class UsernameAvailabilityResponse(
     val isAvailable: Boolean,
     val message: String? = null
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ⭐ Special Folder DTOs
+// ═══════════════════════════════════════════════════════════════════════════════
+
+data class SpecialFolderDto(
+    val aiBots: List<AiBotDto> = emptyList(),
+    val channels: List<SpecialChannelDto> = emptyList(),
+    val groups: List<SpecialGroupDto> = emptyList(),
+    val supportChannels: List<SpecialChannelDto> = emptyList(),
+    val supportGroups: List<SpecialGroupDto> = emptyList(),
+    val supportChatId: String? = null,
+    val isProfileComplete: Boolean = true
+)
+
+data class AiBotDto(
+    val id: String,
+    val name: String,
+    val botType: String,
+    val category: String = "GENERAL",
+    val description: String? = null,
+    val avatarUrl: String? = null,
+    val displayOrder: Int = 0
+)
+
+data class SpecialChannelDto(
+    val id: String,
+    val name: String,
+    val avatarUrl: String? = null,
+    val category: String = "",
+    val subscriberCount: Int = 0
+)
+
+data class SpecialGroupDto(
+    val id: String,
+    val name: String,
+    val avatarUrl: String? = null,
+    val category: String = "",
+    val memberCount: Int = 0
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📚 Reference Data DTOs
+// ═══════════════════════════════════════════════════════════════════════════════
+
+data class FieldOfStudyDto(
+    val id: String,
+    val name: String,
+    val displayOrder: Int = 0
+)
+
+data class EducationLevelDto(
+    val id: String,
+    val name: String,
+    val displayOrder: Int = 0
+)
+
+data class UniversitySimpleDto(
+    val id: String,
+    val name: String,
+    val city: String? = null,
+    val province: String? = null
+)
+
+data class ReferenceDataDto(
+    val universities: List<UniversitySimpleDto> = emptyList(),
+    val fieldsOfStudy: List<FieldOfStudyDto> = emptyList(),
+    val educationLevels: List<EducationLevelDto> = emptyList()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🤖 AI Bot Chat DTOs
+// ═══════════════════════════════════════════════════════════════════════════════
+
+data class AiBotMessageDto(
+    val id: String,
+    val botId: String,
+    val content: String,
+    val role: String, // USER or ASSISTANT
+    val createdAt: String
+)
+
+data class SendAiBotMessageRequest(
+    val content: String
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📁 Smart Folder DTOs
+// ═══════════════════════════════════════════════════════════════════════════════
+
+data class SmartFolderDto(
+    val folderType: String, // TEACHERS, ELM_CLUB, COURSES, PURCHASED
+    val labelFa: String,
+    val iconName: String?,
+    val channels: List<SmartFolderChannelDto> = emptyList()
+)
+
+data class SmartFolderChannelDto(
+    val id: String,
+    val name: String,
+    val avatarUrl: String?,
+    val subscriberCount: Long = 0,
+    val isVerifiedTeacher: Boolean = false,
+    val classification: String = "GENERAL",
+    val isSubscribed: Boolean = false
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📚 Course DTOs (for Courses folder)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+data class CourseDto(
+    val id: String,
+    val title: String,
+    val description: String? = null,
+    val organizerId: String,
+    val organizerName: String? = null,
+    val institutionId: String? = null,
+    val channelId: String? = null,
+    val groupId: String? = null,
+    val coverImageUrl: String? = null,
+    val fieldOfStudy: String? = null,
+    val educationLevel: String? = null,
+    val startsAt: String,
+    val endsAt: String,
+    val enrollmentLimit: Int? = null,
+    val enrolledCount: Long = 0,
+    val isPublic: Boolean = true,
+    val status: String = "DRAFT",
+    val priceRials: Long = 0,
+    val tags: List<String> = emptyList(),
+    val createdAt: String? = null
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📝 Exam DTOs
+// ═══════════════════════════════════════════════════════════════════════════════
+
+data class ExamDto(
+    val id: String,
+    val title: String,
+    val description: String? = null,
+    val creatorId: String,
+    val courseId: String? = null,
+    val channelId: String? = null,
+    val startsAt: String,
+    val endsAt: String,
+    val durationMinutes: Int = 60,
+    val totalScore: Double = 0.0,
+    val passScore: Double? = null,
+    val status: String = "DRAFT",
+    val isPublic: Boolean = false,
+    val shuffleQuestions: Boolean = false,
+    val shuffleOptions: Boolean = false,
+    val showResultsAfter: Boolean = true,
+    val maxAttempts: Int = 1,
+    val questionCount: Long = 0,
+    val attemptCount: Long = 0,
+    val createdAt: String? = null
+)
+
+data class ExamQuestionDto(
+    val id: String,
+    val questionType: String = "MULTIPLE_CHOICE",
+    val questionText: String,
+    val imageUrl: String? = null,
+    val points: Double = 1.0,
+    val sortOrder: Int = 0,
+    val correctAnswer: String? = null,
+    val options: List<ExamOptionDto> = emptyList()
+)
+
+data class ExamOptionDto(
+    val id: String,
+    val optionText: String,
+    val optionLabel: String,
+    val isCorrect: Boolean = false,
+    val sortOrder: Int = 0
+)
+
+data class ExamAttemptDto(
+    val id: String,
+    val examId: String,
+    val examTitle: String,
+    val userId: String,
+    val startedAt: String,
+    val submittedAt: String? = null,
+    val isSubmitted: Boolean = false,
+    val autoScore: Double? = null,
+    val finalScore: Double? = null,
+    val durationSeconds: Int? = null,
+    val passed: Boolean? = null
+)
+
+data class ExamAnswerDto(
+    val id: String,
+    val questionId: String,
+    val questionText: String,
+    val answerText: String? = null,
+    val selectedOption: String? = null,
+    val isCorrect: Boolean? = null,
+    val score: Double? = null,
+    val correctAnswer: String? = null
+)
+
+data class ExamResultDto(
+    val attempt: ExamAttemptDto,
+    val answers: List<ExamAnswerDto> = emptyList()
+)
+
+data class CreateExamRequest(
+    val title: String,
+    val description: String? = null,
+    val courseId: String? = null,
+    val channelId: String? = null,
+    val startsAt: String,
+    val endsAt: String,
+    val durationMinutes: Int = 60,
+    val totalScore: Double = 0.0,
+    val passScore: Double? = null,
+    val isPublic: Boolean = false,
+    val shuffleQuestions: Boolean = false,
+    val shuffleOptions: Boolean = false,
+    val showResultsAfter: Boolean = true,
+    val maxAttempts: Int = 1
+)
+
+data class AddQuestionRequest(
+    val questionType: String = "MULTIPLE_CHOICE",
+    val questionText: String,
+    val imageUrl: String? = null,
+    val points: Double = 1.0,
+    val sortOrder: Int = 0,
+    val correctAnswer: String? = null,
+    val options: List<QuestionOptionRequest> = emptyList()
+)
+
+data class QuestionOptionRequest(
+    val optionText: String,
+    val optionLabel: String,
+    val isCorrect: Boolean = false,
+    val sortOrder: Int = 0
+)
+
+data class SubmitAnswerRequest(
+    val questionId: String,
+    val selectedOption: String? = null,
+    val answerText: String? = null
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📢 Advertisement DTOs
+// ═══════════════════════════════════════════════════════════════════════════════
+
+data class CreateAdRequestDto(
+    val messageContent: String,
+    val targetChannelId: String,
+    val sourceType: String = "CHAT",
+    val sourceId: String? = null,
+    val sourceMessageId: String = "",
+    val messageMediaUrl: String? = null,
+    val messageType: String = "TEXT"
+)
+
+data class AdRequestResponseDto(
+    val id: String,
+    val status: String
 )

@@ -288,8 +288,8 @@ fun ConversationScreen(
     val chatName = chat?.title ?: "چت"
     // FIX: Filter out current user to get OTHER participant
     val otherParticipant = chat?.participants?.find { it.id != state.currentUserId }
-    // Use privacy-sanitized display fields
-    val isOnline = otherParticipant?.displayOnlineStatus ?: false
+    // Use actual online status (not privacy-filtered displayOnlineStatus)
+    val isOnline = otherParticipant?.isOnline ?: false
     // For private chats, ALWAYS use participant's privacy-sanitized avatar (ignore cached chat?.avatarUrl)
     val avatarUrl = if (chat?.type == com.Kelasor.app.domain.model.ChatType.PRIVATE) {
         otherParticipant?.displayAvatarUrl
@@ -428,7 +428,12 @@ fun ConversationScreen(
                 messageToReschedule = it
                 showScheduleEditDialog = true
             }
-        }} else null
+        }} else null,
+        onAdClick = {
+            selectedMsgForOverlay?.let { msg ->
+                Toast.makeText(context, "تبلیغات: ${msg.content.take(30)}...", Toast.LENGTH_SHORT).show()
+            }
+        }
     )
 
     // Schedule edit dialog for rescheduling a message

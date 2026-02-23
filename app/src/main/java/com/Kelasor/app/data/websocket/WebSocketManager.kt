@@ -87,8 +87,8 @@ class WebSocketManager @Inject constructor(
 ) {
     companion object {
         private const val TAG = "WebSocketManager"
-        private const val WS_BASE_URL = "ws://46.249.100.239:8080/ws"
-        private const val RECONNECT_DELAY_MS = 5000L
+        private const val WS_BASE_URL = "ws://192.168.70.113:8080/ws"
+        private const val RECONNECT_DELAY_MS = 2000L
         private const val MAX_RECONNECT_ATTEMPTS = 5
     }
     
@@ -107,7 +107,11 @@ class WebSocketManager @Inject constructor(
     private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
     
-    private val _messages = MutableSharedFlow<WebSocketMessage>(replay = 0)
+    private val _messages = MutableSharedFlow<WebSocketMessage>(
+        replay = 0,
+        extraBufferCapacity = 64,
+        onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
+    )
     val messages: SharedFlow<WebSocketMessage> = _messages.asSharedFlow()
     
     // Track active subscriptions to avoid duplicates

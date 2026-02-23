@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     tailwindcss()
   ],
-  base: '/admin/',
+  base: '/ca978112ca/',
   server: {
     port: 3000,
     strictPort: true,
