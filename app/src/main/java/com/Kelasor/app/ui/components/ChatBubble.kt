@@ -1,13 +1,19 @@
 package com.Kelasor.app.ui.components
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -15,12 +21,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextLayoutResult
@@ -36,6 +45,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.Kelasor.app.domain.model.MessageStatus
 import com.Kelasor.app.ui.theme.GlassBorderLight
@@ -50,22 +60,19 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.Kelasor.app.domain.model.Message
-import androidx.compose.foundation.text.ClickableText
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 💬 Premium Chat Bubble Component
+// 💬 Ultra-Premium Chat Bubble Component
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// URL detection pattern
-// URL detection pattern - Updated to support "google.com" style links
 private val URL_PATTERN = Regex(
     """((https?://|www\.)[^\s]+|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}[^\s]*)""",
     RegexOption.IGNORE_CASE
@@ -94,10 +101,10 @@ fun ChatBubble(
     isPinned: Boolean = false,
     forwardedFrom: String? = null,
     onLongClick: (() -> Unit)? = null,
+    onStoryReplyClick: ((storyId: String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val extendedColors = MessageAppTheme.extendedColors
-    
     val shape = when {
         isMyMessage -> when (position) {
             BubblePosition.FIRST -> MessageShapes.myBubbleFirst
@@ -112,37 +119,34 @@ fun ChatBubble(
             BubblePosition.SINGLE -> MessageShapes.otherBubbleSingle
         }
     }
-    
-    // My bubble: Rich gradient (rose/magenta tones matching reference)
-    // Other bubble: Dark glass effect
+    // ── Premium Bubble Background ────────────────────────────────────────
     val bubbleBackground = if (isMyMessage) {
-        Brush.horizontalGradient(
+        Brush.linearGradient(
             colors = listOf(
                 extendedColors.myBubble,
                 extendedColors.myBubbleEnd
-            )
+            ),
+            start = Offset.Zero,
+            end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
         )
     } else {
-        Brush.horizontalGradient(
+        Brush.linearGradient(
             colors = listOf(
                 extendedColors.otherBubble,
-                extendedColors.otherBubble
+                extendedColors.otherBubble.copy(alpha = 0.95f)
             )
         )
     }
-    
-    // Shadow for depth
     val shadowColor = if (isMyMessage) {
-        extendedColors.myBubble.copy(alpha = 0.3f)
+        extendedColors.myBubble.copy(alpha = 0.25f)
     } else {
-        Color.Black.copy(alpha = 0.2f)
+        Color.Black.copy(alpha = 0.15f)
     }
-    
     Box(
         modifier = modifier
-            .widthIn(max = 300.dp)
+            .widthIn(max = 310.dp)
             .shadow(
-                elevation = if (isMyMessage) 8.dp else 4.dp,
+                elevation = if (isMyMessage) 6.dp else 3.dp,
                 shape = shape,
                 ambientColor = shadowColor,
                 spotColor = shadowColor
@@ -152,11 +156,10 @@ fun ChatBubble(
             .then(
                 if (!isMyMessage) {
                     Modifier.drawBehind {
-                        // Glass border effect for received messages
                         drawRect(
                             brush = Brush.linearGradient(
                                 colors = listOf(
-                                    GlassBorderLight,
+                                    GlassBorderLight.copy(alpha = 0.08f),
                                     Color.Transparent
                                 ),
                                 start = Offset.Zero,
@@ -166,46 +169,61 @@ fun ChatBubble(
                     }
                 } else Modifier
             )
-            .padding(horizontal = 10.dp, vertical = 6.dp)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Column {
-            // Reply Preview
+            // ── Reply Preview ────────────────────────────────────────────
             if (replyToMessage != null) {
                 Row(
-                   modifier = Modifier
-                       .padding(bottom = 4.dp)
-                       .clip(RoundedCornerShape(8.dp))
-                       .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.2f))
-                       .clickable { onReplyClick?.invoke() }
-                       .padding(6.dp),
-                   verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier
+                        .padding(bottom = 6.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(
+                            if (isMyMessage) Color.White.copy(alpha = 0.12f)
+                            else MaterialTheme.colorScheme.surface.copy(alpha = 0.15f)
+                        )
+                        .clickable { onReplyClick?.invoke() }
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
                             .width(3.dp)
-                            .size(36.dp)
-                            .background(extendedColors.accent, RoundedCornerShape(2.dp))
+                            .height(36.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(extendedColors.accent, extendedColors.accentSecondary)
+                                )
+                            )
                     )
-                    Column(modifier = Modifier.padding(start = 8.dp)) {
+                    Column(modifier = Modifier.padding(start = 10.dp)) {
                         Text(
                             text = replyToMessage.senderName,
-                            style = MessageAppTypography.chatTime.copy(fontWeight = FontWeight.Bold, color = extendedColors.accent),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = extendedColors.accent,
+                                fontFamily = VazirFontFamily
+                            ),
                             maxLines = 1
                         )
+                        Spacer(Modifier.height(2.dp))
                         Text(
-                            text = if (replyToMessage.type == com.Kelasor.app.domain.model.MessageType.TEXT) 
-                                replyToMessage.content 
+                            text = if (replyToMessage.type == com.Kelasor.app.domain.model.MessageType.TEXT)
+                                replyToMessage.content
                             else "پیام رسانه",
-                            style = MessageAppTypography.messageText.copy(fontSize = 12.sp),
-                            color = if (isMyMessage) extendedColors.myBubbleText.copy(0.8f) else extendedColors.otherBubbleText.copy(0.8f),
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = 12.sp,
+                                fontFamily = VazirFontFamily
+                            ),
+                            color = if (isMyMessage) extendedColors.myBubbleText.copy(0.7f) else extendedColors.otherBubbleText.copy(0.7f),
                             maxLines = 1,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
                     }
                 }
             }
-
-            // Pin Indicator
+            // ── Pin Indicator ────────────────────────────────────────────
             if (isPinned) {
                 Row(
                     modifier = Modifier.padding(bottom = 4.dp),
@@ -215,34 +233,43 @@ fun ChatBubble(
                     Icon(
                         imageVector = Icons.Default.PushPin,
                         contentDescription = "Pinned",
-                        tint = extendedColors.accent,
-                        modifier = Modifier.size(12.dp)
+                        tint = if (isMyMessage) extendedColors.myBubbleText.copy(alpha = 0.7f) else extendedColors.accent,
+                        modifier = Modifier.size(11.dp)
                     )
                     Text(
                         text = "سنجاق شده",
-                        style = MessageAppTypography.chatTime.copy(fontSize = 10.sp),
-                        color = extendedColors.accent
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 10.sp,
+                            fontFamily = VazirFontFamily
+                        ),
+                        color = if (isMyMessage) extendedColors.myBubbleText.copy(alpha = 0.7f) else extendedColors.accent
                     )
                 }
             }
-
-            // Forward Indicator
+            // ── Forward Indicator ────────────────────────────────────────
             if (!forwardedFrom.isNullOrEmpty()) {
                 Text(
                     text = "↗ ارسال مجدد از: $forwardedFrom",
-                    style = MessageAppTypography.chatTime.copy(fontSize = 10.sp, fontWeight = FontWeight.Medium),
-                    color = if (isMyMessage) extendedColors.myBubbleText.copy(alpha = 0.7f) else extendedColors.otherBubbleText.copy(alpha = 0.7f),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        fontFamily = VazirFontFamily
+                    ),
+                    color = if (isMyMessage) extendedColors.myBubbleText.copy(alpha = 0.65f) else extendedColors.otherBubbleText.copy(alpha = 0.65f),
                     modifier = Modifier.padding(bottom = 4.dp),
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
             }
-
-            // Sender Name (for Groups/Channels)
+            // ── Sender Name (Groups/Channels) ────────────────────────────
             if (!isMyMessage && !senderName.isNullOrEmpty()) {
                 Text(
                     text = senderName,
-                    style = MessageAppTypography.chatTime.copy(fontWeight = FontWeight.Bold),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = VazirFontFamily,
+                        letterSpacing = 0.3.sp
+                    ),
                     color = extendedColors.accent,
                     modifier = Modifier
                         .padding(bottom = 4.dp)
@@ -251,19 +278,81 @@ fun ChatBubble(
                         )
                 )
             }
-            
-            // Message text with clickable links
+            // ── Story Reply Tag Detection ────────────────────────────────
+            val storyReplyPattern = remember { Regex("""\[STORY_REPLY:([^:]+):([^:]*):([^\]]+)](.*)""", RegexOption.DOT_MATCHES_ALL) }
+            val storyMatch = storyReplyPattern.matchEntire(message)
+            val displayMessage = storyMatch?.groupValues?.getOrNull(4) ?: message
+            val storyId = storyMatch?.groupValues?.getOrNull(1)
+            val storyMediaUrl = storyMatch?.groupValues?.getOrNull(2)
+            val storyType = storyMatch?.groupValues?.getOrNull(3)
+            // Show story preview card if this is a story reply
+            if (storyMatch != null && !storyMediaUrl.isNullOrBlank()) {
+                Row(
+                    modifier = Modifier
+                        .padding(bottom = 6.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(
+                            if (isMyMessage) Color.White.copy(alpha = 0.12f)
+                            else MaterialTheme.colorScheme.surface.copy(alpha = 0.15f)
+                        )
+                        .clickable(enabled = onStoryReplyClick != null && !storyId.isNullOrBlank()) {
+                            storyId?.let { onStoryReplyClick?.invoke(it) }
+                        }
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(3.dp)
+                            .height(40.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(Color(0xFFFF6B6B), Color(0xFFFF8E53))
+                                )
+                            )
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    // Story thumbnail
+                    val fullStoryUrl = com.Kelasor.app.util.UrlUtils.getFullUrl(storyMediaUrl) ?: ""
+                    if (storyType == "VIDEO") {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = "ویدیو استوری",
+                            tint = if (isMyMessage) extendedColors.myBubbleText.copy(alpha = 0.7f) else extendedColors.accent,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    } else if (fullStoryUrl.isNotBlank()) {
+                        coil3.compose.AsyncImage(
+                            model = fullStoryUrl,
+                            contentDescription = "استوری",
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(6.dp)),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "📸 پاسخ به استوری",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = VazirFontFamily
+                        ),
+                        color = if (isMyMessage) extendedColors.myBubbleText.copy(alpha = 0.8f) else extendedColors.accent
+                    )
+                }
+            }
+            // ── Message Text with Clickable Links ────────────────────────
             val context = LocalContext.current
             val textColor = if (isMyMessage) extendedColors.myBubbleText else extendedColors.otherBubbleText
-            val linkColor = Color(0xFF4FC3F7) // Light blue for links
+            val linkColor = if (isMyMessage) Color(0xFFB3E5FC) else Color(0xFF4FC3F7)
             val annotatedMessage = buildAnnotatedString {
                 var lastIndex = 0
-                URL_PATTERN.findAll(message).forEach { matchResult ->
-                    // Append text before the URL
+                URL_PATTERN.findAll(displayMessage).forEach { matchResult ->
                     if (matchResult.range.first > lastIndex) {
-                        append(message.substring(lastIndex, matchResult.range.first))
+                        append(displayMessage.substring(lastIndex, matchResult.range.first))
                     }
-                    // Append the URL with styling and annotation
                     pushStringAnnotation(tag = "URL", annotation = matchResult.value)
                     withStyle(SpanStyle(color = linkColor, textDecoration = TextDecoration.Underline)) {
                         append(matchResult.value)
@@ -271,39 +360,34 @@ fun ChatBubble(
                     pop()
                     lastIndex = matchResult.range.last + 1
                 }
-                // Append remaining text after last URL
-                if (lastIndex < message.length) {
-                    append(message.substring(lastIndex))
+                if (lastIndex < displayMessage.length) {
+                    append(displayMessage.substring(lastIndex))
                 }
             }
-            // Build the inline time+status label to measure its width
             val timeLabel = buildString {
                 if (isEdited) append("ویرایش شده ")
                 append(time)
-                if (isMyMessage) append("  ✓") // placeholder for status icon width
+                if (isMyMessage) append("  ✓")
             }
             var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
-            // Use Box to overlay time on the message text, Telegram-style
+            // ── Message + Time Overlay (Telegram-style) ──────────────────
             Box {
-                // Message text with invisible trailing spacer for time
                 Text(
                     text = buildAnnotatedString {
                         append(annotatedMessage)
-                        // Add invisible spacer to reserve room for the time overlay
                         withStyle(SpanStyle(fontSize = 10.sp, color = Color.Transparent)) {
-                            append("  \u00A0\u00A0\u00A0\u00A0$timeLabel\u00A0\u00A0\u00A0")
+                            append("\u00A0\u00A0\u00A0\u00A0\u00A0$timeLabel\u00A0\u00A0\u00A0\u00A0\u00A0")
                         }
                     },
                     style = MessageAppTypography.messageText.copy(
                         fontFamily = VazirFontFamily,
-                        color = textColor
+                        color = textColor,
+                        lineHeight = 22.sp
                     ),
                     onTextLayout = { layoutResult = it },
                     modifier = Modifier.pointerInput(onLongClick) {
                         detectTapGestures(
-                            onLongPress = {
-                                onLongClick?.invoke()
-                            },
+                            onLongPress = { onLongClick?.invoke() },
                             onTap = { offset ->
                                 layoutResult?.let { layout ->
                                     val position = layout.getOffsetForPosition(offset)
@@ -317,84 +401,85 @@ fun ChatBubble(
                                             try {
                                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                                                 context.startActivity(intent)
-                                            } catch (e: Exception) {
-                                                // Handle invalid URL gracefully
-                                            }
+                                            } catch (_: Exception) {}
                                         }
                                 }
                             }
                         )
                     }
                 )
-                // Time + status overlay at bottom-end
+                // Time + Status overlay at bottom-end
                 Row(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(top = 4.dp, start = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        .padding(top = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Edited indicator
                     if (isEdited) {
                         Text(
                             text = "ویرایش شده",
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
-                            color = if (isMyMessage) {
-                                extendedColors.myBubbleText.copy(alpha = 0.6f)
-                            } else {
-                                extendedColors.otherBubbleText.copy(alpha = 0.6f)
-                            }
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 10.sp,
+                                fontFamily = VazirFontFamily
+                            ),
+                            color = if (isMyMessage) extendedColors.myBubbleText.copy(alpha = 0.55f) else extendedColors.otherBubbleText.copy(alpha = 0.55f)
                         )
                     }
                     Text(
                         text = time,
-                        style = MessageAppTypography.messageTime,
-                        color = if (isMyMessage) {
-                            extendedColors.myBubbleText.copy(alpha = 0.6f)
-                        } else {
-                            extendedColors.otherBubbleText.copy(alpha = 0.6f)
-                        }
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 10.sp,
+                            fontFamily = VazirFontFamily
+                        ),
+                        color = if (isMyMessage) extendedColors.myBubbleText.copy(alpha = 0.55f) else extendedColors.otherBubbleText.copy(alpha = 0.55f)
                     )
                     if (isMyMessage) {
                         MessageStatusIcon(
                             status = status,
-                            tint = extendedColors.myBubbleText.copy(alpha = 0.6f)
+                            tint = extendedColors.myBubbleText.copy(alpha = 0.55f)
                         )
                     }
                 }
             }
-
-            // Reactions Row
-             if (reactions.isNotEmpty()) {
-                 FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.padding(top = 4.dp)
-                 ) {
-                     reactions.forEach { (emoji, count) ->
-                         val isSelected = emoji == myReaction
-                         Box(
-                             modifier = Modifier
-                                 .clip(RoundedCornerShape(12.dp))
-                                 .background(
-                                     if (isSelected) extendedColors.accent.copy(alpha = 0.3f)
-                                     else Color.Black.copy(alpha = 0.2f)
-                                 )
-                                 .clickable { onReactionClick?.invoke(emoji) }
-                                 .padding(horizontal = 6.dp, vertical = 4.dp)
-                         ) {
-                             Text(
-                                 text = "$emoji $count",
-                                 style = MessageAppTypography.chatTime.copy(fontSize = 10.sp),
-                                 color = if (isMyMessage) extendedColors.myBubbleText else extendedColors.otherBubbleText
-                             )
-                         }
-                     }
-                 }
+            // ── Reactions Row — Premium Pill Style ────────────────────────
+            if (reactions.isNotEmpty()) {
+                Spacer(Modifier.height(6.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    reactions.forEach { (emoji, count) ->
+                        val isSelected = emoji == myReaction
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(
+                                    if (isSelected) extendedColors.accent.copy(alpha = 0.25f)
+                                    else if (isMyMessage) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.15f)
+                                )
+                                .clickable { onReactionClick?.invoke(emoji) }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "$emoji $count",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 11.sp,
+                                    fontFamily = VazirFontFamily
+                                ),
+                                color = if (isMyMessage) extendedColors.myBubbleText else extendedColors.otherBubbleText
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ✓ Message Status Icon — Animated color transitions
+// ═══════════════════════════════════════════════════════════════════════════════
 
 @Composable
 fun MessageStatusIcon(
@@ -403,60 +488,138 @@ fun MessageStatusIcon(
     modifier: Modifier = Modifier
 ) {
     val extendedColors = MessageAppTheme.extendedColors
-    
     val iconColor by animateColorAsState(
         targetValue = when (status) {
             MessageStatus.READ -> extendedColors.messageRead
             MessageStatus.DELIVERED -> extendedColors.messageSent
+            MessageStatus.FAILED -> MaterialTheme.colorScheme.error
+            MessageStatus.SCHEDULED -> Color(0xFFFFA726)
             else -> tint
         },
-        animationSpec = tween(300),
+        animationSpec = tween(350),
         label = "statusColor"
     )
-    
-    when (status) {
-        MessageStatus.SENDING -> Icon(
-            imageVector = Icons.Default.Schedule,
-            contentDescription = "Sending",
-            tint = tint,
-            modifier = modifier.size(14.dp)
-        )
-        MessageStatus.SENT -> Icon(
-            imageVector = Icons.Default.Check,
-            contentDescription = "Sent",
-            tint = iconColor,
-            modifier = modifier.size(14.dp)
-        )
-        MessageStatus.DELIVERED -> Icon(
-            imageVector = Icons.Default.DoneAll,
-            contentDescription = "Delivered",
-            tint = iconColor,
-            modifier = modifier.size(14.dp)
-        )
-        MessageStatus.READ -> Icon(
-            imageVector = Icons.Default.DoneAll,
-            contentDescription = "Read",
-            tint = iconColor,
-            modifier = modifier.size(14.dp)
-        )
-        MessageStatus.FAILED -> Icon(
-            imageVector = Icons.Default.Schedule,
-            contentDescription = "Failed",
-            tint = MaterialTheme.colorScheme.error,
-            modifier = modifier.size(14.dp)
-        )
-        MessageStatus.PENDING -> Icon(
-            imageVector = Icons.Default.Schedule,
-            contentDescription = "Pending",
-            tint = tint,
-            modifier = modifier.size(14.dp)
-        )
-        MessageStatus.SCHEDULED -> Icon(
-            imageVector = Icons.Default.Schedule,
-            contentDescription = "Scheduled",
-            tint = Color(0xFFFFA726),
-            modifier = modifier.size(14.dp)
-        )
+    // Scale bounce on status change — celebratory pulse for READ
+    val statusScale by animateFloatAsState(
+        targetValue = 1f,
+        animationSpec = spring(
+            dampingRatio = if (status == MessageStatus.READ) {
+                Spring.DampingRatioLowBouncy
+            } else {
+                Spring.DampingRatioMediumBouncy
+            },
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "statusScale"
+    )
+    // Trigger scale pulse by keying on status
+    var scaleTarget: Float by remember { mutableStateOf(1f) }
+    LaunchedEffect(status) {
+        scaleTarget = when (status) {
+            MessageStatus.READ -> 1.2f
+            MessageStatus.DELIVERED -> 1.12f
+            MessageStatus.SENT -> 1.1f
+            else -> 1f
+        }
+    }
+    val animatedScale: Float by animateFloatAsState(
+        targetValue = scaleTarget,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "pulseScale",
+        finishedListener = { scaleTarget = 1f }
+    )
+    // Shake animation for FAILED
+    val shakeX by animateFloatAsState(
+        targetValue = if (status == MessageStatus.FAILED) 0f else 0f,
+        animationSpec = if (status == MessageStatus.FAILED) {
+            spring(dampingRatio = 0.3f, stiffness = Spring.StiffnessHigh)
+        } else {
+            tween(0)
+        },
+        label = "shakeX"
+    )
+    var shakeOffset: Float by remember { mutableStateOf(0f) }
+    LaunchedEffect(status) {
+        if (status == MessageStatus.FAILED) {
+            repeat(3) {
+                shakeOffset = 4f
+                kotlinx.coroutines.delay(60)
+                shakeOffset = -4f
+                kotlinx.coroutines.delay(60)
+            }
+            shakeOffset = 0f
+        }
+    }
+    val animatedShake: Float by animateFloatAsState(
+        targetValue = shakeOffset,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioHighBouncy,
+            stiffness = Spring.StiffnessHigh
+        ),
+        label = "shakeAnim"
+    )
+    // Animated icon transition using Crossfade
+    Box(
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = animatedScale
+                scaleY = animatedScale
+                translationX = animatedShake
+            }
+    ) {
+        androidx.compose.animation.Crossfade(
+            targetState = status,
+            animationSpec = tween(250),
+            label = "statusTransition"
+        ) { targetStatus ->
+            when (targetStatus) {
+                MessageStatus.SENDING -> Icon(
+                    imageVector = Icons.Default.Schedule,
+                    contentDescription = "Sending",
+                    tint = iconColor,
+                    modifier = Modifier.size(13.dp)
+                )
+                MessageStatus.SENT -> Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Sent",
+                    tint = iconColor,
+                    modifier = Modifier.size(13.dp)
+                )
+                MessageStatus.DELIVERED -> Icon(
+                    imageVector = Icons.Default.DoneAll,
+                    contentDescription = "Delivered",
+                    tint = iconColor,
+                    modifier = Modifier.size(13.dp)
+                )
+                MessageStatus.READ -> Icon(
+                    imageVector = Icons.Default.DoneAll,
+                    contentDescription = "Read",
+                    tint = iconColor,
+                    modifier = Modifier.size(13.dp)
+                )
+                MessageStatus.FAILED -> Icon(
+                    imageVector = Icons.Default.ErrorOutline,
+                    contentDescription = "Failed",
+                    tint = iconColor,
+                    modifier = Modifier.size(13.dp)
+                )
+                MessageStatus.PENDING -> Icon(
+                    imageVector = Icons.Default.Schedule,
+                    contentDescription = "Pending",
+                    tint = iconColor,
+                    modifier = Modifier.size(13.dp)
+                )
+                MessageStatus.SCHEDULED -> Icon(
+                    imageVector = Icons.Default.Schedule,
+                    contentDescription = "Scheduled",
+                    tint = iconColor,
+                    modifier = Modifier.size(13.dp)
+                )
+            }
+        }
     }
 }
 
@@ -469,17 +632,16 @@ fun TypingIndicatorBubble(
     modifier: Modifier = Modifier
 ) {
     val extendedColors = MessageAppTheme.extendedColors
-    
     Box(
         modifier = modifier
             .shadow(
-                elevation = 4.dp,
+                elevation = 3.dp,
                 shape = MessageShapes.otherBubbleSingle,
-                ambientColor = Color.Black.copy(alpha = 0.2f)
+                ambientColor = Color.Black.copy(alpha = 0.15f)
             )
             .clip(MessageShapes.otherBubbleSingle)
             .background(extendedColors.otherBubble)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 18.dp, vertical = 12.dp)
     ) {
         ShimmerDots()
     }
@@ -488,9 +650,8 @@ fun TypingIndicatorBubble(
 @Composable
 private fun ShimmerDots() {
     val extendedColors = MessageAppTheme.extendedColors
-    
     Row(
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         repeat(3) { index ->
@@ -506,7 +667,6 @@ private fun ShimmerDots() {
                 ),
                 label = "dotAlpha$index"
             )
-            
             Box(
                 modifier = Modifier
                     .size(8.dp)

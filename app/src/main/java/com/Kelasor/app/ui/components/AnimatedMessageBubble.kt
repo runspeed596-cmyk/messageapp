@@ -1,7 +1,8 @@
 package com.Kelasor.app.ui.components
 
-import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
@@ -12,12 +13,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 
 /**
- * Telegram-style send animation — only for outgoing new messages.
- * Also animates incoming messages with a subtle slide from left.
- * Animates ONLY local (pending) messages on first send.
- * Server-confirmed messages (ID replacement) render instantly.
+ * Premium iMessage-style send/receive animation.
+ *
+ * OUTGOING (my message):
+ *   • Spring-based scale from 0.82 → 1.0 with medium-bouncy overshoot
+ *   • Slide up from +40px (input bar direction)
+ *   • Quick 120ms fade-in
+ *   • Haptic feedback on first appearance
+ *
+ * INCOMING (other's message):
+ *   • Spring-based scale from 0.90 → 1.0 with gentle bounce
+ *   • Slide-in from left (−32px) with slight upward pop (−12px)
+ *   • 150ms fade-in
+ *
+ * Only animates truly new messages (local_ prefix for outgoing, isNewMessage for incoming).
+ * Server-confirmed messages (ID replacement) render instantly — no double animation.
  */
 @Composable
 fun AnimatedMessageBubble(
@@ -26,37 +40,46 @@ fun AnimatedMessageBubble(
     isNewMessage: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    // Only animate local pending messages (outgoing) or new incoming
-    val isLocalPending = messageId.startsWith("local_")
-    // For outgoing: only animate local pending
+    val isLocalPending: Boolean = messageId.startsWith("local_")
+    // Outgoing: only animate local pending messages
     if (isMyMessage && (!isNewMessage || !isLocalPending)) {
         Box { content() }
         return
     }
-    // For incoming: only animate truly new messages
+    // Incoming: only animate truly new messages
     if (!isMyMessage && !isNewMessage) {
         Box { content() }
         return
     }
-    var started by remember(messageId) { mutableStateOf(false) }
+    var started: Boolean by remember(messageId) { mutableStateOf(false) }
+    val haptic = LocalHapticFeedback.current
     if (isMyMessage) {
-        // Outgoing: slide up + scale + fade
-        val scale by animateFloatAsState(
-            targetValue = if (started) 1f else 0.96f,
-            animationSpec = tween(220, easing = FastOutSlowInEasing),
+        // ── Outgoing: spring bounce up from input bar ─────────────
+        val scale: Float by animateFloatAsState(
+            targetValue = if (started) 1f else 0.82f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            ),
             label = "send_scale"
         )
-        val alpha by animateFloatAsState(
+        val alpha: Float by animateFloatAsState(
             targetValue = if (started) 1f else 0f,
-            animationSpec = tween(150, easing = FastOutSlowInEasing),
+            animationSpec = tween(120),
             label = "send_alpha"
         )
-        val slideY by animateFloatAsState(
-            targetValue = if (started) 0f else 24f,
-            animationSpec = tween(220, easing = FastOutSlowInEasing),
+        val slideY: Float by animateFloatAsState(
+            targetValue = if (started) 0f else 40f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMedium
+            ),
             label = "send_slide"
         )
-        LaunchedEffect(messageId) { started = true }
+        LaunchedEffect(messageId) {
+            started = true
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        }
         Box(
             modifier = Modifier.graphicsLayer {
                 scaleX = scale
@@ -68,20 +91,34 @@ fun AnimatedMessageBubble(
             content()
         }
     } else {
-        // Incoming: subtle slide from left + fade
-        val alpha by animateFloatAsState(
+        // ── Incoming: gentle spring pop from left ─────────────────
+        val alpha: Float by animateFloatAsState(
             targetValue = if (started) 1f else 0f,
-            animationSpec = tween(200, easing = FastOutSlowInEasing),
+            animationSpec = tween(150),
             label = "incoming_alpha"
         )
-        val slideX by animateFloatAsState(
-            targetValue = if (started) 0f else -20f,
-            animationSpec = tween(250, easing = FastOutSlowInEasing),
-            label = "incoming_slide"
+        val slideX: Float by animateFloatAsState(
+            targetValue = if (started) 0f else -32f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            ),
+            label = "incoming_slideX"
         )
-        val scale by animateFloatAsState(
-            targetValue = if (started) 1f else 0.97f,
-            animationSpec = tween(220, easing = FastOutSlowInEasing),
+        val slideY: Float by animateFloatAsState(
+            targetValue = if (started) 0f else -12f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMedium
+            ),
+            label = "incoming_slideY"
+        )
+        val scale: Float by animateFloatAsState(
+            targetValue = if (started) 1f else 0.90f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            ),
             label = "incoming_scale"
         )
         LaunchedEffect(messageId) { started = true }
@@ -89,6 +126,7 @@ fun AnimatedMessageBubble(
             modifier = Modifier.graphicsLayer {
                 this.alpha = alpha
                 translationX = slideX
+                translationY = slideY
                 scaleX = scale
                 scaleY = scale
             }

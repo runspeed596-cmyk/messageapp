@@ -205,10 +205,7 @@ foreach ($device in $devices) {
     $model = (& $ADB -s $device shell getprop ro.product.model 2>$null).Trim()
     Write-Step "DEPLOY" "Deploying to $model ($device)..."
 
-    # Uninstall old version (ignore errors if not installed)
-    & $ADB -s $device uninstall $APPLICATION_ID 2>$null | Out-Null
-
-    # Install APK
+    # Install APK (using -r to update without removing data)
     Write-Host "    Installing..." -ForegroundColor DarkGray
     $installOutput = & $ADB -s $device install -r -t $APK_PATH 2>&1
     $installResult = $installOutput | Select-Object -Last 1

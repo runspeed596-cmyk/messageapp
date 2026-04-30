@@ -1,115 +1,901 @@
-D  onAnimationEnd,canceled: false
-2025-12-27 12:43:38.748 11063-11063 InsetsController        com.hasani.messageapp                D  cancelAnimation of types: 8, animType: 0, host: com.hasani.messageapp/com.hasani.messageapp.MainActivity invokeCallback=false reason=android.view.InsetsController.notifyFinished:1792 android.view.InsetsAnimationThreadControlRunner$1.lambda$notifyFinished$0:84 android.view.InsetsAnimationThreadControlRunner$1.$r8$lambda$cDFF0h4Ncq-8EXdGszv69jrUu7c:0 android.view.InsetsAnimationThreadControlRunner$1$$ExternalSyntheticLambda1.run:0 android.os.Handler.handleCallback:959 android.os.Handler.dispatchMessage:100 android.os.Looper.loopOnce:249 android.os.Looper.loop:337 android.app.ActivityThread.main:9500 java.lang.reflect.Method.invoke:-2 
-2025-12-27 12:43:38.748 11063-11063 ImeTracker              com.hasani.messageapp                I  com.hasani.messageapp:e97fdbea: onShown
-2025-12-27 12:43:39.659 11063-11063 MIUIInput               com.hasani.messageapp                I  [MotionEvent] ViewRootImpl windowName 'com.hasani.messageapp/com.hasani.messageapp.MainActivity', { action=ACTION_DOWN, id[0]=0, pointerCount=1, eventTime=261314998, downTime=261314998, phoneEventTime=۱۲:۴۳:۳۹.۶۵۶ } moveCount:0
-2025-12-27 12:43:39.733 11063-11063 MIUIInput               com.hasani.messageapp                I  [MotionEvent] ViewRootImpl windowName 'com.hasani.messageapp/com.hasani.messageapp.MainActivity', { action=ACTION_UP, id[0]=0, pointerCount=1, eventTime=261315073, downTime=261314998, phoneEventTime=۱۲:۴۳:۳۹.۷۳۱ } moveCount:0
-2025-12-27 12:43:39.736 11063-11063 ConversationViewModel   com.hasani.messageapp                D  Message queued: local_695a48aa-ee33-484d-a2b5-4038bffd420b
-2025-12-27 12:43:39.741 11063-15391 MessageSyncManager      com.hasani.messageapp                D  Found 1 pending messages to sync
-2025-12-27 12:43:39.741 11063-15391 MessageSyncManager      com.hasani.messageapp                D  Syncing message local_695a48aa-ee33-484d-a2b5-4038bffd420b to chat 6aa962c8-76bc-4310-975a-32b285f0ec0e
-2025-12-27 12:43:39.742 11063-11063 HandWritingStubImpl     com.hasani.messageapp                I  getCurrentKeyboardType: 1
-2025-12-27 12:43:39.750 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  --> POST http://10.30.218.98:8080/api/chats/6aa962c8-76bc-4310-975a-32b285f0ec0e/messages
-2025-12-27 12:43:39.750 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  Content-Type: application/json; charset=UTF-8
-2025-12-27 12:43:39.750 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  Content-Length: 38
-2025-12-27 12:43:39.750 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJlYWY0ZWM0OS1jMDAxLTRkZGItODU1MC1iOWE2N2Q4MDYxMTciLCJpYXQiOjE3NjY3NzA2MzEsImV4cCI6MTc2Njg1NzAzMX0.Xj_wsr6NP_pZUzeR5aHJmQ57PL3NTki7zhSzLabHVoO2pCGWJH3D633s8VZ0AQHNeyPXCr6WE1BRRgFrFhuWvw
-2025-12-27 12:43:39.750 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  {"content":"ممنون","type":"TEXT"}
-2025-12-27 12:43:39.750 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  --> END POST (38-byte body)
-2025-12-27 12:43:39.760 11063-11063 ConversationViewModel   com.hasani.messageapp                D  Received 33 messages from database for chat: 6aa962c8-76bc-4310-975a-32b285f0ec0e
-2025-12-27 12:43:39.771 11063-15389 GlobalSyncManager       com.hasani.messageapp                D  📊 Chat list in DB: 5 chats. Subscribing to topics...
-2025-12-27 12:43:39.778 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  <-- 200 http://10.30.218.98:8080/api/chats/6aa962c8-76bc-4310-975a-32b285f0ec0e/messages (27ms)
-2025-12-27 12:43:39.778 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  Vary: Origin
-2025-12-27 12:43:39.778 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  Vary: Access-Control-Request-Method
-2025-12-27 12:43:39.778 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  Vary: Access-Control-Request-Headers
-2025-12-27 12:43:39.779 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  Content-Type: application/json
-2025-12-27 12:43:39.779 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  Transfer-Encoding: chunked
-2025-12-27 12:43:39.779 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  Date: Sat, 27 Dec 2025 09:13:40 GMT
-2025-12-27 12:43:39.779 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  Keep-Alive: timeout=60
-2025-12-27 12:43:39.779 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  Connection: keep-alive
-2025-12-27 12:43:39.779 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  {"success":true,"message":"پیام ارسال شد","data":{"id":"8be17d92-70ec-4c9d-aa76-a32d8faf7666","chatId":"6aa962c8-76bc-4310-975a-32b285f0ec0e","senderId":"eaf4ec49-c001-4ddb-8550-b9a67d806117","senderName":"عباس عباسیان","senderAvatar":null,"type":"TEXT","content":"ممنون","mediaUrl":null,"replyToMessageId":null,"forwardedFrom":null,"status":"SENT","isEdited":false,"createdAt":"2025-12-27T09:13:40.057796200Z","editedAt":null}}
-2025-12-27 12:43:39.779 11063-15755 okhttp.OkHttpClient     com.hasani.messageapp                I  <-- END HTTP (28ms, 455-byte body)
-2025-12-27 12:43:39.794 11063-15386 MessageSyncManager      com.hasani.messageapp                D  Message local_695a48aa-ee33-484d-a2b5-4038bffd420b synced successfully as 8be17d92-70ec-4c9d-aa76-a32d8faf7666
-2025-12-27 12:43:39.816 11063-11063 ConversationViewModel   com.hasani.messageapp                D  Received 33 messages from database for chat: 6aa962c8-76bc-4310-975a-32b285f0ec0e
-2025-12-27 12:43:39.827 11063-15389 GlobalSyncManager       com.hasani.messageapp                D  📊 Chat list in DB: 5 chats. Subscribing to topics...
-2025-12-27 12:43:39.840 11063-11063 InsetsController        com.hasani.messageapp                D  show(ime(), fromIme=true)
-2025-12-27 12:43:39.840 11063-11063 ImeTracker              com.hasani.messageapp                I  com.hasani.messageapp:35c2a29f: onCancelled at PHASE_CLIENT_APPLY_ANIMATION
-2025-12-27 12:43:40.453 11063-11063 MIUIInput               com.hasani.messageapp                I  [KeyEvent] ViewRootImpl windowName 'com.hasani.messageapp/com.hasani.messageapp.MainActivity', KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x8, repeatCount=0, eventTime=261315788000000, downTime=261315788000000, deviceId=-1, source=0x101, displayId=0 }, phoneEventTime=۱۲:۴۳:۴۰.۴۴۵
-2025-12-27 12:43:40.470 11063-11063 MIUIInput               com.hasani.messageapp                I  [KeyEvent] ViewRootImpl windowName 'com.hasani.messageapp/com.hasani.messageapp.MainActivity', KeyEvent { action=ACTION_UP, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x8, repeatCount=0, eventTime=261315788000000, downTime=261315788000000, deviceId=-1, source=0x101, displayId=0 }, phoneEventTime=۱۲:۴۳:۴۰.۴۴۶
-2025-12-27 12:43:40.476 11063-11063 InsetsController        com.hasani.messageapp                D  hide(ime(), fromIme=true)
-2025-12-27 12:43:40.477 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  requestedTypes: 8
-2025-12-27 12:43:40.493 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationStart
-2025-12-27 12:43:40.517 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.0
-2025-12-27 12:43:40.520 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.013276251
-2025-12-27 12:43:40.530 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.04877614
-2025-12-27 12:43:40.537 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.0989067
-2025-12-27 12:43:40.545 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.15794414
-2025-12-27 12:43:40.553 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.2216503
-2025-12-27 12:43:40.561 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.28693774
-2025-12-27 12:43:40.570 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.35160097
-2025-12-27 12:43:40.578 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.41410878
-2025-12-27 12:43:40.587 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.4734535
-2025-12-27 12:43:40.594 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.5290018
-2025-12-27 12:43:40.603 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.5804251
-2025-12-27 12:43:40.612 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.62758577
-2025-12-27 12:43:40.620 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.6705074
-2025-12-27 12:43:40.628 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.7093206
-2025-12-27 12:43:40.637 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.74422544
-2025-12-27 12:43:40.646 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.77546424
-2025-12-27 12:43:40.653 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.803307
-2025-12-27 12:43:40.661 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.82803094
-2025-12-27 12:43:40.670 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.84991455
-2025-12-27 12:43:40.678 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.86922765
-2025-12-27 12:43:40.686 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.8862297
-2025-12-27 12:43:40.695 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.90115887
-2025-12-27 12:43:40.703 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.91424024
-2025-12-27 12:43:40.711 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.92568
-2025-12-27 12:43:40.720 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.93566656
-2025-12-27 12:43:40.729 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.94436926
-2025-12-27 12:43:40.736 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.95194197
-2025-12-27 12:43:40.745 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9585219
-2025-12-27 12:43:40.753 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.964232
-2025-12-27 12:43:40.761 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9691812
-2025-12-27 12:43:40.769 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9734662
-2025-12-27 12:43:40.778 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9771721
-2025-12-27 12:43:40.786 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9803739
-2025-12-27 12:43:40.794 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9831377
-2025-12-27 12:43:40.802 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9855213
-2025-12-27 12:43:40.811 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9875753
-2025-12-27 12:43:40.819 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9893438
-2025-12-27 12:43:40.828 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9908655
-2025-12-27 12:43:40.836 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9921743
-2025-12-27 12:43:40.844 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9932988
-2025-12-27 12:43:40.854 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9942646
-2025-12-27 12:43:40.861 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.99509335
-2025-12-27 12:43:40.870 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.995804
-2025-12-27 12:43:40.878 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9964131
-2025-12-27 12:43:40.886 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.996935
-2025-12-27 12:43:40.894 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9973819
-2025-12-27 12:43:40.902 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9977644
-2025-12-27 12:43:40.911 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9980917
-2025-12-27 12:43:40.919 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.99837154
-2025-12-27 12:43:40.927 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9986108
-2025-12-27 12:43:40.936 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 0.9988153
-2025-12-27 12:43:40.944 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationUpdate, value: 1.0
-2025-12-27 12:43:40.946 11063-15531 ViewRootImplStubImpl    com.hasani.messageapp                D  onAnimationEnd,canceled: false
-2025-12-27 12:43:40.958 11063-11063 InsetsController        com.hasani.messageapp                D  cancelAnimation of types: 8, animType: 1, host: com.hasani.messageapp/com.hasani.messageapp.MainActivity invokeCallback=false reason=android.view.InsetsController.notifyFinished:1792 android.view.InsetsAnimationThreadControlRunner$1.lambda$notifyFinished$0:84 android.view.InsetsAnimationThreadControlRunner$1.$r8$lambda$cDFF0h4Ncq-8EXdGszv69jrUu7c:0 android.view.InsetsAnimationThreadControlRunner$1$$ExternalSyntheticLambda1.run:0 android.os.Handler.handleCallback:959 android.os.Handler.dispatchMessage:100 android.os.Looper.loopOnce:249 android.os.Looper.loop:337 android.app.ActivityThread.main:9500 java.lang.reflect.Method.invoke:-2 
-2025-12-27 12:43:40.959 11063-11063 ImeTracker              com.hasani.messageapp                I  com.hasani.messageapp:cd9ac5be: onRequestHide at ORIGIN_CLIENT reason HIDE_SOFT_INPUT_ON_ANIMATION_STATE_CHANGED fromUser false
-2025-12-27 12:43:40.961 11063-11063 ImeTracker              com.hasani.messageapp                I  com.google.android.inputmethod.latin:f98e5bed: onHidden
-2025-12-27 12:43:44.761 11063-15403 WebSocketManager        com.hasani.messageapp                D  📥 WebSocket RAW message received (1 chars)
-2025-12-27 12:43:44.762 11063-15403 WebSocketManager        com.hasani.messageapp                D  📥 Content: 
-2025-12-27 12:43:44.762 11063-15403 WebSocketManager        com.hasani.messageapp                V  💓 Heartbeat received
-2025-12-27 12:43:48.198 11063-15391 WebSocketManager        com.hasani.messageapp                V  💓 Heartbeat sent: true
-
-2025-12-27T12:43:40.054+03:30  INFO 19392 --- [MessageApp] [.0-8080-exec-10] c.i.springboot.services.MessageService   : 📨 sendMessage called: chatId=6aa962c8-76bc-4310-975a-32b285f0ec0e, senderId=eaf4ec49-c001-4ddb-8550-b9a67d806117, content=ممنون...
-Hibernate: select c1_0.id,c1_0.avatar_url,c1_0.created_at,c1_0.is_archived,c1_0.is_muted,c1_0.is_pinned,c1_0.title,c1_0.type,c1_0.updated_at from chats c1_0 where c1_0.id=?
-Hibernate: select u1_0.id,u1_0.avatar_url,u1_0.bio,u1_0.created_at,u1_0.display_name,u1_0.is_online,u1_0.last_seen,u1_0.password_hash,u1_0.phone_number,u1_0.username from users u1_0 where u1_0.id=?
-Hibernate: select p1_0.chat_id,p1_1.id,p1_1.avatar_url,p1_1.bio,p1_1.created_at,p1_1.display_name,p1_1.is_online,p1_1.last_seen,p1_1.password_hash,p1_1.phone_number,p1_1.username from chat_participants p1_0 join users p1_1 on p1_1.id=p1_0.user_id where p1_0.chat_id=?
-2025-12-27T12:43:40.058+03:30  INFO 19392 --- [MessageApp] [.0-8080-exec-10] c.i.springboot.services.MessageService   : ✅ Message saved to DB: 8be17d92-70ec-4c9d-aa76-a32d8faf7666
-2025-12-27T12:43:40.058+03:30  INFO 19392 --- [MessageApp] [.0-8080-exec-10] c.i.springboot.services.MessageService   : 📡 Broadcasting to participants...
-2025-12-27T12:43:40.058+03:30  INFO 19392 --- [MessageApp] [.0-8080-exec-10] c.i.s.websocket.WebSocketMessageHandler  : 📤 Broadcasting message 8be17d92-70ec-4c9d-aa76-a32d8faf7666 to 1 recipients in chat 6aa962c8-76bc-4310-975a-32b285f0ec0e
-2025-12-27T12:43:40.058+03:30  INFO 19392 --- [MessageApp] [.0-8080-exec-10] c.i.s.websocket.WebSocketMessageHandler  :    → Sending to user: 0ad3ae7e-5750-492d-83c3-abf7405b668e
-2025-12-27T12:43:40.059+03:30  INFO 19392 --- [MessageApp] [.0-8080-exec-10] c.i.s.websocket.WebSocketMessageHandler  : ✅ Broadcast complete for message 8be17d92-70ec-4c9d-aa76-a32d8faf7666
-2025-12-27T12:43:40.059+03:30  INFO 19392 --- [MessageApp] [.0-8080-exec-10] c.i.springboot.services.MessageService   : 📡 Notifying chat update...
-Hibernate: insert into messages (chat_id,content,created_at,edited_at,forwarded_from,is_edited,media_url,reply_to_id,sender_id,status,type,id) values (?,?,?,?,?,?,?,?,?,?,?,?)
-Hibernate: update chats set avatar_url=?,created_at=?,is_archived=?,is_muted=?,is_pinned=?,title=?,type=?,updated_at=? where id=?
-Hibernate: select count(m1_0.id) from messages m1_0 where m1_0.chat_id=? and m1_0.sender_id<>? and m1_0.status<>'READ'
-2025-12-27T12:43:40.063+03:30  INFO 19392 --- [MessageApp] [.0-8080-exec-10] c.i.s.websocket.WebSocketMessageHandler  : 📤 Notifying chat update to user: 0ad3ae7e-5750-492d-83c3-abf7405b668e, chatId: 6aa962c8-76bc-4310-975a-32b285f0ec0e, lastMessage: ممنون
-2025-12-27T12:43:40.064+03:30  INFO 19392 --- [MessageApp] [.0-8080-exec-10] c.i.s.websocket.WebSocketMessageHandler  : ✅ Chat update notification sent to /user/0ad3ae7e-5750-492d-83c3-abf7405b668e/queue/chats
+org.springframework.dao.InvalidDataAccessResourceUsageException: JDBC exception executing SQL [select c1_0.id,c1_0.admin_note,c1_0.average_rating,c1_0.capacity,c1_0.channel_id,c1_0.cover_image_url,c1_0.created_at,c1_0.description,c1_0.discount_percentage,c1_0.education_level,c1_0.ends_at,c1_0.enrollment_limit,c1_0.favorites_count,c1_0.field_of_study,c1_0.group_id,c1_0.institution_id,c1_0.is_public,c1_0.organizer_id,c1_0.organizer_description,c1_0.price_rials,c1_0.review_count,c1_0.scientific_association_name,c1_0.slogan,c1_0.starts_at,c1_0.status,c1_0.syllabus_duration,c1_0.title,c1_0.updated_at from courses c1_0 left join users o1_0 on o1_0.id=c1_0.organizer_id where o1_0.id=? fetch first ? rows only] [ERROR: column c1_0.average_rating does not exist
+  Position: 32] [n/a]; SQL [n/a]
+        at org.springframework.orm.jpa.vendor.HibernateJpaDialect.convertHibernateAccessException(HibernateJpaDialect.java:281)
+        at org.springframework.orm.jpa.vendor.HibernateJpaDialect.convertHibernateAccessException(HibernateJpaDialect.java:256)
+        at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:241)
+        at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:560)
+        at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61)
+        at org.springframework.dao.support.DataAccessUtils.translateIfNecessary(DataAccessUtils.java:343)
+        at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:160)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.data.jpa.repository.support.CrudMethodMetadataPostProcessor$CrudMethodMetadataPopulatingMethodInterceptor.invoke(CrudMethodMetadataPostProcessor.java:136)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.data.util.NullnessMethodInvocationValidator.invoke(NullnessMethodInvocationValidator.java:95)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.aop.framework.JdkDynamicAopProxy.invoke(JdkDynamicAopProxy.java:223)
+        at jdk.proxy4/jdk.proxy4.$Proxy205.findByOrganizerId(Unknown Source)
+        at com.iliyadev.springboot.services.CourseService.getMyCourses(CourseService.kt:371)
+        at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+        at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+        at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359)
+        at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:724)
+        at com.iliyadev.springboot.services.CourseService$$SpringCGLIB$$0.getMyCourses(<generated>)
+        at com.iliyadev.springboot.controllers.CourseController.getMyCourses(CourseController.kt:72)
+        at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+        at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+        at kotlin.reflect.jvm.internal.calls.CallerImpl$Method.callMethod(CallerImpl.kt:97)
+        at kotlin.reflect.jvm.internal.calls.CallerImpl$Method$Instance.call(CallerImpl.kt:113)
+        at kotlin.reflect.jvm.internal.KCallableImpl.callDefaultMethod$kotlin_reflection(KCallableImpl.kt:207)
+        at kotlin.reflect.jvm.internal.KCallableImpl.callBy(KCallableImpl.kt:112)
+        at org.springframework.web.method.support.InvocableHandlerMethod$KotlinDelegate.invokeFunction(InvocableHandlerMethod.java:335)
+        at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:255)
+        at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:191)
+        at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+        at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:986)
+        at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:891)
+        at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+        at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089)
+        at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979)
+        at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+        at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:903)
+        at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:564)
+        at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+        at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:195)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:110)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108)
+        at org.springframework.security.web.FilterChainProxy.lambda$doFilterInternal$3(FilterChainProxy.java:231)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:365)
+        at org.springframework.security.web.access.intercept.AuthorizationFilter.doFilter(AuthorizationFilter.java:101)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:125)
+        at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:119)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:131)
+        at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:85)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:100)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:179)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at com.iliyadev.springboot.config.filters.JwtRequestFilter.doFilterInternal(JwtRequestFilter.kt:57)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:107)
+        at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:93)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.web.filter.CorsFilter.doFilterInternal(CorsFilter.java:91)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.header.HeaderWriterFilter.doHeadersAfter(HeaderWriterFilter.java:90)
+        at org.springframework.security.web.header.HeaderWriterFilter.doFilterInternal(HeaderWriterFilter.java:75)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:82)
+        at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:69)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:62)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:233)
+        at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:191)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+        at org.springframework.web.filter.ServletRequestPathFilter.doFilter(ServletRequestPathFilter.java:52)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+        at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74)
+        at org.springframework.security.config.annotation.web.configuration.WebSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebSecurityConfiguration.java:319)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+        at org.springframework.web.servlet.handler.HandlerMappingIntrospector.lambda$createCacheFilter$4(HandlerMappingIntrospector.java:267)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+        at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74)
+        at org.springframework.security.config.annotation.web.configuration.WebMvcSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebMvcSecurityConfiguration.java:240)     
+        at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:362)
+        at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:278)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167)
+        at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90)
+        at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:483)
+        at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:116)
+        at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93)
+        at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74)
+        at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344)
+        at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:398)
+        at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+        at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903)
+        at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1769)
+        at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+        at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1189)
+        at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:658)
+        at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+        at java.base/java.lang.Thread.run(Thread.java:1583)
+Caused by: org.hibernate.exception.SQLGrammarException: JDBC exception executing SQL [select c1_0.id,c1_0.admin_note,c1_0.average_rating,c1_0.capacity,c1_0.channel_id,c1_0.cover_image_url,c1_0.created_at,c1_0.description,c1_0.discount_percentage,c1_0.education_level,c1_0.ends_at,c1_0.enrollment_limit,c1_0.favorites_count,c1_0.field_of_study,c1_0.group_id,c1_0.institution_id,c1_0.is_public,c1_0.organizer_id,c1_0.organizer_description,c1_0.price_rials,c1_0.review_count,c1_0.scientific_association_name,c1_0.slogan,c1_0.starts_at,c1_0.status,c1_0.syllabus_duration,c1_0.title,c1_0.updated_at from courses c1_0 left join users o1_0 on o1_0.id=c1_0.organizer_id where o1_0.id=? fetch first ? rows only] [ERROR: column c1_0.average_rating does not exist
+  Position: 32] [n/a]
+        at org.hibernate.exception.internal.SQLStateConversionDelegate.convert(SQLStateConversionDelegate.java:91)
+        at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:58)
+        at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:108)
+        at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:94)
+        at org.hibernate.sql.results.jdbc.internal.DeferredResultSetAccess.executeQuery(DeferredResultSetAccess.java:269)
+        at org.hibernate.sql.results.jdbc.internal.DeferredResultSetAccess.getResultSet(DeferredResultSetAccess.java:172)
+        at org.hibernate.sql.results.jdbc.internal.JdbcValuesResultSetImpl.<init>(JdbcValuesResultSetImpl.java:74)
+        at org.hibernate.sql.exec.internal.JdbcSelectExecutorStandardImpl.resolveJdbcValuesSource(JdbcSelectExecutorStandardImpl.java:355)
+        at org.hibernate.sql.exec.internal.JdbcSelectExecutorStandardImpl.doExecuteQuery(JdbcSelectExecutorStandardImpl.java:137)
+        at org.hibernate.sql.exec.internal.JdbcSelectExecutorStandardImpl.executeQuery(JdbcSelectExecutorStandardImpl.java:102)
+        at org.hibernate.sql.exec.spi.JdbcSelectExecutor.executeQuery(JdbcSelectExecutor.java:91)
+        at org.hibernate.sql.exec.spi.JdbcSelectExecutor.list(JdbcSelectExecutor.java:165)
+        at org.hibernate.query.sqm.internal.ConcreteSqmSelectQueryPlan.lambda$new$1(ConcreteSqmSelectQueryPlan.java:152)
+        at org.hibernate.query.sqm.internal.ConcreteSqmSelectQueryPlan.withCacheableSqmInterpretation(ConcreteSqmSelectQueryPlan.java:442)
+        at org.hibernate.query.sqm.internal.ConcreteSqmSelectQueryPlan.performList(ConcreteSqmSelectQueryPlan.java:362)
+        at org.hibernate.query.sqm.internal.QuerySqmImpl.doList(QuerySqmImpl.java:380)
+        at org.hibernate.query.spi.AbstractSelectionQuery.list(AbstractSelectionQuery.java:143)
+        at org.hibernate.query.Query.getResultList(Query.java:120)
+        at org.springframework.data.jpa.repository.query.JpaQueryExecution$PagedExecution.doExecute(JpaQueryExecution.java:205)
+        at org.springframework.data.jpa.repository.query.JpaQueryExecution.execute(JpaQueryExecution.java:93)
+        at org.springframework.data.jpa.repository.query.AbstractJpaQuery.doExecute(AbstractJpaQuery.java:160)
+        at org.springframework.data.jpa.repository.query.AbstractJpaQuery.execute(AbstractJpaQuery.java:148)
+        at org.springframework.data.repository.core.support.RepositoryMethodInvoker.doInvoke(RepositoryMethodInvoker.java:170)
+        at org.springframework.data.repository.core.support.RepositoryMethodInvoker.invoke(RepositoryMethodInvoker.java:158)
+        at org.springframework.data.repository.core.support.QueryExecutorMethodInterceptor.doInvoke(QueryExecutorMethodInterceptor.java:170)
+        at org.springframework.data.repository.core.support.QueryExecutorMethodInterceptor.invoke(QueryExecutorMethodInterceptor.java:149)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.data.projection.DefaultMethodInvokingMethodInterceptor.invoke(DefaultMethodInvokingMethodInterceptor.java:69)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+        at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:138)
+        ... 126 more
+Caused by: org.postgresql.util.PSQLException: ERROR: column c1_0.average_rating does not exist
+  Position: 32
+        at org.postgresql.core.v3.QueryExecutorImpl.receiveErrorResponse(QueryExecutorImpl.java:2734)
+        at org.postgresql.core.v3.QueryExecutorImpl.processResults(QueryExecutorImpl.java:2421)
+        at org.postgresql.core.v3.QueryExecutorImpl.execute(QueryExecutorImpl.java:372)
+        at org.postgresql.jdbc.PgStatement.executeInternal(PgStatement.java:518)
+        at org.postgresql.jdbc.PgStatement.execute(PgStatement.java:435)
+        at org.postgresql.jdbc.PgPreparedStatement.executeWithFlags(PgPreparedStatement.java:196)
+        at org.postgresql.jdbc.PgPreparedStatement.executeQuery(PgPreparedStatement.java:139)
+        at com.zaxxer.hikari.pool.ProxyPreparedStatement.executeQuery(ProxyPreparedStatement.java:52)
+        at com.zaxxer.hikari.pool.HikariProxyPreparedStatement.executeQuery(HikariProxyPreparedStatement.java)
+        at org.hibernate.sql.results.jdbc.internal.DeferredResultSetAccess.executeQuery(DeferredResultSetAccess.java:251)
+        ... 154 more
+org.springframework.dao.InvalidDataAccessResourceUsageException: JDBC exception executing SQL [select c1_0.id,c1_0.admin_note,c1_0.average_rating,c1_0.capacity,c1_0.channel_id,c1_0.cover_image_url,c1_0.created_at,c1_0.description,c1_0.discount_percentage,c1_0.education_level,c1_0.ends_at,c1_0.enrollment_limit,c1_0.favorites_count,c1_0.field_of_study,c1_0.group_id,c1_0.institution_id,c1_0.is_public,c1_0.organizer_id,c1_0.organizer_description,c1_0.price_rials,c1_0.review_count,c1_0.scientific_association_name,c1_0.slogan,c1_0.starts_at,c1_0.status,c1_0.syllabus_duration,c1_0.title,c1_0.updated_at from courses c1_0 where c1_0.status=? and c1_0.is_public fetch first ? rows only] [ERROR: column c1_0.average_rating does not exist
+  Position: 32] [n/a]; SQL [n/a]
+        at org.springframework.orm.jpa.vendor.HibernateJpaDialect.convertHibernateAccessException(HibernateJpaDialect.java:281)
+        at org.springframework.orm.jpa.vendor.HibernateJpaDialect.convertHibernateAccessException(HibernateJpaDialect.java:256)
+        at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:241)
+        at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:560)
+        at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61)
+        at org.springframework.dao.support.DataAccessUtils.translateIfNecessary(DataAccessUtils.java:343)
+        at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:160)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.data.jpa.repository.support.CrudMethodMetadataPostProcessor$CrudMethodMetadataPopulatingMethodInterceptor.invoke(CrudMethodMetadataPostProcessor.java:136)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.data.util.NullnessMethodInvocationValidator.invoke(NullnessMethodInvocationValidator.java:95)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.aop.framework.JdkDynamicAopProxy.invoke(JdkDynamicAopProxy.java:223)
+        at jdk.proxy4/jdk.proxy4.$Proxy205.findByStatusAndIsPublicTrue(Unknown Source)
+        at com.iliyadev.springboot.services.CourseService.getPublicCourses(CourseService.kt:381)
+        at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+        at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+        at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359)
+        at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:724)
+        at com.iliyadev.springboot.services.CourseService$$SpringCGLIB$$0.getPublicCourses(<generated>)
+        at com.iliyadev.springboot.controllers.CourseController.getPublicCourses(CourseController.kt:78)
+        at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+        at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+        at kotlin.reflect.jvm.internal.calls.CallerImpl$Method.callMethod(CallerImpl.kt:97)
+        at kotlin.reflect.jvm.internal.calls.CallerImpl$Method$Instance.call(CallerImpl.kt:113)
+        at kotlin.reflect.jvm.internal.KCallableImpl.callDefaultMethod$kotlin_reflection(KCallableImpl.kt:207)
+        at kotlin.reflect.jvm.internal.KCallableImpl.callBy(KCallableImpl.kt:112)
+        at org.springframework.web.method.support.InvocableHandlerMethod$KotlinDelegate.invokeFunction(InvocableHandlerMethod.java:335)
+        at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:255)
+        at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:191)
+        at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+        at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:986)
+        at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:891)
+        at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+        at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089)
+        at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979)
+        at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+        at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:903)
+        at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:564)
+        at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+        at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:195)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:110)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108)
+        at org.springframework.security.web.FilterChainProxy.lambda$doFilterInternal$3(FilterChainProxy.java:231)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:365)
+        at org.springframework.security.web.access.intercept.AuthorizationFilter.doFilter(AuthorizationFilter.java:101)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:125)
+        at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:119)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:131)
+        at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:85)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:100)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:179)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at com.iliyadev.springboot.config.filters.JwtRequestFilter.doFilterInternal(JwtRequestFilter.kt:57)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+JWT_FILTER: Token validation result = true for GET /api/users/me
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+2026-04-29T15:01:03.730+03:30  WARN 11752 --- [MessageApp] [.0-8080-exec-10] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42703
+2026-04-29T15:01:03.731+03:30 ERROR 11752 --- [MessageApp] [.0-8080-exec-10] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: column c1_0.average_rating does not exist
+  Position: 32
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+        at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:107)
+2026-04-29T15:01:03.737+03:30  WARN 11752 --- [MessageApp] [0.0-8080-exec-8] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.dao.InvalidDataAccessResourceUsageException: JDBC exception executing SQL [select c1_0.id,c1_0.admin_note,c1_0.average_rating,c1_0.capacity,c1_0.channel_id,c1_0.cover_image_url,c1_0.created_at,c1_0.description,c1_0.discount_percentage,c1_0.education_level,c1_0.ends_at,c1_0.enrollment_limit,c1_0.favorites_count,c1_0.field_of_study,c1_0.group_id,c1_0.institution_id,c1_0.is_public,c1_0.organizer_id,c1_0.organizer_description,c1_0.price_rials,c1_0.review_count,c1_0.scientific_association_name,c1_0.slogan,c1_0.starts_at,c1_0.status,c1_0.syllabus_duration,c1_0.title,c1_0.updated_at from courses c1_0 left join users o1_0 on o1_0.id=c1_0.organizer_id where o1_0.id=? fetch first ? rows only] [ERROR: column c1_0.average_rating does not exist<EOL>  Position: 32] [n/a]; SQL [n/a]]
+        at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:93)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.web.filter.CorsFilter.doFilterInternal(CorsFilter.java:91)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.header.HeaderWriterFilter.doHeadersAfter(HeaderWriterFilter.java:90)
+        at org.springframework.security.web.header.HeaderWriterFilter.doFilterInternal(HeaderWriterFilter.java:75)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:82)
+        at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:69)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:62)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:233)
+        at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:191)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+        at org.springframework.web.filter.ServletRequestPathFilter.doFilter(ServletRequestPathFilter.java:52)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+        at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74)
+        at org.springframework.security.config.annotation.web.configuration.WebSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebSecurityConfiguration.java:319)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+        at org.springframework.web.servlet.handler.HandlerMappingIntrospector.lambda$createCacheFilter$4(HandlerMappingIntrospector.java:267)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+        at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74)
+        at org.springframework.security.config.annotation.web.configuration.WebMvcSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebMvcSecurityConfiguration.java:240)     
+        at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:362)
+        at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:278)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167)
+        at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90)
+        at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:483)
+        at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:116)
+        at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93)
+        at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74)
+        at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344)
+        at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:398)
+        at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+        at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903)
+        at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1769)
+        at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+        at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1189)
+        at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:658)
+        at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+        at java.base/java.lang.Thread.run(Thread.java:1583)
+Caused by: org.hibernate.exception.SQLGrammarException: JDBC exception executing SQL [select c1_0.id,c1_0.admin_note,c1_0.average_rating,c1_0.capacity,c1_0.channel_id,c1_0.cover_image_url,c1_0.created_at,c1_0.description,c1_0.discount_percentage,c1_0.education_level,c1_0.ends_at,c1_0.enrollment_limit,c1_0.favorites_count,c1_0.field_of_study,c1_0.group_id,c1_0.institution_id,c1_0.is_public,c1_0.organizer_id,c1_0.organizer_description,c1_0.price_rials,c1_0.review_count,c1_0.scientific_association_name,c1_0.slogan,c1_0.starts_at,c1_0.status,c1_0.syllabus_duration,c1_0.title,c1_0.updated_at from courses c1_0 where c1_0.status=? and c1_0.is_public fetch first ? rows only] [ERROR: column c1_0.average_rating does not exist
+  Position: 32] [n/a]
+        at org.hibernate.exception.internal.SQLStateConversionDelegate.convert(SQLStateConversionDelegate.java:91)
+        at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:58)
+        at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:108)
+        at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:94)
+        at org.hibernate.sql.results.jdbc.internal.DeferredResultSetAccess.executeQuery(DeferredResultSetAccess.java:269)
+        at org.hibernate.sql.results.jdbc.internal.DeferredResultSetAccess.getResultSet(DeferredResultSetAccess.java:172)
+        at org.hibernate.sql.results.jdbc.internal.JdbcValuesResultSetImpl.<init>(JdbcValuesResultSetImpl.java:74)
+        at org.hibernate.sql.exec.internal.JdbcSelectExecutorStandardImpl.resolveJdbcValuesSource(JdbcSelectExecutorStandardImpl.java:355)
+        at org.hibernate.sql.exec.internal.JdbcSelectExecutorStandardImpl.doExecuteQuery(JdbcSelectExecutorStandardImpl.java:137)
+        at org.hibernate.sql.exec.internal.JdbcSelectExecutorStandardImpl.executeQuery(JdbcSelectExecutorStandardImpl.java:102)
+        at org.hibernate.sql.exec.spi.JdbcSelectExecutor.executeQuery(JdbcSelectExecutor.java:91)
+        at org.hibernate.sql.exec.spi.JdbcSelectExecutor.list(JdbcSelectExecutor.java:165)
+        at org.hibernate.query.sqm.internal.ConcreteSqmSelectQueryPlan.lambda$new$1(ConcreteSqmSelectQueryPlan.java:152)
+        at org.hibernate.query.sqm.internal.ConcreteSqmSelectQueryPlan.withCacheableSqmInterpretation(ConcreteSqmSelectQueryPlan.java:442)
+        at org.hibernate.query.sqm.internal.ConcreteSqmSelectQueryPlan.performList(ConcreteSqmSelectQueryPlan.java:362)
+        at org.hibernate.query.sqm.internal.QuerySqmImpl.doList(QuerySqmImpl.java:380)
+        at org.hibernate.query.spi.AbstractSelectionQuery.list(AbstractSelectionQuery.java:143)
+        at org.hibernate.query.Query.getResultList(Query.java:120)
+        at org.springframework.data.jpa.repository.query.JpaQueryExecution$PagedExecution.doExecute(JpaQueryExecution.java:205)
+        at org.springframework.data.jpa.repository.query.JpaQueryExecution.execute(JpaQueryExecution.java:93)
+        at org.springframework.data.jpa.repository.query.AbstractJpaQuery.doExecute(AbstractJpaQuery.java:160)
+        at org.springframework.data.jpa.repository.query.AbstractJpaQuery.execute(AbstractJpaQuery.java:148)
+        at org.springframework.data.repository.core.support.RepositoryMethodInvoker.doInvoke(RepositoryMethodInvoker.java:170)
+        at org.springframework.data.repository.core.support.RepositoryMethodInvoker.invoke(RepositoryMethodInvoker.java:158)
+        at org.springframework.data.repository.core.support.QueryExecutorMethodInterceptor.doInvoke(QueryExecutorMethodInterceptor.java:170)
+        at org.springframework.data.repository.core.support.QueryExecutorMethodInterceptor.invoke(QueryExecutorMethodInterceptor.java:149)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.data.projection.DefaultMethodInvokingMethodInterceptor.invoke(DefaultMethodInvokingMethodInterceptor.java:69)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+        at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:138)
+        ... 126 more
+Caused by: org.postgresql.util.PSQLException: ERROR: column c1_0.average_rating does not exist
+  Position: 32
+        at org.postgresql.core.v3.QueryExecutorImpl.receiveErrorResponse(QueryExecutorImpl.java:2734)
+        at org.postgresql.core.v3.QueryExecutorImpl.processResults(QueryExecutorImpl.java:2421)
+        at org.postgresql.core.v3.QueryExecutorImpl.execute(QueryExecutorImpl.java:372)
+        at org.postgresql.jdbc.PgStatement.executeInternal(PgStatement.java:518)
+        at org.postgresql.jdbc.PgStatement.execute(PgStatement.java:435)
+        at org.postgresql.jdbc.PgPreparedStatement.executeWithFlags(PgPreparedStatement.java:196)
+        at org.postgresql.jdbc.PgPreparedStatement.executeQuery(PgPreparedStatement.java:139)
+        at com.zaxxer.hikari.pool.ProxyPreparedStatement.executeQuery(ProxyPreparedStatement.java:52)
+        at com.zaxxer.hikari.pool.HikariProxyPreparedStatement.executeQuery(HikariProxyPreparedStatement.java)
+        at org.hibernate.sql.results.jdbc.internal.DeferredResultSetAccess.executeQuery(DeferredResultSetAccess.java:251)
+        ... 154 more
+2026-04-29T15:01:03.740+03:30  WARN 11752 --- [MessageApp] [.0-8080-exec-10] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.dao.InvalidDataAccessResourceUsageException: JDBC exception executing SQL [select c1_0.id,c1_0.admin_note,c1_0.average_rating,c1_0.capacity,c1_0.channel_id,c1_0.cover_image_url,c1_0.created_at,c1_0.description,c1_0.discount_percentage,c1_0.education_level,c1_0.ends_at,c1_0.enrollment_limit,c1_0.favorites_count,c1_0.field_of_study,c1_0.group_id,c1_0.institution_id,c1_0.is_public,c1_0.organizer_id,c1_0.organizer_description,c1_0.price_rials,c1_0.review_count,c1_0.scientific_association_name,c1_0.slogan,c1_0.starts_at,c1_0.status,c1_0.syllabus_duration,c1_0.title,c1_0.updated_at from courses c1_0 where c1_0.status=? and c1_0.is_public fetch first ? rows only] [ERROR: column c1_0.average_rating does not exist<EOL>  Position: 32] [n/a]; SQL [n/a]]   
+2026-04-29T15:01:03.754+03:30  WARN 11752 --- [MessageApp] [0.0-8080-exec-2] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42703
+2026-04-29T15:01:03.754+03:30 ERROR 11752 --- [MessageApp] [0.0-8080-exec-2] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: column c1_0.average_rating does not exist
+  Position: 32
+org.springframework.dao.InvalidDataAccessResourceUsageException: JDBC exception executing SQL [select c1_0.id,c1_0.admin_note,c1_0.average_rating,c1_0.capacity,c1_0.channel_id,c1_0.cover_image_url,c1_0.created_at,c1_0.description,c1_0.discount_percentage,c1_0.education_level,c1_0.ends_at,c1_0.enrollment_limit,c1_0.favorites_count,c1_0.field_of_study,c1_0.group_id,c1_0.institution_id,c1_0.is_public,c1_0.organizer_id,c1_0.organizer_description,c1_0.price_rials,c1_0.review_count,c1_0.scientific_association_name,c1_0.slogan,c1_0.starts_at,c1_0.status,c1_0.syllabus_duration,c1_0.title,c1_0.updated_at from courses c1_0 where c1_0.institution_id=?] [ERROR: column c1_0.average_rating does not exist
+  Position: 32] [n/a]; SQL [n/a]
+        at org.springframework.orm.jpa.vendor.HibernateJpaDialect.convertHibernateAccessException(HibernateJpaDialect.java:281)
+        at org.springframework.orm.jpa.vendor.HibernateJpaDialect.convertHibernateAccessException(HibernateJpaDialect.java:256)
+        at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:241)
+        at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:560)
+        at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61)
+        at org.springframework.dao.support.DataAccessUtils.translateIfNecessary(DataAccessUtils.java:343)
+        at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:160)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.data.jpa.repository.support.CrudMethodMetadataPostProcessor$CrudMethodMetadataPopulatingMethodInterceptor.invoke(CrudMethodMetadataPostProcessor.java:136)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.data.util.NullnessMethodInvocationValidator.invoke(NullnessMethodInvocationValidator.java:95)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.aop.framework.JdkDynamicAopProxy.invoke(JdkDynamicAopProxy.java:223)
+        at jdk.proxy4/jdk.proxy4.$Proxy205.findByInstitutionId(Unknown Source)
+        at com.iliyadev.springboot.services.InstitutionService.mapToResponse(InstitutionService.kt:234)
+        at com.iliyadev.springboot.services.InstitutionService.access$mapToResponse(InstitutionService.kt:43)
+        at com.iliyadev.springboot.services.InstitutionService$getActiveInstitutions$1.invoke(InstitutionService.kt:131)
+        at com.iliyadev.springboot.services.InstitutionService$getActiveInstitutions$1.invoke(InstitutionService.kt:131)
+        at com.iliyadev.springboot.services.InstitutionService.getActiveInstitutions$lambda$4(InstitutionService.kt:131)
+        at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+        at java.base/java.util.ArrayList$Itr.forEachRemaining(ArrayList.java:1085)
+        at java.base/java.util.Spliterators$IteratorSpliterator.forEachRemaining(Spliterators.java:1939)
+        at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+        at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+        at java.base/java.util.stream.ReduceOps$ReduceOp.evaluateSequential(ReduceOps.java:921)
+        at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+        at java.base/java.util.stream.ReferencePipeline.collect(ReferencePipeline.java:682)
+        at org.springframework.data.domain.Chunk.getConvertedContent(Chunk.java:131)
+        at org.springframework.data.domain.PageImpl.map(PageImpl.java:86)
+        at com.iliyadev.springboot.services.InstitutionService.getActiveInstitutions(InstitutionService.kt:131)
+        at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+        at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+        at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359)
+        at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:724)
+        at com.iliyadev.springboot.services.InstitutionService$$SpringCGLIB$$0.getActiveInstitutions(<generated>)
+        at com.iliyadev.springboot.controllers.MosbatElmHomeController.getHomeData(MosbatElmControllers.kt:241)
+        at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+        at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+        at kotlin.reflect.jvm.internal.calls.CallerImpl$Method.callMethod(CallerImpl.kt:97)
+        at kotlin.reflect.jvm.internal.calls.CallerImpl$Method$Instance.call(CallerImpl.kt:113)
+        at kotlin.reflect.jvm.internal.KCallableImpl.callDefaultMethod$kotlin_reflection(KCallableImpl.kt:207)
+        at kotlin.reflect.jvm.internal.KCallableImpl.callBy(KCallableImpl.kt:112)
+        at org.springframework.web.method.support.InvocableHandlerMethod$KotlinDelegate.invokeFunction(InvocableHandlerMethod.java:335)
+        at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:255)
+        at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:191)
+        at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+        at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:986)
+        at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:891)
+        at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+        at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089)
+        at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979)
+        at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+        at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:903)
+        at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:564)
+        at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+        at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:195)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:110)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108)
+        at org.springframework.security.web.FilterChainProxy.lambda$doFilterInternal$3(FilterChainProxy.java:231)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:365)
+        at org.springframework.security.web.access.intercept.AuthorizationFilter.doFilter(AuthorizationFilter.java:101)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:125)
+        at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:119)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:131)
+        at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:85)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:100)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:179)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at com.iliyadev.springboot.config.filters.JwtRequestFilter.doFilterInternal(JwtRequestFilter.kt:57)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:107)
+        at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:93)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.web.filter.CorsFilter.doFilterInternal(CorsFilter.java:91)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.header.HeaderWriterFilter.doHeadersAfter(HeaderWriterFilter.java:90)
+        at org.springframework.security.web.header.HeaderWriterFilter.doFilterInternal(HeaderWriterFilter.java:75)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:82)
+        at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:69)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:62)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:233)
+        at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:191)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+        at org.springframework.web.filter.ServletRequestPathFilter.doFilter(ServletRequestPathFilter.java:52)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+        at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74)
+        at org.springframework.security.config.annotation.web.configuration.WebSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebSecurityConfiguration.java:319)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+        at org.springframework.web.servlet.handler.HandlerMappingIntrospector.lambda$createCacheFilter$4(HandlerMappingIntrospector.java:267)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+        at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74)
+        at org.springframework.security.config.annotation.web.configuration.WebMvcSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebMvcSecurityConfiguration.java:240)     
+        at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:362)
+        at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:278)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167)
+        at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90)
+        at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:483)
+        at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:116)
+        at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93)
+        at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74)
+        at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344)
+        at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:398)
+        at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+        at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903)
+        at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1769)
+        at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+        at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1189)
+        at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:658)
+        at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+        at java.base/java.lang.Thread.run(Thread.java:1583)
+Caused by: org.hibernate.exception.SQLGrammarException: JDBC exception executing SQL [select c1_0.id,c1_0.admin_note,c1_0.average_rating,c1_0.capacity,c1_0.channel_id,c1_0.cover_image_url,c1_0.created_at,c1_0.description,c1_0.discount_percentage,c1_0.education_level,c1_0.ends_at,c1_0.enrollment_limit,c1_0.favorites_count,c1_0.field_of_study,c1_0.group_id,c1_0.institution_id,c1_0.is_public,c1_0.organizer_id,c1_0.organizer_description,c1_0.price_rials,c1_0.review_count,c1_0.scientific_association_name,c1_0.slogan,c1_0.starts_at,c1_0.status,c1_0.syllabus_duration,c1_0.title,c1_0.updated_at from courses c1_0 where c1_0.institution_id=?] [ERROR: column c1_0.average_rating does not exist
+  Position: 32] [n/a]
+        at org.hibernate.exception.internal.SQLStateConversionDelegate.convert(SQLStateConversionDelegate.java:91)
+        at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:58)
+        at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:108)
+        at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:94)
+        at org.hibernate.sql.results.jdbc.internal.DeferredResultSetAccess.executeQuery(DeferredResultSetAccess.java:269)
+        at org.hibernate.sql.results.jdbc.internal.DeferredResultSetAccess.getResultSet(DeferredResultSetAccess.java:172)
+        at org.hibernate.sql.results.jdbc.internal.JdbcValuesResultSetImpl.<init>(JdbcValuesResultSetImpl.java:74)
+        at org.hibernate.sql.exec.internal.JdbcSelectExecutorStandardImpl.resolveJdbcValuesSource(JdbcSelectExecutorStandardImpl.java:355)
+        at org.hibernate.sql.exec.internal.JdbcSelectExecutorStandardImpl.doExecuteQuery(JdbcSelectExecutorStandardImpl.java:137)
+        at org.hibernate.sql.exec.internal.JdbcSelectExecutorStandardImpl.executeQuery(JdbcSelectExecutorStandardImpl.java:102)
+        at org.hibernate.sql.exec.spi.JdbcSelectExecutor.executeQuery(JdbcSelectExecutor.java:91)
+        at org.hibernate.sql.exec.spi.JdbcSelectExecutor.list(JdbcSelectExecutor.java:165)
+        at org.hibernate.query.sqm.internal.ConcreteSqmSelectQueryPlan.lambda$new$1(ConcreteSqmSelectQueryPlan.java:152)
+        at org.hibernate.query.sqm.internal.ConcreteSqmSelectQueryPlan.withCacheableSqmInterpretation(ConcreteSqmSelectQueryPlan.java:442)
+        at org.hibernate.query.sqm.internal.ConcreteSqmSelectQueryPlan.performList(ConcreteSqmSelectQueryPlan.java:362)
+        at org.hibernate.query.sqm.internal.QuerySqmImpl.doList(QuerySqmImpl.java:380)
+        at org.hibernate.query.spi.AbstractSelectionQuery.list(AbstractSelectionQuery.java:143)
+        at org.hibernate.query.Query.getResultList(Query.java:120)
+        at org.springframework.data.jpa.repository.query.JpaQueryExecution$PagedExecution.doExecute(JpaQueryExecution.java:205)
+        at org.springframework.data.jpa.repository.query.JpaQueryExecution.execute(JpaQueryExecution.java:93)
+        at org.springframework.data.jpa.repository.query.AbstractJpaQuery.doExecute(AbstractJpaQuery.java:160)
+        at org.springframework.data.jpa.repository.query.AbstractJpaQuery.execute(AbstractJpaQuery.java:148)
+        at org.springframework.data.repository.core.support.RepositoryMethodInvoker.doInvoke(RepositoryMethodInvoker.java:170)
+        at org.springframework.data.repository.core.support.RepositoryMethodInvoker.invoke(RepositoryMethodInvoker.java:158)
+        at org.springframework.data.repository.core.support.QueryExecutorMethodInterceptor.doInvoke(QueryExecutorMethodInterceptor.java:170)
+        at org.springframework.data.repository.core.support.QueryExecutorMethodInterceptor.invoke(QueryExecutorMethodInterceptor.java:149)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.data.projection.DefaultMethodInvokingMethodInterceptor.invoke(DefaultMethodInvokingMethodInterceptor.java:69)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+        at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:138)
+        ... 141 more
+Caused by: org.postgresql.util.PSQLException: ERROR: column c1_0.average_rating does not exist
+  Position: 32
+        at org.postgresql.core.v3.QueryExecutorImpl.receiveErrorResponse(QueryExecutorImpl.java:2734)
+        at org.postgresql.core.v3.QueryExecutorImpl.processResults(QueryExecutorImpl.java:2421)
+        at org.postgresql.core.v3.QueryExecutorImpl.execute(QueryExecutorImpl.java:372)
+        at org.postgresql.jdbc.PgStatement.executeInternal(PgStatement.java:518)
+        at org.postgresql.jdbc.PgStatement.execute(PgStatement.java:435)
+        at org.postgresql.jdbc.PgPreparedStatement.executeWithFlags(PgPreparedStatement.java:196)
+        at org.postgresql.jdbc.PgPreparedStatement.executeQuery(PgPreparedStatement.java:139)
+        at com.zaxxer.hikari.pool.ProxyPreparedStatement.executeQuery(ProxyPreparedStatement.java:52)
+        at com.zaxxer.hikari.pool.HikariProxyPreparedStatement.executeQuery(HikariProxyPreparedStatement.java)
+        at org.hibernate.sql.results.jdbc.internal.DeferredResultSetAccess.executeQuery(DeferredResultSetAccess.java:251)
+        ... 169 more
+2026-04-29T15:01:03.758+03:30  WARN 11752 --- [MessageApp] [0.0-8080-exec-2] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.dao.InvalidDataAccessResourceUsageException: JDBC exception executing SQL [select c1_0.id,c1_0.admin_note,c1_0.average_rating,c1_0.capacity,c1_0.channel_id,c1_0.cover_image_url,c1_0.created_at,c1_0.description,c1_0.discount_percentage,c1_0.education_level,c1_0.ends_at,c1_0.enrollment_limit,c1_0.favorites_count,c1_0.field_of_study,c1_0.group_id,c1_0.institution_id,c1_0.is_public,c1_0.organizer_id,c1_0.organizer_description,c1_0.price_rials,c1_0.review_count,c1_0.scientific_association_name,c1_0.slogan,c1_0.starts_at,c1_0.status,c1_0.syllabus_duration,c1_0.title,c1_0.updated_at from courses c1_0 where c1_0.institution_id=?] [ERROR: column c1_0.average_rating does not exist<EOL>  Position: 32] [n/a]; SQL [n/a]]
+JWT_FILTER: Token validation result = true for GET /api/locations/provinces/%D8%A7%DB%8C%D8%B1%D8%A7%D9%86
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/me
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/reference-data
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/search
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+PRIVACY_LOG: Hiding phone for user 85cd098d-1c3a-4134-a49d-b4b2dd7ce5c9. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 9e633e2d-6566-41a8-b2f5-a25531d1e425. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 4975b20e-c9d5-44ca-9561-6b49da62c251. Visibility=CONTACTS, isContact=false, showPhone=false
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/search
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+PRIVACY_LOG: Hiding phone for user 85cd098d-1c3a-4134-a49d-b4b2dd7ce5c9. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 9e633e2d-6566-41a8-b2f5-a25531d1e425. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 4975b20e-c9d5-44ca-9561-6b49da62c251. Visibility=CONTACTS, isContact=false, showPhone=false
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/search
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+PRIVACY_LOG: Hiding phone for user c7a7579e-55d9-4934-9344-239bfc0fdfa9. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 87563e06-8dc2-4ee8-985e-16eed6c390c2. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 610e4d0d-a5cc-4d07-b925-839b92050e1b. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 1ad92a62-5081-4806-9315-915f43b9ee54. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user c241d1f7-82c4-4736-8533-683b3c689deb. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 840af008-3782-4f10-8ad9-1746931e533f. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 53bcdf1f-350c-4416-ad46-ff9943bac569. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 105e04a6-f922-4d60-b9c5-7e5e7e22a7e2. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 585a801e-0e81-446f-9db2-eef37e804ea4. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user cb04e073-1b27-41d1-af1f-24fadfcb4173. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 9f93836c-bdf4-4a0a-9ab7-2325dfa972ae. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 187a7e36-cbc9-4d0b-8c53-64380d045613. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user fc4f6453-23b2-4731-a5cc-d18ddbef062d. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 088a482f-6e28-4056-adac-96bc0c79535c. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user e134a20d-c384-4d22-8861-d36c07784b2c. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 297feef5-0df8-4d2c-918e-8e407d901bd8. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user a1555d5e-a97c-488a-b4ae-b022f91bc66e. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 6fd1b6bb-04f0-4996-93ec-50183f6f155a. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user d7cf46d3-3221-4188-9083-6d42416efac6. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a. Visibility=CONTACTS, isContact=false, showPhone=false
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/search
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+PRIVACY_LOG: Hiding phone for user c7a7579e-55d9-4934-9344-239bfc0fdfa9. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 87563e06-8dc2-4ee8-985e-16eed6c390c2. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 610e4d0d-a5cc-4d07-b925-839b92050e1b. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 1ad92a62-5081-4806-9315-915f43b9ee54. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user c241d1f7-82c4-4736-8533-683b3c689deb. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 840af008-3782-4f10-8ad9-1746931e533f. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 53bcdf1f-350c-4416-ad46-ff9943bac569. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 105e04a6-f922-4d60-b9c5-7e5e7e22a7e2. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 585a801e-0e81-446f-9db2-eef37e804ea4. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user cb04e073-1b27-41d1-af1f-24fadfcb4173. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 9f93836c-bdf4-4a0a-9ab7-2325dfa972ae. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 187a7e36-cbc9-4d0b-8c53-64380d045613. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user fc4f6453-23b2-4731-a5cc-d18ddbef062d. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 088a482f-6e28-4056-adac-96bc0c79535c. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user e134a20d-c384-4d22-8861-d36c07784b2c. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 297feef5-0df8-4d2c-918e-8e407d901bd8. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user a1555d5e-a97c-488a-b4ae-b022f91bc66e. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user 6fd1b6bb-04f0-4996-93ec-50183f6f155a. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user d7cf46d3-3221-4188-9083-6d42416efac6. Visibility=CONTACTS, isContact=false, showPhone=false
+PRIVACY_LOG: Hiding phone for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a. Visibility=CONTACTS, isContact=false, showPhone=false
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for GET /api/users/a5951c8d-a362-440c-93c6-dc18ab9f9d9a/follow-counts
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: Token validation result = true for POST /api/institutions/upload-logo
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+JWT_FILTER: No Bearer token for GET /uploads/e822ab3a-2d35-4075-86fa-1d5c07a5bd31_institution_logo_7739239601785210277.jpg
+JWT_FILTER: Token validation result = true for POST /api/institutions/register
+JWT_FILTER: Authentication set for user a5951c8d-a362-440c-93c6-dc18ab9f9d9a
+2026-04-29T15:02:29.756+03:30  WARN 11752 --- [MessageApp] [.0-8080-exec-10] o.h.engine.jdbc.spi.SqlExceptionHelper   : SQL Error: 0, SQLState: 42703
+2026-04-29T15:02:29.756+03:30 ERROR 11752 --- [MessageApp] [.0-8080-exec-10] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: column c1_0.average_rating does not exist
+  Position: 32
+org.springframework.dao.InvalidDataAccessResourceUsageException: JDBC exception executing SQL [select c1_0.id,c1_0.admin_note,c1_0.average_rating,c1_0.capacity,c1_0.channel_id,c1_0.cover_image_url,c1_0.created_at,c1_0.description,c1_0.discount_percentage,c1_0.education_level,c1_0.ends_at,c1_0.enrollment_limit,c1_0.favorites_count,c1_0.field_of_study,c1_0.group_id,c1_0.institution_id,c1_0.is_public,c1_0.organizer_id,c1_0.organizer_description,c1_0.price_rials,c1_0.review_count,c1_0.scientific_association_name,c1_0.slogan,c1_0.starts_at,c1_0.status,c1_0.syllabus_duration,c1_0.title,c1_0.updated_at from courses c1_0 where c1_0.institution_id=?] [ERROR: column c1_0.average_rating does not exist
+  Position: 32] [n/a]; SQL [n/a]
+        at org.springframework.orm.jpa.vendor.HibernateJpaDialect.convertHibernateAccessException(HibernateJpaDialect.java:281)
+        at org.springframework.orm.jpa.vendor.HibernateJpaDialect.convertHibernateAccessException(HibernateJpaDialect.java:256)
+        at org.springframework.orm.jpa.vendor.HibernateJpaDialect.translateExceptionIfPossible(HibernateJpaDialect.java:241)
+        at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.translateExceptionIfPossible(AbstractEntityManagerFactoryBean.java:560)
+        at org.springframework.dao.support.ChainedPersistenceExceptionTranslator.translateExceptionIfPossible(ChainedPersistenceExceptionTranslator.java:61)
+        at org.springframework.dao.support.DataAccessUtils.translateIfNecessary(DataAccessUtils.java:343)
+        at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:160)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.data.jpa.repository.support.CrudMethodMetadataPostProcessor$CrudMethodMetadataPopulatingMethodInterceptor.invoke(CrudMethodMetadataPostProcessor.java:136)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.data.util.NullnessMethodInvocationValidator.invoke(NullnessMethodInvocationValidator.java:95)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.aop.framework.JdkDynamicAopProxy.invoke(JdkDynamicAopProxy.java:223)
+        at jdk.proxy4/jdk.proxy4.$Proxy205.findByInstitutionId(Unknown Source)
+        at com.iliyadev.springboot.services.InstitutionService.mapToResponse(InstitutionService.kt:234)
+        at com.iliyadev.springboot.services.InstitutionService.registerInstitution(InstitutionService.kt:87)
+        at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+        at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+        at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+        at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+        at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:728)
+        at com.iliyadev.springboot.services.InstitutionService$$SpringCGLIB$$0.registerInstitution(<generated>)
+        at com.iliyadev.springboot.controllers.InstitutionController.register(MosbatElmControllers.kt:153)
+        at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+        at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+        at kotlin.reflect.jvm.internal.calls.CallerImpl$Method.callMethod(CallerImpl.kt:97)
+        at kotlin.reflect.jvm.internal.calls.CallerImpl$Method$Instance.call(CallerImpl.kt:113)
+        at kotlin.reflect.jvm.internal.KCallableImpl.callDefaultMethod$kotlin_reflection(KCallableImpl.kt:207)
+        at kotlin.reflect.jvm.internal.KCallableImpl.callBy(KCallableImpl.kt:112)
+        at org.springframework.web.method.support.InvocableHandlerMethod$KotlinDelegate.invokeFunction(InvocableHandlerMethod.java:335)
+        at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:255)
+        at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:191)
+        at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+        at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:986)
+        at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:891)
+        at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+        at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089)
+        at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979)
+        at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+        at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914)
+        at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590)
+        at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+        at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:195)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:110)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108)
+        at org.springframework.security.web.FilterChainProxy.lambda$doFilterInternal$3(FilterChainProxy.java:231)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:365)
+        at org.springframework.security.web.access.intercept.AuthorizationFilter.doFilter(AuthorizationFilter.java:101)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:125)
+        at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:119)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:131)
+        at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:85)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:100)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:179)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at com.iliyadev.springboot.config.filters.JwtRequestFilter.doFilterInternal(JwtRequestFilter.kt:57)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:107)
+        at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:93)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.web.filter.CorsFilter.doFilterInternal(CorsFilter.java:91)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.header.HeaderWriterFilter.doHeadersAfter(HeaderWriterFilter.java:90)
+        at org.springframework.security.web.header.HeaderWriterFilter.doFilterInternal(HeaderWriterFilter.java:75)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:82)
+        at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:69)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:62)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:374)
+        at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:233)
+        at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:191)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+        at org.springframework.web.filter.ServletRequestPathFilter.doFilter(ServletRequestPathFilter.java:52)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+        at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74)
+        at org.springframework.security.config.annotation.web.configuration.WebSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebSecurityConfiguration.java:319)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+        at org.springframework.web.servlet.handler.HandlerMappingIntrospector.lambda$createCacheFilter$4(HandlerMappingIntrospector.java:267)
+        at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113)
+        at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74)
+        at org.springframework.security.config.annotation.web.configuration.WebMvcSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebMvcSecurityConfiguration.java:240)     
+        at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:362)
+        at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:278)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+        at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+        at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:164)
+        at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:140)
+        at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167)
+        at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90)
+        at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:483)
+        at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:116)
+        at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93)
+        at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74)
+        at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344)
+        at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:398)
+        at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+        at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903)
+        at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1769)
+        at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+        at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1189)
+        at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:658)
+        at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+        at java.base/java.lang.Thread.run(Thread.java:1583)
+Caused by: org.hibernate.exception.SQLGrammarException: JDBC exception executing SQL [select c1_0.id,c1_0.admin_note,c1_0.average_rating,c1_0.capacity,c1_0.channel_id,c1_0.cover_image_url,c1_0.created_at,c1_0.description,c1_0.discount_percentage,c1_0.education_level,c1_0.ends_at,c1_0.enrollment_limit,c1_0.favorites_count,c1_0.field_of_study,c1_0.group_id,c1_0.institution_id,c1_0.is_public,c1_0.organizer_id,c1_0.organizer_description,c1_0.price_rials,c1_0.review_count,c1_0.scientific_association_name,c1_0.slogan,c1_0.starts_at,c1_0.status,c1_0.syllabus_duration,c1_0.title,c1_0.updated_at from courses c1_0 where c1_0.institution_id=?] [ERROR: column c1_0.average_rating does not exist
+  Position: 32] [n/a]
+        at org.hibernate.exception.internal.SQLStateConversionDelegate.convert(SQLStateConversionDelegate.java:91)
+        at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:58)
+        at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:108)
+        at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:94)
+        at org.hibernate.sql.results.jdbc.internal.DeferredResultSetAccess.executeQuery(DeferredResultSetAccess.java:269)
+        at org.hibernate.sql.results.jdbc.internal.DeferredResultSetAccess.getResultSet(DeferredResultSetAccess.java:172)
+        at org.hibernate.sql.results.jdbc.internal.JdbcValuesResultSetImpl.<init>(JdbcValuesResultSetImpl.java:74)
+        at org.hibernate.sql.exec.internal.JdbcSelectExecutorStandardImpl.resolveJdbcValuesSource(JdbcSelectExecutorStandardImpl.java:355)
+        at org.hibernate.sql.exec.internal.JdbcSelectExecutorStandardImpl.doExecuteQuery(JdbcSelectExecutorStandardImpl.java:137)
+        at org.hibernate.sql.exec.internal.JdbcSelectExecutorStandardImpl.executeQuery(JdbcSelectExecutorStandardImpl.java:102)
+        at org.hibernate.sql.exec.spi.JdbcSelectExecutor.executeQuery(JdbcSelectExecutor.java:91)
+        at org.hibernate.sql.exec.spi.JdbcSelectExecutor.list(JdbcSelectExecutor.java:165)
+        at org.hibernate.query.sqm.internal.ConcreteSqmSelectQueryPlan.lambda$new$1(ConcreteSqmSelectQueryPlan.java:152)
+        at org.hibernate.query.sqm.internal.ConcreteSqmSelectQueryPlan.withCacheableSqmInterpretation(ConcreteSqmSelectQueryPlan.java:442)
+        at org.hibernate.query.sqm.internal.ConcreteSqmSelectQueryPlan.performList(ConcreteSqmSelectQueryPlan.java:362)
+        at org.hibernate.query.sqm.internal.QuerySqmImpl.doList(QuerySqmImpl.java:380)
+        at org.hibernate.query.spi.AbstractSelectionQuery.list(AbstractSelectionQuery.java:143)
+        at org.hibernate.query.Query.getResultList(Query.java:120)
+        at org.springframework.data.jpa.repository.query.JpaQueryExecution$PagedExecution.doExecute(JpaQueryExecution.java:205)
+        at org.springframework.data.jpa.repository.query.JpaQueryExecution.execute(JpaQueryExecution.java:93)
+        at org.springframework.data.jpa.repository.query.AbstractJpaQuery.doExecute(AbstractJpaQuery.java:160)
+        at org.springframework.data.jpa.repository.query.AbstractJpaQuery.execute(AbstractJpaQuery.java:148)
+        at org.springframework.data.repository.core.support.RepositoryMethodInvoker.doInvoke(RepositoryMethodInvoker.java:170)
+        at org.springframework.data.repository.core.support.RepositoryMethodInvoker.invoke(RepositoryMethodInvoker.java:158)
+        at org.springframework.data.repository.core.support.QueryExecutorMethodInterceptor.doInvoke(QueryExecutorMethodInterceptor.java:170)
+        at org.springframework.data.repository.core.support.QueryExecutorMethodInterceptor.invoke(QueryExecutorMethodInterceptor.java:149)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.data.projection.DefaultMethodInvokingMethodInterceptor.invoke(DefaultMethodInvokingMethodInterceptor.java:69)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+        at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+        at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+        at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:138)
+        ... 132 more
+Caused by: org.postgresql.util.PSQLException: ERROR: column c1_0.average_rating does not exist
+  Position: 32
+        at org.postgresql.core.v3.QueryExecutorImpl.receiveErrorResponse(QueryExecutorImpl.java:2734)
+        at org.postgresql.core.v3.QueryExecutorImpl.processResults(QueryExecutorImpl.java:2421)
+        at org.postgresql.core.v3.QueryExecutorImpl.execute(QueryExecutorImpl.java:372)
+        at org.postgresql.jdbc.PgStatement.executeInternal(PgStatement.java:518)
+        at org.postgresql.jdbc.PgStatement.execute(PgStatement.java:435)
+        at org.postgresql.jdbc.PgPreparedStatement.executeWithFlags(PgPreparedStatement.java:196)
+        at org.postgresql.jdbc.PgPreparedStatement.executeQuery(PgPreparedStatement.java:139)
+        at com.zaxxer.hikari.pool.ProxyPreparedStatement.executeQuery(ProxyPreparedStatement.java:52)
+        at com.zaxxer.hikari.pool.HikariProxyPreparedStatement.executeQuery(HikariProxyPreparedStatement.java)
+        at org.hibernate.sql.results.jdbc.internal.DeferredResultSetAccess.executeQuery(DeferredResultSetAccess.java:251)
+        ... 160 more
+2026-04-29T15:02:29.759+03:30  WARN 11752 --- [MessageApp] [.0-8080-exec-10] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.dao.InvalidDataAccessResourceUsageException: JDBC exception executing SQL [select c1_0.id,c1_0.admin_note,c1_0.average_rating,c1_0.capacity,c1_0.channel_id,c1_0.cover_image_url,c1_0.created_at,c1_0.description,c1_0.discount_percentage,c1_0.education_level,c1_0.ends_at,c1_0.enrollment_limit,c1_0.favorites_count,c1_0.field_of_study,c1_0.group_id,c1_0.institution_id,c1_0.is_public,c1_0.organizer_id,c1_0.organizer_description,c1_0.price_rials,c1_0.review_count,c1_0.scientific_association_name,c1_0.slogan,c1_0.starts_at,c1_0.status,c1_0.syllabus_duration,c1_0.title,c1_0.updated_at from courses c1_0 where c1_0.institution_id=?] [ERROR: column c1_0.average_rating does not exist<EOL>  Position: 32] [n/a]; SQL [n/a]]

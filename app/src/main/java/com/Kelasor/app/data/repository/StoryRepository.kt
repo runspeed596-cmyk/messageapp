@@ -167,20 +167,27 @@ class StoryRepository @Inject constructor(
         caption: String?
     ): Result<Story> {
         return try {
-            val suffix = if (type == "VIDEO") ".mp4" else ".jpg"
-            val file = uriToFile(uri, suffix) ?: return Result.failure(Exception("Could not process file"))
-            
-            val requestFile = file.asRequestBody(
-                (if (type == "VIDEO") "video/*" else "image/*").toMediaTypeOrNull()
-            )
+            val file: File
+            val mimeType: String
+            if (type != "VIDEO") {
+                file = File.createTempFile("compressed_story", ".jpg", context.cacheDir)
+                val compressed = com.Kelasor.app.util.MediaCompressor.compressImage(context, uri, file)
+                if (!compressed) {
+                    file.delete()
+                    val fallback = uriToFile(uri, ".jpg") ?: return Result.failure(Exception("Could not process file"))
+                    fallback.renameTo(file)
+                }
+                mimeType = "image/jpeg"
+            } else {
+                file = uriToFile(uri, ".mp4") ?: return Result.failure(Exception("Could not process file"))
+                mimeType = "video/mp4"
+            }
+            val requestFile = file.asRequestBody(mimeType.toMediaTypeOrNull())
             val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
-            
             val response = apiService.postStory(body, type, duration, caption)
-            
+            file.delete()
             if (response.isSuccessful && response.body() != null) {
-                val storyDomain = response.body()!!.toDomain()
-                // Save specific story to DB? For now, refresh all stories is safer/easier
-                Result.success(storyDomain)
+                Result.success(response.body()!!.toDomain())
             } else {
                 val errorBody = response.errorBody()?.string() ?: "Upload failed: ${response.code()}"
                 val errorMsg = try {
@@ -291,12 +298,25 @@ class StoryRepository @Inject constructor(
 
     suspend fun uploadGroupStory(groupId: String, uri: Uri, type: String, duration: Int, caption: String?): Result<Story> {
         return try {
-            val suffix = if (type == "VIDEO") ".mp4" else ".jpg"
-            val file = uriToFile(uri, suffix) ?: return Result.failure(Exception("Could not process file"))
-            val requestFile = file.asRequestBody((if (type == "VIDEO") "video/*" else "image/*").toMediaTypeOrNull())
+            val file: File
+            val mimeType: String
+            if (type != "VIDEO") {
+                file = File.createTempFile("compressed_group_story", ".jpg", context.cacheDir)
+                val compressed = com.Kelasor.app.util.MediaCompressor.compressImage(context, uri, file)
+                if (!compressed) {
+                    file.delete()
+                    val fallback = uriToFile(uri, ".jpg") ?: return Result.failure(Exception("Could not process file"))
+                    fallback.renameTo(file)
+                }
+                mimeType = "image/jpeg"
+            } else {
+                file = uriToFile(uri, ".mp4") ?: return Result.failure(Exception("Could not process file"))
+                mimeType = "video/mp4"
+            }
+            val requestFile = file.asRequestBody(mimeType.toMediaTypeOrNull())
             val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
-            
             val response = apiService.postGroupStory(groupId, body, type, duration, caption)
+            file.delete()
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!.toDomain())
             } else {
@@ -315,12 +335,25 @@ class StoryRepository @Inject constructor(
 
     suspend fun uploadChannelStory(channelId: String, uri: Uri, type: String, duration: Int, caption: String?): Result<Story> {
         return try {
-            val suffix = if (type == "VIDEO") ".mp4" else ".jpg"
-            val file = uriToFile(uri, suffix) ?: return Result.failure(Exception("Could not process file"))
-            val requestFile = file.asRequestBody((if (type == "VIDEO") "video/*" else "image/*").toMediaTypeOrNull())
+            val file: File
+            val mimeType: String
+            if (type != "VIDEO") {
+                file = File.createTempFile("compressed_channel_story", ".jpg", context.cacheDir)
+                val compressed = com.Kelasor.app.util.MediaCompressor.compressImage(context, uri, file)
+                if (!compressed) {
+                    file.delete()
+                    val fallback = uriToFile(uri, ".jpg") ?: return Result.failure(Exception("Could not process file"))
+                    fallback.renameTo(file)
+                }
+                mimeType = "image/jpeg"
+            } else {
+                file = uriToFile(uri, ".mp4") ?: return Result.failure(Exception("Could not process file"))
+                mimeType = "video/mp4"
+            }
+            val requestFile = file.asRequestBody(mimeType.toMediaTypeOrNull())
             val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
-            
             val response = apiService.postChannelStory(channelId, body, type, duration, caption)
+            file.delete()
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!.toDomain())
             } else {

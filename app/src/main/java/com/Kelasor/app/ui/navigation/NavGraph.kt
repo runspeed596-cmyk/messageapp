@@ -44,8 +44,11 @@ import com.Kelasor.app.ui.screens.profile.EditProfileScreen
 import com.Kelasor.app.ui.screens.profile.ProfileScreen
 import com.Kelasor.app.ui.screens.profile.SettingsScreen
 import com.Kelasor.app.ui.screens.profile.UserProfileScreen
+import com.Kelasor.app.ui.screens.profile.ComingSoonScreen
 import com.Kelasor.app.ui.screens.splash.SplashScreen
 import com.Kelasor.app.ui.screens.forward.ForwardTargetScreen
+import com.Kelasor.app.ui.screens.mosbat_elm.OrganizerSetupScreen
+import com.Kelasor.app.ui.screens.mosbat_elm.AcademyProfileSetupScreen
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🗺️ Main Navigation Graph
@@ -64,40 +67,40 @@ fun NavGraph(
         enterTransition = {
             slideIntoContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                animationSpec = spring(
-                    dampingRatio = 0.86f,
-                    stiffness = Spring.StiffnessMediumLow
+                animationSpec = tween(
+                    durationMillis = 400,
+                    easing = androidx.compose.animation.core.FastOutSlowInEasing
                 )
-            ) + fadeIn(animationSpec = androidx.compose.animation.core.tween(220))
+            ) + fadeIn(animationSpec = tween(300))
         },
         exitTransition = {
             slideOutOfContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                animationSpec = spring(
-                    dampingRatio = 0.86f,
-                    stiffness = Spring.StiffnessMediumLow
+                animationSpec = tween(
+                    durationMillis = 400,
+                    easing = androidx.compose.animation.core.FastOutSlowInEasing
                 ),
-                targetOffset = { fullOffset -> fullOffset / 4 }
-            ) + fadeOut(animationSpec = androidx.compose.animation.core.tween(180), targetAlpha = 0.6f)
+                targetOffset = { it / 4 } // Parallax effect
+            ) + fadeOut(animationSpec = tween(300), targetAlpha = 0.8f)
         },
         popEnterTransition = {
             slideIntoContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.End,
-                animationSpec = spring(
-                    dampingRatio = 0.86f,
-                    stiffness = Spring.StiffnessMediumLow
+                animationSpec = tween(
+                    durationMillis = 400,
+                    easing = androidx.compose.animation.core.FastOutSlowInEasing
                 ),
-                initialOffset = { fullOffset -> fullOffset / 4 }
-            ) + fadeIn(animationSpec = androidx.compose.animation.core.tween(180))
+                initialOffset = { it / 4 } // Parallax effect
+            ) + fadeIn(animationSpec = tween(300))
         },
         popExitTransition = {
             slideOutOfContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.End,
-                animationSpec = spring(
-                    dampingRatio = 0.86f,
-                    stiffness = Spring.StiffnessMediumLow
+                animationSpec = tween(
+                    durationMillis = 400,
+                    easing = androidx.compose.animation.core.FastOutSlowInEasing
                 )
-            ) + fadeOut(animationSpec = androidx.compose.animation.core.tween(180), targetAlpha = 0.6f)
+            ) + fadeOut(animationSpec = tween(300), targetAlpha = 0.8f)
         }
     ) {
         // ─────────────────────────────────────────────────────────────────────────
@@ -165,6 +168,10 @@ fun NavGraph(
                 onNavigateToNewChat = { navController.navigate(Routes.NewChat.route) },
                 onNavigateToCreateGroup = { navController.navigate(Routes.CreateGroup.route) },
                 onNavigateToCreateChannel = { navController.navigate(Routes.CreateChannel.route) },
+                onNavigateToOrganizerSetup = { navController.navigate(Routes.OrganizerSetup.route) },
+                onNavigateToCreateCourse = { navController.navigate(Routes.CreateCourse.route) },
+                onNavigateToEditCourse = { courseId -> navController.navigate(Routes.EditCourse.createRoute(courseId)) },
+                onNavigateToAcademyProfile = { id -> navController.navigate(Routes.AcademyProfile.createRoute(id)) },
                 onNavigateToMyStories = { navController.navigate(Routes.MyStories.route) },
                 onNavigateToCreateTextStory = { navController.navigate(Routes.CreateTextStory.route) },
                 onNavigateToGroupStories = { id, name -> 
@@ -178,7 +185,7 @@ fun NavGraph(
                 onNavigateToChannelView = { channelId -> navController.navigate("channelView/$channelId") },
                 onNavigateToProfile = { navController.navigate(Routes.Profile.route) },
                 onNavigateToSettings = { navController.navigate(Routes.Settings.route) },
-                onNavigateToUserProfile = { userId -> navController.navigate("userProfile/$userId") },
+                onNavigateToUserProfile = { userId -> navController.navigate(Routes.UserProfile.createRoute(userId)) },
                 onNavigateToNotifications = { navController.navigate(Routes.Notifications.route) },
                 onNavigateToElm = { navController.navigate(Routes.Elm.route) },
                 onNavigateToAllMovies = { navController.navigate(Routes.AllMovies.route) },
@@ -238,10 +245,19 @@ fun NavGraph(
             com.Kelasor.app.ui.screens.profile.SettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onEditProfileClick = { navController.navigate(Routes.EditProfile.route) },
-                onSavedMessagesClick = { userId ->
-                    navController.navigate(Routes.Conversation.createRoute(userId))
+                onEditAcademyProfileClick = { navController.navigate(Routes.OrganizerSetup.route) },
+                onAccountClick = { navController.navigate(Routes.SettingsAccount.route) },
+                onAppearanceClick = { navController.navigate(Routes.SettingsChat.route) },
+                onPrivacyClick = { navController.navigate(Routes.SettingsPrivacy.route) },
+                onNotificationsClick = { navController.navigate(Routes.SettingsNotifications.route) },
+                onDataStorageClick = { navController.navigate(Routes.SettingsDataStorage.route) },
+                onFoldersClick = { navController.navigate(Routes.SettingsFolders.route) },
+                onDevicesClick = { navController.navigate(Routes.SettingsDevices.route) },
+                onLanguageClick = { navController.navigate(Routes.SettingsLanguage.route) },
+                onWalletClick = { navController.navigate(Routes.Wallet.route) },
+                onAcademyProfileClick = { id ->
+                    navController.navigate(Routes.AcademyProfile.createRoute(id))
                 },
-                onArchivedChatsClick = { navController.navigate(Routes.ArchivedChats.route) },
                 onLogoutClick = {
                     navController.navigate(Routes.Login.route) {
                         popUpTo(Routes.Main.route) { inclusive = true }
@@ -265,40 +281,28 @@ fun NavGraph(
             enterTransition = {
                 slideIntoContainer(
                     towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                    animationSpec = spring(
-                        dampingRatio = 0.82f,
-                        stiffness = Spring.StiffnessMedium
-                    )
+                    animationSpec = tween(durationMillis = 300)
                 ) + fadeIn(animationSpec = tween(200))
             },
             exitTransition = {
                 slideOutOfContainer(
                     towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                    animationSpec = spring(
-                        dampingRatio = 0.86f,
-                        stiffness = Spring.StiffnessMedium
-                    ),
-                    targetOffset = { fullOffset -> fullOffset / 5 }
-                ) + fadeOut(animationSpec = tween(150), targetAlpha = 0.5f)
+                    animationSpec = tween(durationMillis = 300),
+                    targetOffset = { fullOffset -> fullOffset / 4 }
+                ) + fadeOut(animationSpec = tween(200))
             },
             popEnterTransition = {
                 slideIntoContainer(
                     towards = AnimatedContentTransitionScope.SlideDirection.End,
-                    animationSpec = spring(
-                        dampingRatio = 0.82f,
-                        stiffness = Spring.StiffnessMedium
-                    ),
-                    initialOffset = { fullOffset -> fullOffset / 5 }
-                ) + fadeIn(animationSpec = tween(180))
+                    animationSpec = tween(durationMillis = 300),
+                    initialOffset = { fullOffset -> fullOffset / 4 }
+                ) + fadeIn(animationSpec = tween(200))
             },
             popExitTransition = {
                 slideOutOfContainer(
                     towards = AnimatedContentTransitionScope.SlideDirection.End,
-                    animationSpec = spring(
-                        dampingRatio = 0.82f,
-                        stiffness = Spring.StiffnessMedium
-                    )
-                ) + fadeOut(animationSpec = tween(150), targetAlpha = 0.5f)
+                    animationSpec = tween(durationMillis = 300)
+                ) + fadeOut(animationSpec = tween(200))
             }
         ) { backStackEntry ->
             val chatId = backStackEntry.arguments?.getString("chatId") ?: ""
@@ -332,8 +336,26 @@ fun NavGraph(
             com.Kelasor.app.ui.screens.course.CreateCourseScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onCourseCreated = { _ ->
-                    // Navigate to course/channel view or just pop back
                     navController.popBackStack() 
+                },
+                onNavigateToEditAcademyProfile = {
+                    navController.navigate(Routes.OrganizerSetup.route)
+                }
+            )
+        }
+        composable(
+            route = Routes.EditCourse.route,
+            arguments = listOf(navArgument("courseId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId")
+            com.Kelasor.app.ui.screens.course.CreateCourseScreen(
+                editCourseId = courseId,
+                onNavigateBack = { navController.popBackStack() },
+                onCourseCreated = { _ ->
+                    navController.popBackStack()
+                },
+                onNavigateToEditAcademyProfile = {
+                    navController.navigate(Routes.OrganizerSetup.route)
                 }
             )
         }
@@ -359,7 +381,45 @@ fun NavGraph(
                     nullable = true
                     defaultValue = null
                 }
-            )
+            ),
+            enterTransition = {
+                slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                    animationSpec = spring(
+                        dampingRatio = 0.82f,
+                        stiffness = Spring.StiffnessMedium
+                    )
+                ) + fadeIn(animationSpec = tween(280), initialAlpha = 0.3f)
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                    animationSpec = spring(
+                        dampingRatio = 0.86f,
+                        stiffness = Spring.StiffnessMedium
+                    ),
+                    targetOffset = { fullOffset -> fullOffset / 5 }
+                ) + fadeOut(animationSpec = tween(150), targetAlpha = 0.5f)
+            },
+            popEnterTransition = {
+                slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.End,
+                    animationSpec = spring(
+                        dampingRatio = 0.82f,
+                        stiffness = Spring.StiffnessMedium
+                    ),
+                    initialOffset = { fullOffset -> fullOffset / 5 }
+                ) + fadeIn(animationSpec = tween(180))
+            },
+            popExitTransition = {
+                slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.End,
+                    animationSpec = spring(
+                        dampingRatio = 0.82f,
+                        stiffness = Spring.StiffnessMedium
+                    )
+                ) + fadeOut(animationSpec = tween(150), targetAlpha = 0.5f)
+            }
         ) { backStackEntry ->
             val groupId = backStackEntry.arguments?.getString("groupId") ?: ""
             val messageId = backStackEntry.arguments?.getString("messageId")
@@ -434,6 +494,22 @@ fun NavGraph(
                 }
             )
         }
+        composable(Routes.OrganizerSetup.route) {
+            OrganizerSetupScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToAcademyProfileSetup = {
+                    navController.navigate(Routes.AcademyProfileSetup.route)
+                }
+            )
+        }
+        composable(Routes.AcademyProfileSetup.route) {
+            AcademyProfileSetupScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onFinish = {
+                    navController.popBackStack(Routes.Main.route, inclusive = false)
+                }
+            )
+        }
         composable(
             route = Routes.ChannelView.route + "?messageId={messageId}",
             arguments = listOf(
@@ -443,7 +519,45 @@ fun NavGraph(
                     nullable = true
                     defaultValue = null
                 }
-            )
+            ),
+            enterTransition = {
+                slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                    animationSpec = spring(
+                        dampingRatio = 0.82f,
+                        stiffness = Spring.StiffnessMedium
+                    )
+                ) + fadeIn(animationSpec = tween(280), initialAlpha = 0.3f)
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                    animationSpec = spring(
+                        dampingRatio = 0.86f,
+                        stiffness = Spring.StiffnessMedium
+                    ),
+                    targetOffset = { fullOffset -> fullOffset / 5 }
+                ) + fadeOut(animationSpec = tween(150), targetAlpha = 0.5f)
+            },
+            popEnterTransition = {
+                slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.End,
+                    animationSpec = spring(
+                        dampingRatio = 0.82f,
+                        stiffness = Spring.StiffnessMedium
+                    ),
+                    initialOffset = { fullOffset -> fullOffset / 5 }
+                ) + fadeIn(animationSpec = tween(180))
+            },
+            popExitTransition = {
+                slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.End,
+                    animationSpec = spring(
+                        dampingRatio = 0.82f,
+                        stiffness = Spring.StiffnessMedium
+                    )
+                ) + fadeOut(animationSpec = tween(150), targetAlpha = 0.5f)
+            }
         ) { backStackEntry ->
             val channelId = backStackEntry.arguments?.getString("channelId") ?: ""
             val messageId = backStackEntry.arguments?.getString("messageId")
@@ -537,16 +651,118 @@ fun NavGraph(
             com.Kelasor.app.ui.screens.profile.SettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onEditProfileClick = { navController.navigate(Routes.EditProfile.route) },
-                onSavedMessagesClick = { userId ->
-                    navController.navigate(Routes.Conversation.createRoute(userId))
+                onEditAcademyProfileClick = { navController.navigate(Routes.OrganizerSetup.route) },
+                onAcademyProfileClick = { institutionId -> 
+                    navController.navigate(Routes.AcademyProfile.createRoute(institutionId))
                 },
-                onArchivedChatsClick = { navController.navigate(Routes.ArchivedChats.route) },
+                onAccountClick = { navController.navigate(Routes.SettingsAccount.route) },
+                onAppearanceClick = { navController.navigate(Routes.SettingsChat.route) },
+                onPrivacyClick = { navController.navigate(Routes.SettingsPrivacy.route) },
+                onNotificationsClick = { navController.navigate(Routes.SettingsNotifications.route) },
+                onDataStorageClick = { navController.navigate(Routes.SettingsDataStorage.route) },
+                onFoldersClick = { navController.navigate(Routes.SettingsFolders.route) },
+                onDevicesClick = { navController.navigate(Routes.SettingsDevices.route) },
+                onLanguageClick = { navController.navigate(Routes.SettingsLanguage.route) },
+                onWalletClick = { navController.navigate(Routes.Wallet.route) },
                 onLogoutClick = {
                     navController.navigate(Routes.Login.route) {
                         popUpTo(Routes.Main.route) { inclusive = true }
                     }
                 }
             )
+        }
+        composable(
+            route = Routes.AcademyProfile.route,
+            arguments = listOf(navArgument("institutionId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val institutionId = backStackEntry.arguments?.getString("institutionId") ?: ""
+            com.Kelasor.app.ui.screens.mosbat_elm.AcademyProfileScreen(
+                institutionId = institutionId,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToCourseDetail = { courseId ->
+                    navController.navigate(Routes.CourseDetail.createRoute(courseId))
+                },
+                onNavigateToEditAcademyProfile = {
+                    navController.navigate(Routes.OrganizerSetup.route)
+                },
+                onNavigateToChat = { userId ->
+                    navController.navigate(Routes.Conversation.createRoute(userId))
+                },
+                onNavigateToUserProfile = { userId ->
+                    navController.navigate(Routes.UserProfile.createRoute(userId))
+                },
+                onNavigateToEditCourse = { courseId ->
+                    navController.navigate(Routes.EditCourse.createRoute(courseId))
+                }
+            )
+        }
+        composable(
+            route = Routes.CourseDetail.route,
+            arguments = listOf(navArgument("courseId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId") ?: ""
+            com.Kelasor.app.ui.screens.mosbat_elm.CourseDetailScreen(
+                courseId = courseId,
+                onBack = { navController.popBackStack() },
+                onInstructorClick = { userId ->
+                    navController.navigate(Routes.UserProfile.createRoute(userId))
+                },
+                onOrganizerClick = { institutionId ->
+                    navController.navigate(Routes.AcademyProfile.createRoute(institutionId))
+                },
+                onNavigateToChat = { userId ->
+                    navController.navigate(Routes.Conversation.createRoute(userId))
+                },
+                onNavigateToEditCourse = { cId ->
+                    navController.navigate(Routes.EditCourse.createRoute(cId))
+                }
+            )
+        }
+        // EditCourse Route
+        composable(
+            route = Routes.EditCourse.route,
+            arguments = listOf(navArgument("courseId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val editCourseId: String = backStackEntry.arguments?.getString("courseId") ?: ""
+            com.Kelasor.app.ui.screens.course.CreateCourseScreen(
+                editCourseId = editCourseId,
+                onNavigateBack = { navController.popBackStack() },
+                onCourseCreated = { _ ->
+                    navController.popBackStack()
+                },
+                onNavigateToEditAcademyProfile = {
+                    navController.navigate(Routes.OrganizerSetup.route)
+                }
+            )
+        }
+        
+        // ── Settings Sub-Pages ───────────────────────────────────────────
+        composable(Routes.SettingsAccount.route) {
+            ComingSoonScreen(title = "Account", onNavigateBack = { navController.popBackStack() })
+        }
+        composable(Routes.SettingsChat.route) {
+            ComingSoonScreen(title = "Chat Settings", onNavigateBack = { navController.popBackStack() })
+        }
+        composable(Routes.SettingsPrivacy.route) {
+            ComingSoonScreen(title = "Privacy & Security", onNavigateBack = { navController.popBackStack() })
+        }
+        composable(Routes.SettingsNotifications.route) {
+            ComingSoonScreen(title = "Notifications", onNavigateBack = { navController.popBackStack() })
+        }
+        composable(Routes.SettingsDataStorage.route) {
+            ComingSoonScreen(title = "Data and Storage", onNavigateBack = { navController.popBackStack() })
+        }
+        composable(Routes.SettingsFolders.route) {
+            ComingSoonScreen(title = "Chat Folders", onNavigateBack = { navController.popBackStack() })
+        }
+        composable(Routes.SettingsDevices.route) {
+            ComingSoonScreen(title = "Devices", onNavigateBack = { navController.popBackStack() })
+        }
+        composable(Routes.SettingsLanguage.route) {
+            ComingSoonScreen(title = "Language", onNavigateBack = { navController.popBackStack() })
+        }
+        composable(Routes.Wallet.route) {
+            com.Kelasor.app.ui.screens.wallet.WalletScreen(onNavigateBack = { navController.popBackStack() })
         }
         composable(Routes.ArchivedChats.route) {
             com.Kelasor.app.ui.screens.chat.ArchivedChatsScreen(

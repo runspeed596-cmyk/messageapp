@@ -767,7 +767,10 @@ private fun ChannelPostItemWrapper(
                                 isMyMessage = false,
                                 audioPlayerManager = viewModel.audioPlayerManager,
                                 amplitudes = post.amplitudes,
-                                time = timeString
+                                time = timeString,
+                                reactions = post.reactions,
+                                myReaction = post.myReaction,
+                                onReactionClick = { emoji -> viewModel.reactToPost(post.id, emoji) }
                             )
                         }
                         post.type == MessageType.IMAGE && post.mediaUrl != null -> {
@@ -781,7 +784,10 @@ private fun ChannelPostItemWrapper(
                                 isMyMessage = false,
                                 time = timeString,
                                 onPreviewClick = { url, type -> onPreviewMedia(url, type) },
-                                caption = imageCaption
+                                caption = imageCaption,
+                                reactions = post.reactions,
+                                myReaction = post.myReaction,
+                                onReactionClick = { emoji -> viewModel.reactToPost(post.id, emoji) }
                             )
                         }
                         post.type == MessageType.VIDEO && post.mediaUrl != null -> {
@@ -795,7 +801,10 @@ private fun ChannelPostItemWrapper(
                                 isMyMessage = false,
                                 time = timeString,
                                 onPreviewClick = { url, type -> onPreviewMedia(url, type) },
-                                caption = videoCaption
+                                caption = videoCaption,
+                                reactions = post.reactions,
+                                myReaction = post.myReaction,
+                                onReactionClick = { emoji -> viewModel.reactToPost(post.id, emoji) }
                             )
                         }
 
@@ -810,7 +819,10 @@ private fun ChannelPostItemWrapper(
                                 isMyMessage = false,
                                 time = timeString,
                                 durationText = durationText,
-                                modifier = Modifier.padding(horizontal = 8.dp)
+                                modifier = Modifier.padding(horizontal = 8.dp),
+                                reactions = post.reactions,
+                                myReaction = post.myReaction,
+                                onReactionClick = { emoji -> viewModel.reactToPost(post.id, emoji) }
                             )
                         }
 
@@ -834,7 +846,10 @@ private fun ChannelPostItemWrapper(
                                     latitude = lat,
                                     longitude = lng,
                                     isMyMessage = false,
-                                    time = timeString
+                                    time = timeString,
+                                    reactions = post.reactions,
+                                    myReaction = post.myReaction,
+                                    onReactionClick = { emoji -> viewModel.reactToPost(post.id, emoji) }
                                 )
                             }
                         }
@@ -848,7 +863,10 @@ private fun ChannelPostItemWrapper(
                                 mediaUrl = post.mediaUrl!!,
                                 fileName = fileName,
                                 isMyMessage = false,
-                                time = timeString
+                                time = timeString,
+                                reactions = post.reactions,
+                                myReaction = post.myReaction,
+                                onReactionClick = { emoji -> viewModel.reactToPost(post.id, emoji) }
                             )
                         }
                         else -> {

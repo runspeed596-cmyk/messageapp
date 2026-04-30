@@ -17,5 +17,6 @@ class WebConfig : WebMvcConfigurer {
     override fun addResourceHandlers(registry: ResourceHandlerRegistry) {
         registry.addResourceHandler("/uploads/**")
             .addResourceLocations("file:uploads/")
+            .setCachePeriod(2592000) // 30 days
     }
 }

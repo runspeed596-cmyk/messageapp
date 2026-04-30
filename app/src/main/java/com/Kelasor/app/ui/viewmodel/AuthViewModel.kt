@@ -122,8 +122,12 @@ class AuthViewModel @Inject constructor(
     fun updateProfile(
         firstName: String, 
         lastName: String, 
-        username: String, 
-        bio: String, 
+        nationalCode: String? = null,
+        educationalRole: String? = null,
+        gradeLevel: String? = null,
+        major: String? = null,
+        username: String? = null, 
+        bio: String? = null, 
         avatarFile: java.io.File? = null,
         university: String? = null,
         fieldOfStudy: String? = null,
@@ -131,7 +135,8 @@ class AuthViewModel @Inject constructor(
         skills: String? = null,
         interests: String? = null,
         workExperience: String? = null,
-        achievements: String? = null
+        achievements: String? = null,
+        faculty: String? = null
     ) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
@@ -147,8 +152,23 @@ class AuthViewModel @Inject constructor(
 
             val displayName = "$firstName $lastName"
             userRepository.updateProfile(
-                username, displayName, bio,
-                university, fieldOfStudy, education, skills, interests, workExperience, achievements
+                username = username,
+                displayName = displayName,
+                firstName = firstName,
+                lastName = lastName,
+                nationalCode = nationalCode,
+                educationalRole = educationalRole,
+                gradeLevel = gradeLevel,
+                major = major,
+                bio = bio,
+                university = university, 
+                fieldOfStudy = fieldOfStudy, 
+                education = education, 
+                skills = skills, 
+                interests = interests, 
+                workExperience = workExperience, 
+                achievements = achievements,
+                faculty = faculty
             ).collect { result ->
                 when (result) {
                     is com.Kelasor.app.data.repository.UserResult.Success -> {

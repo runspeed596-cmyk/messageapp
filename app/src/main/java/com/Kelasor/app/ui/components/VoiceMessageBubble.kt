@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -60,7 +61,10 @@ fun VoiceMessageBubble(
     amplitudes: List<Int>? = null,
     time: String = "",
     status: MessageStatus = MessageStatus.SENT,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    reactions: Map<String, Int> = emptyMap(),
+    myReaction: String? = null,
+    onReactionClick: ((String) -> Unit)? = null
 ) {
     val extendedColors = MessageAppTheme.extendedColors
     val playbackInfo by audioPlayerManager.playbackInfo.collectAsState()
@@ -92,12 +96,16 @@ fun VoiceMessageBubble(
     } else {
         MaterialTheme.colorScheme.primary
     }
-    Row(
+    Column(
         modifier = modifier
             .clip(RoundedCornerShape(20.dp))
             .background(backgroundColor)
+            .width(280.dp)
+    ) {
+    Row(
+        modifier = Modifier
             .padding(horizontal = 12.dp, vertical = 8.dp)
-            .width(280.dp),
+            .fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Play/Pause Button
@@ -225,6 +233,17 @@ fun VoiceMessageBubble(
                 }
             }
         }
+    }
+    // Reactions inside card
+    if (reactions.isNotEmpty()) {
+        ReactionRow(
+            reactions = reactions,
+            myReaction = myReaction,
+            isMyMessage = isMyMessage,
+            onReactionClick = onReactionClick,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp).offset(y = (-4).dp)
+        )
+    }
     }
 }
 

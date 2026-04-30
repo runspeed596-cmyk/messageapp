@@ -85,22 +85,53 @@ fun ElmScreen(
     var circleAnnotationManager by remember { mutableStateOf<CircleAnnotationManager?>(null) }
     var markerJob by remember { mutableStateOf<Job?>(null) }
 
-    // Helper to animate border drawing
+    // Helper to animate border drawing with cascading multi-layer reveal
     fun animateBorderDrawing(points: List<Point>) {
         mapboxMap?.getStyle { style ->
             val source = style.getSource("highlight-source") as? GeoJsonSource
             val lineString = LineString.fromLngLats(points)
             source?.feature(com.mapbox.geojson.Feature.fromGeometry(lineString))
-
             coroutineScope.launch {
-                val anim = Animatable(0f)
-                anim.animateTo(1f, tween(1500, easing = LinearOutSlowInEasing)) {
-                    val currentVal = this.value.toDouble()
-                    style.getLayer("highlight-line-layer")?.let { layer ->
-                        (layer as LineLayer).lineTrimOffset(listOf(currentVal, 1.0))
+                // Animate all 4 layers with staggered timing for cascading neon reveal
+                val layerIds = listOf("highlight-outer-glow", "highlight-glow-layer", "highlight-line-layer", "highlight-inner-core")
+                layerIds.forEach { layerId ->
+                    style.getLayer(layerId)?.let { layer ->
+                        (layer as LineLayer).lineTrimOffset(listOf(1.0, 1.0)) // start hidden
                     }
-                    style.getLayer("highlight-glow-layer")?.let { layer ->
-                        (layer as LineLayer).lineTrimOffset(listOf(currentVal, 1.0))
+                }
+                // Outer glow leads
+                launch {
+                    val anim = Animatable(0f)
+                    anim.animateTo(1f, tween(2500, easing = LinearOutSlowInEasing)) {
+                        val v = this.value.toDouble()
+                        style.getLayer("highlight-outer-glow")?.let { (it as LineLayer).lineTrimOffset(listOf(v, 1.0)) }
+                    }
+                }
+                // Mid glow follows slightly
+                launch {
+                    kotlinx.coroutines.delay(200)
+                    val anim = Animatable(0f)
+                    anim.animateTo(1f, tween(2200, easing = LinearOutSlowInEasing)) {
+                        val v = this.value.toDouble()
+                        style.getLayer("highlight-glow-layer")?.let { (it as LineLayer).lineTrimOffset(listOf(v, 1.0)) }
+                    }
+                }
+                // Core line follows
+                launch {
+                    kotlinx.coroutines.delay(350)
+                    val anim = Animatable(0f)
+                    anim.animateTo(1f, tween(2000, easing = LinearOutSlowInEasing)) {
+                        val v = this.value.toDouble()
+                        style.getLayer("highlight-line-layer")?.let { (it as LineLayer).lineTrimOffset(listOf(v, 1.0)) }
+                    }
+                }
+                // Inner white core last
+                launch {
+                    kotlinx.coroutines.delay(500)
+                    val anim = Animatable(0f)
+                    anim.animateTo(1f, tween(1800, easing = LinearOutSlowInEasing)) {
+                        val v = this.value.toDouble()
+                        style.getLayer("highlight-inner-core")?.let { (it as LineLayer).lineTrimOffset(listOf(v, 1.0)) }
                     }
                 }
             }
@@ -110,7 +141,7 @@ fun ElmScreen(
     // Helper to generate a smooth cyber ring (circle) around a point
     fun getCyberRingPoints(center: Point, radiusKm: Double = 50.0): List<Point> {
         val points = mutableListOf<Point>()
-        val segments = 64 // Use 64 segments for a smooth circle animation
+        val segments = 64
         for (i in 0..segments) {
             val angle = Math.toRadians((i * 360.0 / segments))
             val lat = center.latitude() + (radiusKm / 111.0) * Math.sin(angle)
@@ -120,12 +151,86 @@ fun ElmScreen(
         return points
     }
 
+    // Accurate Iran border coordinates (~90 points)
     val iranBorder = listOf(
-        Point.fromLngLat(44.0, 39.0), Point.fromLngLat(48.0, 38.0), Point.fromLngLat(50.0, 37.0),
-        Point.fromLngLat(54.0, 37.0), Point.fromLngLat(59.0, 37.0), Point.fromLngLat(61.0, 35.0),
-        Point.fromLngLat(62.0, 30.0), Point.fromLngLat(61.0, 25.0), Point.fromLngLat(57.0, 26.0),
-        Point.fromLngLat(53.0, 27.0), Point.fromLngLat(50.0, 29.0), Point.fromLngLat(48.0, 30.0),
-        Point.fromLngLat(45.0, 33.0), Point.fromLngLat(44.0, 37.0), Point.fromLngLat(44.0, 39.0)
+        // Northwest: Turkey-Armenia-Azerbaijan border
+        Point.fromLngLat(44.79, 39.71), Point.fromLngLat(44.81, 39.65), Point.fromLngLat(44.77, 39.55),
+        Point.fromLngLat(44.59, 39.45), Point.fromLngLat(44.38, 39.42), Point.fromLngLat(44.28, 39.39),
+        Point.fromLngLat(44.03, 39.38), Point.fromLngLat(44.02, 39.36),
+        // Along Turkey border going south
+        Point.fromLngLat(44.17, 39.25), Point.fromLngLat(44.28, 39.10), Point.fromLngLat(44.38, 38.94),
+        Point.fromLngLat(44.30, 38.81), Point.fromLngLat(44.32, 38.45), Point.fromLngLat(44.45, 38.30),
+        Point.fromLngLat(44.56, 38.22), Point.fromLngLat(44.67, 38.06),
+        // Along Azerbaijan (Nakhchivan) and Turkey
+        Point.fromLngLat(44.78, 37.82), Point.fromLngLat(44.77, 37.59), Point.fromLngLat(44.60, 37.44),
+        Point.fromLngLat(44.56, 37.15), Point.fromLngLat(44.60, 36.82), Point.fromLngLat(44.75, 36.60),
+        Point.fromLngLat(44.83, 36.42), Point.fromLngLat(44.85, 36.18),
+        // Iraq border going south
+        Point.fromLngLat(44.97, 36.01), Point.fromLngLat(45.05, 35.82), Point.fromLngLat(45.16, 35.63),
+        Point.fromLngLat(45.36, 35.41), Point.fromLngLat(45.39, 35.16), Point.fromLngLat(45.44, 34.95),
+        Point.fromLngLat(45.56, 34.69), Point.fromLngLat(45.65, 34.47), Point.fromLngLat(45.70, 34.22),
+        Point.fromLngLat(45.78, 33.96), Point.fromLngLat(45.80, 33.72), Point.fromLngLat(45.85, 33.48),
+        Point.fromLngLat(45.96, 33.20), Point.fromLngLat(46.09, 32.96), Point.fromLngLat(46.17, 32.68),
+        Point.fromLngLat(46.28, 32.42), Point.fromLngLat(46.39, 32.18), Point.fromLngLat(46.56, 31.93),
+        Point.fromLngLat(47.06, 31.69), Point.fromLngLat(47.35, 31.41), Point.fromLngLat(47.68, 31.00),
+        Point.fromLngLat(47.85, 30.84), Point.fromLngLat(47.98, 30.62),
+        // Shatt al-Arab / Persian Gulf coast
+        Point.fromLngLat(48.02, 30.44), Point.fromLngLat(48.16, 30.32), Point.fromLngLat(48.42, 30.35),
+        Point.fromLngLat(48.85, 30.42), Point.fromLngLat(49.20, 30.38), Point.fromLngLat(49.55, 30.15),
+        Point.fromLngLat(49.80, 29.88), Point.fromLngLat(50.10, 29.60),
+        // Bushehr coast
+        Point.fromLngLat(50.35, 29.35), Point.fromLngLat(50.60, 29.10), Point.fromLngLat(50.84, 28.97),
+        Point.fromLngLat(51.10, 28.68), Point.fromLngLat(51.35, 28.30), Point.fromLngLat(51.58, 27.95),
+        // Kangan / Assaluyeh coast
+        Point.fromLngLat(52.06, 27.84), Point.fromLngLat(52.62, 27.47), Point.fromLngLat(53.05, 27.18),
+        Point.fromLngLat(53.50, 26.98), Point.fromLngLat(53.95, 26.72), Point.fromLngLat(54.35, 26.55),
+        // Bandar Lengeh / Qeshm
+        Point.fromLngLat(54.88, 26.56), Point.fromLngLat(55.35, 26.65), Point.fromLngLat(55.80, 26.80),
+        Point.fromLngLat(56.27, 27.18),
+        // Strait of Hormuz / Bandar Abbas down to Jask
+        Point.fromLngLat(56.45, 27.06), Point.fromLngLat(56.80, 26.68), Point.fromLngLat(57.15, 26.30),
+        Point.fromLngLat(57.48, 25.95), Point.fromLngLat(57.77, 25.65),
+        // Makran / Gulf of Oman coast (Jask to Chabahar)
+        Point.fromLngLat(58.20, 25.48), Point.fromLngLat(58.65, 25.38), Point.fromLngLat(59.10, 25.35),
+        Point.fromLngLat(59.55, 25.32), Point.fromLngLat(60.02, 25.30), Point.fromLngLat(60.38, 25.35),
+        Point.fromLngLat(60.64, 25.29),
+        // Gwatar Bay / Pakistan border
+        Point.fromLngLat(61.05, 25.20), Point.fromLngLat(61.38, 25.15), Point.fromLngLat(61.66, 25.13),
+        // Pakistan border going north (stays along ~61.6°E)
+        Point.fromLngLat(61.62, 25.45), Point.fromLngLat(61.58, 25.80), Point.fromLngLat(61.55, 26.20),
+        Point.fromLngLat(61.58, 26.55), Point.fromLngLat(61.62, 26.95),
+        Point.fromLngLat(61.65, 27.40), Point.fromLngLat(61.68, 27.75), Point.fromLngLat(61.70, 28.10),
+        Point.fromLngLat(61.68, 28.45), Point.fromLngLat(61.65, 28.80),
+        // Iran-Pakistan-Afghanistan tripoint
+        Point.fromLngLat(61.65, 29.04),
+        // Afghanistan border (runs along ~60.5-61.5°E going north)
+        Point.fromLngLat(61.55, 29.40), Point.fromLngLat(61.40, 29.75), Point.fromLngLat(61.30, 30.10),
+        Point.fromLngLat(61.15, 30.50), Point.fromLngLat(61.05, 30.85), Point.fromLngLat(60.90, 31.15),
+        Point.fromLngLat(60.85, 31.40), Point.fromLngLat(60.77, 31.65),
+        Point.fromLngLat(60.68, 31.85), Point.fromLngLat(60.58, 32.20), Point.fromLngLat(60.52, 32.60),
+        Point.fromLngLat(60.48, 33.06), Point.fromLngLat(60.50, 33.52), Point.fromLngLat(60.48, 33.76),
+        Point.fromLngLat(60.45, 34.09), Point.fromLngLat(60.52, 34.32), Point.fromLngLat(60.58, 34.52),
+        Point.fromLngLat(60.72, 34.63), Point.fromLngLat(60.88, 35.27), Point.fromLngLat(61.05, 35.62),
+        // Turkmenistan border
+        Point.fromLngLat(61.15, 35.98), Point.fromLngLat(61.22, 36.18), Point.fromLngLat(61.12, 36.48),
+        Point.fromLngLat(60.65, 36.81), Point.fromLngLat(60.30, 36.95), Point.fromLngLat(59.92, 37.05),
+        Point.fromLngLat(59.50, 37.18), Point.fromLngLat(58.80, 37.52), Point.fromLngLat(58.42, 37.64),
+        Point.fromLngLat(57.90, 37.78), Point.fromLngLat(57.38, 37.95), Point.fromLngLat(56.88, 37.92),
+        Point.fromLngLat(56.40, 37.95), Point.fromLngLat(55.98, 37.93), Point.fromLngLat(55.58, 37.88),
+        Point.fromLngLat(55.07, 37.58), Point.fromLngLat(54.75, 37.48), Point.fromLngLat(54.38, 37.32),
+        Point.fromLngLat(54.06, 37.25),
+        // Caspian Sea coast
+        Point.fromLngLat(53.80, 37.10), Point.fromLngLat(53.50, 36.86), Point.fromLngLat(53.15, 36.78),
+        Point.fromLngLat(52.62, 36.82), Point.fromLngLat(52.10, 36.88), Point.fromLngLat(51.55, 36.85),
+        Point.fromLngLat(51.15, 36.78), Point.fromLngLat(50.82, 36.68), Point.fromLngLat(50.42, 36.68),
+        Point.fromLngLat(50.05, 36.72), Point.fromLngLat(49.80, 36.82), Point.fromLngLat(49.45, 37.10),
+        Point.fromLngLat(49.10, 37.28), Point.fromLngLat(48.88, 37.60), Point.fromLngLat(48.73, 37.82),
+        Point.fromLngLat(48.60, 38.05), Point.fromLngLat(48.58, 38.22), Point.fromLngLat(48.35, 38.42),
+        // Back up to Azerbaijan / Armenia
+        Point.fromLngLat(48.02, 38.85), Point.fromLngLat(47.98, 39.01), Point.fromLngLat(47.77, 39.10),
+        Point.fromLngLat(47.56, 39.18), Point.fromLngLat(46.55, 38.88), Point.fromLngLat(46.17, 38.82),
+        Point.fromLngLat(45.95, 38.88), Point.fromLngLat(45.62, 39.02), Point.fromLngLat(45.35, 39.18),
+        Point.fromLngLat(45.03, 39.34), Point.fromLngLat(44.79, 39.71) // Close loop
     )
 
     LaunchedEffect(mapboxMap) {
@@ -590,12 +695,7 @@ fun ScienceWorldContent(
             }
         }
         
-        Spacer(Modifier.height(8.dp))
-        Text(
-            "تارکت یافت شده: ${filteredUniversities.size} دانشگاه",
-            color = if (filteredUniversities.isEmpty()) Color.Red.copy(alpha = 0.6f) else textColor.copy(alpha = 0.6f),
-            fontSize = 12.sp
-        )
+
 
         AnimatedVisibility(visible = showAdvancedFilters) {
             GlassmorphicFilterCard(backgroundColor = cardColor, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) {
@@ -631,7 +731,7 @@ fun ScienceWorldContent(
             }
         }
         
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(8.dp))
         Box(modifier = Modifier.fillMaxWidth().height(450.dp).padding(horizontal = 24.dp).clip(RoundedCornerShape(32.dp)), contentAlignment = Alignment.Center) {
             Globe3D(modifier = Modifier.fillMaxSize()) // Glow behind
             MapboxGlobe(onMapReady = onMapReady, modifier = Modifier.fillMaxSize())

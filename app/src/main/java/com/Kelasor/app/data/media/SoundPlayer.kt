@@ -26,37 +26,17 @@ class SoundPlayer @Inject constructor(
     private var isSoundEnabled: Boolean = true
     
     /**
-     * Play send message sound
+     * Play send message sound — DISABLED per user request
      */
     fun playSendSound() {
-        if (!isSoundEnabled) return
-        try {
-            releaseSendPlayer()
-            // SWAPPED: Was send, now using receive (User reported swap)
-            sendSoundPlayer = MediaPlayer.create(context, R.raw.receive)?.apply {
-                setOnCompletionListener { release() }
-                start()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error playing send sound", e)
-        }
+        // Sound disabled
     }
     
     /**
-     * Play receive message sound
+     * Play receive message sound — DISABLED per user request
      */
     fun playReceiveSound() {
-        if (!isSoundEnabled) return
-        try {
-            releaseReceivePlayer()
-            // SWAPPED: Was receive, now using send (User reported swap)
-            receiveSoundPlayer = MediaPlayer.create(context, R.raw.send)?.apply {
-                setOnCompletionListener { release() }
-                start()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error playing receive sound", e)
-        }
+        // Sound disabled
     }
     
     /**

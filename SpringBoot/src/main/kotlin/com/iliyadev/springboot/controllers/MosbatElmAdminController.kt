@@ -1,6 +1,7 @@
 package com.iliyadev.springboot.controllers
 
 import com.iliyadev.springboot.models.ApiResponse
+import com.iliyadev.springboot.models.InstitutionResponse
 import com.iliyadev.springboot.services.*
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -19,7 +20,8 @@ import java.util.UUID
 class MosbatElmAdminController(
     private val teacherService: TeacherVerificationService,
     private val institutionService: InstitutionService,
-    private val subscriptionService: SubscriptionService
+    private val subscriptionService: SubscriptionService,
+    private val courseService: CourseService
 ) {
     // ── Teacher Verification ──
 
@@ -63,6 +65,24 @@ class MosbatElmAdminController(
         return ResponseEntity.ok(ApiResponse(success = true, message = "Institution reviewed", data = result))
     }
 
+    // ── Course (Elm Club) Management ──
+
+    @GetMapping("/courses/pending")
+    fun getPendingCourses(pageable: Pageable): ResponseEntity<ApiResponse<Page<CourseResponse>>> {
+        val result: Page<CourseResponse> = courseService.getPendingCourses(pageable)
+        return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = result))
+    }
+
+    @PostMapping("/courses/{id}/review")
+    fun reviewCourse(
+        @PathVariable id: UUID,
+        @RequestParam adminId: UUID,
+        @RequestBody request: CourseReviewRequest
+    ): ResponseEntity<ApiResponse<CourseResponse>> {
+        val result: CourseResponse = courseService.reviewCourse(id, adminId, request.status, request.adminNote)
+        return ResponseEntity.ok(ApiResponse(success = true, message = "Course reviewed", data = result))
+    }
+
     // ── Subscription Plans CRUD ──
 
     @PostMapping("/subscription-plans")
@@ -77,3 +97,8 @@ class MosbatElmAdminController(
         return ResponseEntity.ok(ApiResponse(success = true, message = "Plan deactivated", data = result))
     }
 }
+
+data class CourseReviewRequest(
+    val status: com.iliyadev.springboot.models.CourseStatus, // APPROVED or REJECTED
+    val adminNote: String? = null
+)

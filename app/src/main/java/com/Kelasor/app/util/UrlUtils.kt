@@ -12,7 +12,11 @@ object UrlUtils {
         if (mediaUrl == null) return null
         if (mediaUrl.isBlank()) return ""
         
-        return if (mediaUrl.startsWith("http://") || mediaUrl.startsWith("https://")) {
+        return if (mediaUrl.startsWith("http://") || 
+            mediaUrl.startsWith("https://") ||
+            mediaUrl.startsWith("content://") ||
+            mediaUrl.startsWith("file://")
+        ) {
             mediaUrl
         } else {
             val baseUrl = Constants.BASE_URL.removeSuffix("/")

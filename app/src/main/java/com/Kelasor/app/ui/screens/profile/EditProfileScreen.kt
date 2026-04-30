@@ -1,13 +1,17 @@
 package com.Kelasor.app.ui.screens.profile
 
 import android.net.Uri
-import androidx.compose.animation.AnimatedVisibility
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -16,191 +20,209 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.Kelasor.app.domain.model.Channel
-import com.Kelasor.app.ui.components.AvatarImage
-import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.viewmodel.ProfileViewModel
-import com.Kelasor.app.ui.viewmodel.ChannelListViewModel
-import com.Kelasor.app.ui.viewmodel.ProfileEvent
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.collectAsState
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import com.Kelasor.app.data.ProvincesData
+import com.Kelasor.app.ui.components.AvatarImage
+import com.Kelasor.app.ui.theme.MessageAppTheme
+import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.viewmodel.ProfileViewModel
+import com.Kelasor.app.ui.viewmodel.ReferenceDataViewModel
+import com.Kelasor.app.ui.viewmodel.ProfileEvent
+import com.Kelasor.app.util.DateUtils
+import com.Kelasor.app.util.UrlUtils
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
     onNavigateBack: () -> Unit,
     profileViewModel: ProfileViewModel = hiltViewModel(),
-    channelViewModel: ChannelListViewModel = hiltViewModel()
+    channelViewModel: com.Kelasor.app.ui.viewmodel.ChannelListViewModel = hiltViewModel(),
+    refViewModel: ReferenceDataViewModel = hiltViewModel()
 ) {
     val profileState by profileViewModel.state.collectAsState()
     val channelState by channelViewModel.state.collectAsState()
+    val refState by refViewModel.state.collectAsState()
     val user = profileState.user
     val extendedColors = MessageAppTheme.extendedColors
     val context = LocalContext.current
 
-    // Local URI for immediate preview after picking
+    // Local URI for immediate preview
     var selectedAvatarUri by remember { mutableStateOf<Uri?>(null) }
+    
+    // Photo Editor State
+    var editingAvatarUri by remember { mutableStateOf<Uri?>(null) }
 
     // Avatar picker launcher
     val avatarPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         uri?.let {
-            selectedAvatarUri = it
-            try {
-                val inputStream = context.contentResolver.openInputStream(it)
-                val tempFile = java.io.File.createTempFile("avatar_", ".jpg", context.cacheDir)
-                inputStream?.use { input ->
-                    tempFile.outputStream().use { output -> input.copyTo(output) }
-                }
-                profileViewModel.uploadAvatar(tempFile)
-            } catch (e: Exception) {
-                selectedAvatarUri = null
-                android.widget.Toast.makeText(context, "خطا در بارگذاری تصویر", android.widget.Toast.LENGTH_SHORT).show()
-            }
+            editingAvatarUri = it
         }
     }
 
-    // Load channels & reference data on mount
+    // Load reference data and channels
     LaunchedEffect(Unit) {
+        refViewModel.loadReferenceData()
+        profileViewModel.loadProvinces()
         channelViewModel.loadChannels()
-        profileViewModel.loadReferenceData()
     }
 
-    // Observe avatar upload events
+    // Observe events
     LaunchedEffect(Unit) {
         profileViewModel.events.collect { event ->
             when (event) {
+                is ProfileEvent.SaveSuccess -> {
+                    Toast.makeText(context, "تغییرات با موفقیت ذخیره شد", Toast.LENGTH_SHORT).show()
+                    onNavigateBack()
+                }
                 is ProfileEvent.AvatarUploaded -> {
-                    android.widget.Toast.makeText(context, "تصویر پروفایل بروزرسانی شد", android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "تصویر پروفایل بروزرسانی شد", Toast.LENGTH_SHORT).show()
                 }
                 is ProfileEvent.Error -> {
-                    android.widget.Toast.makeText(context, event.message, android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
                 }
-                else -> {}
             }
         }
     }
+
+    // ── Form State ───────────────────────────────────────────────────────────
+    var firstName by remember(user) { mutableStateOf(user?.firstName ?: "") }
+    var lastName by remember(user) { mutableStateOf(user?.lastName ?: "") }
+    var username by remember(user) { mutableStateOf(user?.username ?: "") }
+    var bio by remember(user) { mutableStateOf(user?.bio ?: "") }
+    var nationalCode by remember(user) { mutableStateOf(user?.nationalCode ?: "") }
+    var birthDate by remember(user) { mutableStateOf(user?.birthDate ?: "") }
     
-    // Admin Channels for Bio Selection
+    // Educational State
+    var selectedRoleValueEn by remember(user) { mutableStateOf(user?.educationalRole ?: "") }
+    var selectedLevelName by remember(user) { mutableStateOf(user?.gradeLevel ?: "") }
+    var selectedFaculty by remember(user) { mutableStateOf(user?.faculty ?: "") }
+    var selectedMajor by remember(user) { mutableStateOf(user?.major ?: "") }
+    
+    // Detailed Profile Fields
+    var achievements by remember(user) { mutableStateOf(user?.achievements ?: "") }
+    var skills by remember(user) { mutableStateOf(user?.skills ?: "") }
+    var certificates by remember(user) { mutableStateOf(user?.education ?: "") }
+    
+    // Location State
+    var province by remember(user) { mutableStateOf(user?.province ?: "") }
+    var city by remember(user) { mutableStateOf(user?.city ?: "") }
+
+    // Bio Channels State
+    var bioChannelId1 by remember(user) { mutableStateOf(user?.bioChannelId1) }
+    var bioChannelId2 by remember(user) { mutableStateOf(user?.bioChannelId2) }
+
+    // Admin Channels
     val adminChannels = remember(channelState.channels) {
         channelState.channels.filter { it.isAdmin }
     }
 
-    // Form State
-    var displayName by remember(user) { mutableStateOf(user?.displayName ?: "") }
-    var username by remember(user) { mutableStateOf(user?.username ?: "") }
-    var bio by remember(user) { mutableStateOf(user?.bio ?: "") }
+    // Validation
+    val isFormValid = username.isNotBlank() && firstName.isNotBlank() && lastName.isNotBlank()
     
-    var university by remember(user) { mutableStateOf(user?.university ?: "") }
-    var fieldOfStudy by remember(user) { mutableStateOf(user?.fieldOfStudy ?: "") }
-    var education by remember(user) { mutableStateOf(user?.education ?: "") }
-    var skills by remember(user) { mutableStateOf(user?.skills ?: "") }
-    var interests by remember(user) { mutableStateOf(user?.interests ?: "") }
-    var workExperience by remember(user) { mutableStateOf(user?.workExperience ?: "") }
-    var achievements by remember(user) { mutableStateOf(user?.achievements ?: "") }
-    
-    // Teacher fields
-    var isTeacher by remember(user) { mutableStateOf(user?.isTeacher ?: false) }
-    var teachingField by remember(user) { mutableStateOf(user?.teachingField ?: "") }
-    var teachingUniversity by remember(user) { mutableStateOf(user?.teachingUniversity ?: "") }
-    // Location fields
-    var province by remember(user) { mutableStateOf(user?.province ?: "") }
-    var city by remember(user) { mutableStateOf(user?.city ?: "") }
-    // Pre-load cities if user already has a province set
-    LaunchedEffect(user?.province) {
-        val existingProvince: String? = user?.province
-        if (!existingProvince.isNullOrBlank()) {
-            profileViewModel.loadCities(existingProvince)
-        }
-    }
-    
-    var bioChannelId1 by remember(user) { mutableStateOf(user?.bioChannelId1) }
-    var bioChannelId2 by remember(user) { mutableStateOf(user?.bioChannelId2) }
+    // UI state for showing validation errors
+    var showErrors by remember { mutableStateOf(false) }
 
-    // Dropdown expanded states
-    var universityExpanded by remember { mutableStateOf(false) }
-    var fieldOfStudyExpanded by remember { mutableStateOf(false) }
-    var educationExpanded by remember { mutableStateOf(false) }
-    var teachingFieldExpanded by remember { mutableStateOf(false) }
-    var teachingUniversityExpanded by remember { mutableStateOf(false) }
-    var provinceExpanded by remember { mutableStateOf(false) }
-    var cityExpanded by remember { mutableStateOf(false) }
-
-    // Channel Selection Sheets
-    var showChannelSheet1 by remember { mutableStateOf(false) }
-    var showChannelSheet2 by remember { mutableStateOf(false) }
-
-    // Profile completion calculation
-    val profileCompletionPercent = remember(user, university, fieldOfStudy, education, isTeacher) {
-        var filled = 0
-        var total = 6
-        if (!user?.displayName.isNullOrBlank()) filled++
-        if (!user?.bio.isNullOrBlank()) filled++
-        if (university.isNotBlank()) filled++
-        if (fieldOfStudy.isNotBlank()) filled++
-        if (education.isNotBlank()) filled++
-        if (!user?.avatarUrl.isNullOrBlank()) filled++
-        (filled * 100) / total
+    val filteredLevels = remember(selectedRoleValueEn, refState.educationLevels) {
+        refState.educationLevels.filter { it.roleValueEn == selectedRoleValueEn || it.roleValueEn.isNullOrBlank() }
     }
 
-    // Handle Save Success
-    LaunchedEffect(profileState.saveSuccess) {
-        if (profileState.saveSuccess) {
-            onNavigateBack()
-            profileViewModel.resetSaveSuccess()
+    val filteredFields = remember(selectedLevelName, refState.fieldsOfStudy) {
+        if (selectedLevelName.isBlank()) emptyList()
+        else refState.fieldsOfStudy.filter { it.educationLevel.equals(selectedLevelName, ignoreCase = true) }.map { it.name }
+    }
+
+    val filteredFaculties = remember(selectedLevelName, refState.faculties) {
+        if (selectedLevelName.isBlank()) emptyList()
+        else refState.faculties.filter { it.educationLevel.equals(selectedLevelName, ignoreCase = true) }.map { it.name }
+    }
+
+    // Load cities if province changes
+    LaunchedEffect(province) {
+        if (province.isNotBlank()) {
+            profileViewModel.loadCities(province)
         }
+    }
+
+    // Jalali Date Picker State
+    var showJalaliPicker by remember { mutableStateOf(false) }
+
+    if (showJalaliPicker) {
+        JalaliDatePickerDialog(
+            initialDate = birthDate,
+            onDismiss = { showJalaliPicker = false },
+            onConfirm = { selectedDate ->
+                birthDate = selectedDate
+                showJalaliPicker = false
+            }
+        )
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("ویرایش پروفایل") },
+                title = { Text("ویرایش پروفایل", fontFamily = VazirFontFamily, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "برگشت")
                     }
                 },
                 actions = {
                     if (profileState.isSaving) {
-                        CircularProgressIndicator(modifier = Modifier.padding(end = 16.dp).size(24.dp))
+                        CircularProgressIndicator(
+                            modifier = Modifier.padding(end = 16.dp).size(24.dp),
+                            strokeWidth = 2.dp,
+                            color = extendedColors.accent
+                        )
                     } else {
-                        IconButton(onClick = {
-                            profileViewModel.updateProfile(
-                                username = username,
-                                displayName = displayName,
-                                bio = bio,
-                                university = university,
-                                fieldOfStudy = fieldOfStudy,
-                                education = education,
-                                skills = skills,
-                                interests = interests,
-                                workExperience = workExperience,
-                                achievements = achievements,
-                                bioChannelId1 = bioChannelId1,
-                                bioChannelId2 = bioChannelId2,
-                                isTeacher = isTeacher,
-                                teachingField = teachingField.ifBlank { null },
-                                teachingUniversity = teachingUniversity.ifBlank { null },
-                                province = province.ifBlank { null },
-                                city = city.ifBlank { null }
+                        IconButton(
+                            onClick = {
+                                if (isFormValid) {
+                                    profileViewModel.updateProfile(
+                                        username = username.trim(),
+                                        displayName = "${firstName.trim()} ${lastName.trim()}",
+                                        firstName = firstName.trim(),
+                                        lastName = lastName.trim(),
+                                        nationalCode = if (nationalCode.isBlank()) null else nationalCode.trim(),
+                                        bio = if (bio.isBlank()) null else bio.trim(),
+                                        educationalRole = if (selectedRoleValueEn.isBlank()) null else selectedRoleValueEn,
+                                        gradeLevel = if (selectedLevelName.isBlank()) null else selectedLevelName,
+                                        major = if (selectedMajor.isBlank()) null else selectedMajor,
+                                        faculty = if (selectedFaculty.isBlank()) null else selectedFaculty,
+                                        birthDate = if (birthDate.isBlank()) null else birthDate,
+                                        skills = if (skills.isBlank()) null else skills.trim(),
+                                        achievements = if (achievements.isBlank()) null else achievements.trim(),
+                                        education = if (certificates.isBlank()) null else certificates.trim(),
+                                        province = if (province.isBlank()) null else province,
+                                        city = if (city.isBlank()) null else city,
+                                        bioChannelId1 = bioChannelId1,
+                                        bioChannelId2 = bioChannelId2
+                                    )
+                                } else {
+                                    showErrors = true
+                                    Toast.makeText(context, "لطفاً تمامی فیلدهای اجباری را پر کنید", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        ) {
+                            Icon(
+                                Icons.Default.Check, 
+                                contentDescription = "ذخیره", 
+                                tint = if (isFormValid) extendedColors.accent else extendedColors.accent.copy(alpha = 0.3f)
                             )
-                        }) {
-                            Icon(Icons.Default.Check, "Save", tint = extendedColors.accent)
                         }
                     }
                 }
@@ -211,89 +233,62 @@ fun EditProfileScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .background(MaterialTheme.colorScheme.background),
+            contentPadding = PaddingValues(bottom = 32.dp)
         ) {
-            // Profile Completion Banner
-            if (profileCompletionPercent < 100) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(
-                                    Brush.horizontalGradient(
-                                        colors = listOf(
-                                            Color(0xFF6C63FF),
-                                            Color(0xFF4ECDC4)
-                                        )
-                                    ),
-                                    shape = RoundedCornerShape(16.dp)
-                                )
-                                .padding(16.dp)
-                        ) {
-                            Column {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.Star,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Text(
-                                        "پروفایل خود را تکمیل کنید!",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                LinearProgressIndicator(
-                                    progress = { profileCompletionPercent / 100f },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(8.dp)
-                                        .clip(RoundedCornerShape(4.dp)),
-                                    color = Color.White,
-                                    trackColor = Color.White.copy(alpha = 0.3f)
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    "%$profileCompletionPercent تکمیل شده",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = 0.9f)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Avatar Upload Section
+            // ── Top Avatar Section ──
             item {
                 Box(
-                    modifier = Modifier.size(130.dp),
-                    contentAlignment = Alignment.BottomEnd
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    val displayImageUri: Any? = selectedAvatarUri
-                        ?: user?.avatarUrl?.let { com.Kelasor.app.util.UrlUtils.getFullUrl(it) }
-                    if (displayImageUri != null && (displayImageUri is Uri || (displayImageUri is String && displayImageUri.isNotBlank()))) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(displayImageUri)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = "پروفایل",
+                    Box(modifier = Modifier.size(120.dp)) {
+                        val displayImageUri: Any? = selectedAvatarUri
+                            ?: user?.avatarUrl?.let { UrlUtils.getFullUrl(it) }
+
+                        if (displayImageUri != null) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(displayImageUri)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = "پروفایل",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                                    .clickable {
+                                        avatarPickerLauncher.launch(
+                                            androidx.activity.result.PickVisualMediaRequest(
+                                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                                            )
+                                        )
+                                    },
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            AvatarImage(
+                                imageUrl = null,
+                                name = if (firstName.isNotBlank() || lastName.isNotBlank()) "$firstName $lastName" else "?",
+                                size = com.Kelasor.app.ui.components.AvatarSize.XLARGE,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clickable {
+                                        avatarPickerLauncher.launch(
+                                            androidx.activity.result.PickVisualMediaRequest(
+                                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                                            )
+                                        )
+                                    }
+                            )
+                        }
+                        
+                        // Camera overlay
+                        Surface(
                             modifier = Modifier
-                                .size(130.dp)
+                                .align(Alignment.BottomEnd)
+                                .size(36.dp)
                                 .clip(CircleShape)
                                 .clickable {
                                     avatarPickerLauncher.launch(
@@ -302,650 +297,832 @@ fun EditProfileScreen(
                                         )
                                     )
                                 },
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        AvatarImage(
-                            imageUrl = null,
-                            name = user?.displayName ?: "?",
-                            size = com.Kelasor.app.ui.components.AvatarSize.LARGE,
-                            modifier = Modifier
-                                .size(130.dp)
-                                .clickable {
-                                    avatarPickerLauncher.launch(
-                                        androidx.activity.result.PickVisualMediaRequest(
-                                            ActivityResultContracts.PickVisualMedia.ImageOnly
-                                        )
-                                    )
-                                }
-                        )
-                    }
-                    Surface(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .clickable {
-                                avatarPickerLauncher.launch(
-                                    androidx.activity.result.PickVisualMediaRequest(
-                                        ActivityResultContracts.PickVisualMedia.ImageOnly
-                                    )
-                                )
-                            },
-                        color = extendedColors.accent,
-                        shape = CircleShape
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CameraAlt,
-                            contentDescription = "تغییر تصویر",
-                            tint = Color.White,
-                            modifier = Modifier.padding(6.dp)
-                        )
+                            color = extendedColors.accent,
+                            tonalElevation = 4.dp
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CameraAlt,
+                                contentDescription = "تغییر تصویر",
+                                tint = Color.White,
+                                modifier = Modifier.padding(8.dp)
+                            )
+                        }
                     }
                 }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "تغییر تصویر پروفایل",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = extendedColors.accent
-                )
             }
 
-            // Basic Info Section
+            // ── Identity Section ──
             item {
-                SectionHeader("اطلاعات پایه", Icons.Default.Person)
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                OutlinedTextField(
-                    value = displayName,
-                    onValueChange = { displayName = it },
-                    label = { Text("نام نمایشی") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                EditSectionHeader("اطلاعات هویتی", Icons.Default.Badge)
+                EditField(
+                    label = "نام (اجباری)",
+                    value = firstName,
+                    onValueChange = { firstName = it },
+                    placeholder = "نام خود را وارد کنید",
+                    isError = showErrors && firstName.isBlank()
                 )
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                OutlinedTextField(
+                EditField(
+                    label = "نام خانوادگی (اجباری)",
+                    value = lastName,
+                    onValueChange = { lastName = it },
+                    placeholder = "نام خانوادگی خود را وارد کنید",
+                    isError = showErrors && lastName.isBlank()
+                )
+                EditField(
+                    label = "نام کاربری / ID (اجباری)",
                     value = username,
-                    onValueChange = { newValue ->
-                        username = newValue.lowercase().filter { c -> c.isLetterOrDigit() || c == '_' || c == '.' }
-                    },
-                    label = { Text("نام کاربری (@)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    isError = username.isNotEmpty() && username.length < 3,
-                    supportingText = {
-                        when {
-                            username.isEmpty() -> Text("حداقل ۳ کاراکتر، فقط حروف انگلیسی و عدد")
-                            username.length < 3 -> Text("نام کاربری باید حداقل ۳ کاراکتر باشد", color = MaterialTheme.colorScheme.error)
-                            else -> Text("✓ فرمت صحیح", color = Color(0xFF4CAF50))
-                        }
-                    },
-                    leadingIcon = {
-                        Text("@", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = if (username.length >= 3) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = if (username.length >= 3) Color(0xFF4CAF50).copy(alpha = 0.5f) else MaterialTheme.colorScheme.outline
-                    )
+                    onValueChange = { username = it },
+                    placeholder = "یک شناسه‌ی کاربری انتخاب کنید",
+                    isError = showErrors && username.isBlank()
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                EditField(
+                    label = "کد ملی",
+                    value = nationalCode,
+                    onValueChange = { if (it.length <= 10 && it.all { c -> c.isDigit() }) nationalCode = it },
+                    placeholder = "کد ملی ۱۰ رقمی",
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
                 
-                OutlinedTextField(
+                // Birth Date Field (Clickable TextField)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = "تاریخ تولد",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontFamily = VazirFontFamily,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showJalaliPicker = true }
+                            .padding(vertical = 12.dp)
+                    ) {
+                        Text(
+                            text = if (birthDate.isBlank()) "انتخاب تاریخ تولد" else DateUtils.formatGregorianToJalali(birthDate),
+                            fontFamily = VazirFontFamily,
+                            color = if (birthDate.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                }
+                
+                EditField(
+                    label = "بیوگرافی",
                     value = bio,
                     onValueChange = { bio = it },
-                    label = { Text("بیوگرافی") },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 3,
-                    maxLines = 5
+                    placeholder = "درباره خودتان بنویسید...",
+                    singleLine = false,
+                    maxLines = 4
                 )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
             }
 
-            // Education Section with Dropdowns
+            // ── Educational Identity Section ──
             item {
-                SectionHeader("تحصیلات و مهارت‌ها", Icons.Default.School)
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                // University Dropdown
-                ExposedDropdownMenuBox(
-                    expanded = universityExpanded,
-                    onExpandedChange = { universityExpanded = it }
-                ) {
-                    OutlinedTextField(
-                        value = university,
-                        onValueChange = { university = it },
-                        label = { Text("دانشگاه") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
-                        singleLine = true,
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = universityExpanded) },
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
-                    )
-                    val filteredUniversities = remember(university, profileState.universities) {
-                        if (university.isBlank()) profileState.universities
-                        else profileState.universities.filter { it.name.contains(university, ignoreCase = true) }
-                    }
-                    if (filteredUniversities.isNotEmpty()) {
-                        ExposedDropdownMenu(
-                            expanded = universityExpanded,
-                            onDismissRequest = { universityExpanded = false }
-                        ) {
-                            filteredUniversities.take(15).forEach { uni ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Column {
-                                            Text(uni.name, fontWeight = FontWeight.Medium)
-                                            if (uni.city != null) {
-                                                Text(
-                                                    uni.city,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
-                                        }
-                                    },
-                                    onClick = {
-                                        university = uni.name
-                                        universityExpanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Education Level Dropdown
-                ExposedDropdownMenuBox(
-                    expanded = educationExpanded,
-                    onExpandedChange = { educationExpanded = it }
-                ) {
-                    OutlinedTextField(
-                        value = education,
-                        onValueChange = { education = it },
-                        label = { Text("مقطع تحصیلی") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
-                        singleLine = true,
-                        readOnly = profileState.educationLevels.isNotEmpty(),
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = educationExpanded) },
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
-                    )
-                    if (profileState.educationLevels.isNotEmpty()) {
-                        ExposedDropdownMenu(
-                            expanded = educationExpanded,
-                            onDismissRequest = { educationExpanded = false }
-                        ) {
-                            profileState.educationLevels.forEach { level ->
-                                DropdownMenuItem(
-                                    text = { Text(level.name) },
-                                    onClick = {
-                                        education = level.name
-                                        educationExpanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Field of Study Dropdown
-                ExposedDropdownMenuBox(
-                    expanded = fieldOfStudyExpanded,
-                    onExpandedChange = { fieldOfStudyExpanded = it }
-                ) {
-                    OutlinedTextField(
-                        value = fieldOfStudy,
-                        onValueChange = { fieldOfStudy = it },
-                        label = { Text("رشته تحصیلی") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
-                        singleLine = true,
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = fieldOfStudyExpanded) },
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
-                    )
-                    val filteredFields = remember(fieldOfStudy, profileState.fieldsOfStudy) {
-                        if (fieldOfStudy.isBlank()) profileState.fieldsOfStudy
-                        else profileState.fieldsOfStudy.filter { it.name.contains(fieldOfStudy, ignoreCase = true) }
-                    }
-                    if (filteredFields.isNotEmpty()) {
-                        ExposedDropdownMenu(
-                            expanded = fieldOfStudyExpanded,
-                            onDismissRequest = { fieldOfStudyExpanded = false }
-                        ) {
-                            filteredFields.take(15).forEach { field ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Column {
-                                            Text(field.name, fontWeight = FontWeight.Medium)
-                                        }
-                                    },
-                                    onClick = {
-                                        fieldOfStudy = field.name
-                                        fieldOfStudyExpanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // ── Location Section ──
-                SectionHeader("موقعیت مکانی", Icons.Default.LocationOn)
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Province Dropdown
-                ExposedDropdownMenuBox(
-                    expanded = provinceExpanded,
-                    onExpandedChange = { provinceExpanded = it }
-                ) {
-                    OutlinedTextField(
-                        value = province,
-                        onValueChange = { },
-                        label = { Text("استان") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
-                        singleLine = true,
-                        readOnly = true,
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = provinceExpanded) },
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = provinceExpanded,
-                        onDismissRequest = { provinceExpanded = false }
-                    ) {
-                        profileState.provinces.forEach { provinceName ->
-                            DropdownMenuItem(
-                                text = { Text(provinceName) },
-                                onClick = {
-                                    province = provinceName
-                                    city = "" // Reset city when province changes
-                                    provinceExpanded = false
-                                    profileViewModel.loadCities(provinceName)
-                                }
-                            )
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // City Dropdown (filtered by selected province)
-                val citiesForProvince: List<String> = profileState.cities
-                ExposedDropdownMenuBox(
-                    expanded = cityExpanded,
-                    onExpandedChange = { if (citiesForProvince.isNotEmpty()) cityExpanded = it }
-                ) {
-                    OutlinedTextField(
-                        value = city,
-                        onValueChange = { },
-                        label = { Text("شهر") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
-                        singleLine = true,
-                        readOnly = true,
-                        enabled = citiesForProvince.isNotEmpty(),
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = cityExpanded) },
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
-                    )
-                    if (citiesForProvince.isNotEmpty()) {
-                        ExposedDropdownMenu(
-                            expanded = cityExpanded,
-                            onDismissRequest = { cityExpanded = false }
-                        ) {
-                            citiesForProvince.forEach { cityName ->
-                                DropdownMenuItem(
-                                    text = { Text(cityName) },
-                                    onClick = {
-                                        city = cityName
-                                        cityExpanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                OutlinedTextField(
-                    value = skills,
-                    onValueChange = { skills = it },
-                    label = { Text("مهارت‌ها (با کاما جدا کنید)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 2
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-
-                OutlinedTextField(
-                    value = interests,
-                    onValueChange = { interests = it },
-                    label = { Text("علاقه‌مندی‌ها") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
-            // Teacher Role Section
-            item {
-                SectionHeader("نقش استاد", Icons.Default.School)
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (isTeacher) Color(0xFF6C63FF).copy(alpha = 0.08f)
-                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    )
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.animateContentSize()) {
+                    EditSectionHeader("هویت آموزشی", Icons.Default.School)
+                    
+                    // Role Selection
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        Text(
+                            "نقش من در آموزش",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = extendedColors.accent,
+                            fontFamily = VazirFontFamily
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    "من استاد هستم",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold
+                            refState.educationalRoles.forEach { role ->
+                                RoleChip(
+                                    emoji = role.emoji,
+                                    label = role.labelFa,
+                                    isSelected = selectedRoleValueEn == role.valueEn,
+                                    onClick = { 
+                                        selectedRoleValueEn = role.valueEn
+                                        selectedLevelName = ""
+                                        selectedFaculty = ""
+                                        selectedMajor = ""
+                                    },
+                                    modifier = Modifier.weight(1f)
                                 )
-                                Text(
-                                    "با فعال کردن این گزینه، می‌توانید به عنوان استاد شناخته شوید",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Switch(
-                                checked = isTeacher,
-                                onCheckedChange = { isTeacher = it },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = Color(0xFF6C63FF)
-                                )
-                            )
-                        }
-                        
-                        AnimatedVisibility(visible = isTeacher) {
-                            Column {
-                                Spacer(modifier = Modifier.height(16.dp))
-                                
-                                ExposedDropdownMenuBox(
-                                    expanded = teachingFieldExpanded,
-                                    onExpandedChange = { teachingFieldExpanded = it }
-                                ) {
-                                    OutlinedTextField(
-                                        value = teachingField,
-                                        onValueChange = { teachingField = it },
-                                        label = { Text("رشته تدریس") },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .menuAnchor(),
-                                        singleLine = true,
-                                        leadingIcon = { Icon(Icons.Default.MenuBook, contentDescription = null) },
-                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = teachingFieldExpanded) },
-                                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
-                                    )
-                                    val filteredTeachFields = remember(teachingField, profileState.fieldsOfStudy) {
-                                        if (teachingField.isBlank()) profileState.fieldsOfStudy
-                                        else profileState.fieldsOfStudy.filter { it.name.contains(teachingField, ignoreCase = true) }
-                                    }
-                                    if (filteredTeachFields.isNotEmpty()) {
-                                        ExposedDropdownMenu(
-                                            expanded = teachingFieldExpanded,
-                                            onDismissRequest = { teachingFieldExpanded = false }
-                                        ) {
-                                            filteredTeachFields.take(15).forEach { field ->
-                                                DropdownMenuItem(
-                                                    text = { Text(field.name, fontWeight = FontWeight.Medium) },
-                                                    onClick = {
-                                                        teachingField = field.name
-                                                        teachingFieldExpanded = false
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                // Teaching University Dropdown
-                                ExposedDropdownMenuBox(
-                                    expanded = teachingUniversityExpanded,
-                                    onExpandedChange = { teachingUniversityExpanded = it }
-                                ) {
-                                    OutlinedTextField(
-                                        value = teachingUniversity,
-                                        onValueChange = { teachingUniversity = it },
-                                        label = { Text("دانشگاه محل تدریس") },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .menuAnchor(),
-                                        singleLine = true,
-                                        leadingIcon = { Icon(Icons.Default.AccountBalance, contentDescription = null) },
-                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = teachingUniversityExpanded) },
-                                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
-                                    )
-                                    val filteredTeachUniversities = remember(teachingUniversity, profileState.universities) {
-                                        if (teachingUniversity.isBlank()) profileState.universities
-                                        else profileState.universities.filter { it.name.contains(teachingUniversity, ignoreCase = true) }
-                                    }
-                                    if (filteredTeachUniversities.isNotEmpty()) {
-                                        ExposedDropdownMenu(
-                                            expanded = teachingUniversityExpanded,
-                                            onDismissRequest = { teachingUniversityExpanded = false }
-                                        ) {
-                                            filteredTeachUniversities.take(15).forEach { uni ->
-                                                DropdownMenuItem(
-                                                    text = {
-                                                        Column {
-                                                            Text(uni.name, fontWeight = FontWeight.Medium)
-                                                            if (uni.city != null) {
-                                                                Text(
-                                                                    uni.city,
-                                                                    style = MaterialTheme.typography.bodySmall,
-                                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                                )
-                                                            }
-                                                        }
-                                                    },
-                                                    onClick = {
-                                                        teachingUniversity = uni.name
-                                                        teachingUniversityExpanded = false
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
                             }
                         }
                     }
+
+                    // Education Level Dropdown
+                    AnimatedVisibility(visible = selectedRoleValueEn.isNotBlank()) {
+                        EditDropdownField(
+                            label = "مقطع تحصیلی",
+                            value = selectedLevelName,
+                            options = filteredLevels.map { it.name },
+                            onOptionSelected = { 
+                                selectedLevelName = it
+                                selectedFaculty = ""
+                                selectedMajor = ""
+                            }
+                        )
+                    }
+
+                    // Faculty Dropdown
+                    AnimatedVisibility(visible = filteredFaculties.isNotEmpty()) {
+                        EditDropdownField(
+                            label = "دانشکده",
+                            value = selectedFaculty,
+                            options = filteredFaculties,
+                            onOptionSelected = { selectedFaculty = it }
+                        )
+                    }
+
+                    // Major Dropdown
+                    AnimatedVisibility(visible = filteredFields.isNotEmpty()) {
+                        EditDropdownField(
+                            label = "رشته تحصیلی",
+                            value = selectedMajor,
+                            options = filteredFields,
+                            onOptionSelected = { selectedMajor = it }
+                        )
+                    }
+                    
+                    // New Fields: Skills, Achievements, Certificates
+                    EditField(
+                        label = "مهارت‌ها",
+                        value = skills,
+                        onValueChange = { skills = it },
+                        placeholder = "مهارت‌های خود را وارد کنید (مثلا: فتوشاپ، پایتون)",
+                        singleLine = false,
+                        maxLines = 3
+                    )
+                    
+                    EditField(
+                        label = "افتخارات",
+                        value = achievements,
+                        onValueChange = { achievements = it },
+                        placeholder = "افتخارات و جوایز خود را بنویسید",
+                        singleLine = false,
+                        maxLines = 3
+                    )
+                    
+                    EditField(
+                        label = "مدارک و گواهینامه‌ها",
+                        value = certificates,
+                        onValueChange = { certificates = it },
+                        placeholder = "مدارک تحصیلی یا گواهینامه‌ها",
+                        singleLine = false,
+                        maxLines = 3
+                    )
                 }
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
             }
 
-            // Experience Section
+            // ── Bio Channels Section ──
             item {
-                SectionHeader("سوابق کاری و افتخارات", Icons.Default.Work)
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                OutlinedTextField(
-                    value = workExperience,
-                    onValueChange = { workExperience = it },
-                    label = { Text("تجربه کاری") },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 2
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                OutlinedTextField(
-                    value = achievements,
-                    onValueChange = { achievements = it },
-                    label = { Text("افتخارات") },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 2
-                )
-            }
-
-            // Bio Channels Section
-            item {
-                SectionHeader("کانال‌های بایو", Icons.Default.Campaign)
+                EditSectionHeader("کانال‌های بایو", Icons.Default.Campaign)
                 Text(
-                    "می‌توانید تا ۲ کانال که مدیریت می‌کنید را در پروفایل خود نمایش دهید.",
+                    "می‌توانید تا ۲ کانال را در پروفایل خود نمایش دهید",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontFamily = VazirFontFamily,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                 )
-                Spacer(modifier = Modifier.height(12.dp))
                 
-                BioChannelSelector(
+                ChannelSelectorItem(
                     label = "کانال اول",
                     selectedChannelId = bioChannelId1,
-                    channels = adminChannels,
-                    onSelectValues = { showChannelSheet1 = true },
-                    onRemove = { bioChannelId1 = null }
+                    availableChannels = adminChannels,
+                    onChannelSelected = { bioChannelId1 = it }
                 )
-                Spacer(modifier = Modifier.height(12.dp))
                 
-                BioChannelSelector(
+                ChannelSelectorItem(
                     label = "کانال دوم",
                     selectedChannelId = bioChannelId2,
-                    channels = adminChannels,
-                    onSelectValues = { showChannelSheet2 = true },
-                    onRemove = { bioChannelId2 = null }
+                    availableChannels = adminChannels,
+                    onChannelSelected = { bioChannelId2 = it }
+                )
+                
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+            }
+
+            // ── Location Section ──
+            item {
+                EditSectionHeader("موقعیت مکانی", Icons.Default.LocationOn)
+                
+                EditDropdownField(
+                    label = "استان",
+                    value = province,
+                    options = profileState.provinces,
+                    onOptionSelected = { 
+                        province = it
+                        city = ""
+                    }
+                )
+                
+                EditDropdownField(
+                    label = "شهر",
+                    value = city,
+                    options = profileState.cities,
+                    onOptionSelected = { city = it },
+                    enabled = province.isNotBlank()
                 )
             }
-            
-            item {
-                Spacer(modifier = Modifier.height(32.dp))
-            }
         }
     }
-    
-    // Channel Selection Sheets
-    if (showChannelSheet1) {
-        ChannelSelectionSheet(
-            channels = adminChannels,
-            onDismiss = { showChannelSheet1 = false },
-            onChannelSelected = { 
-                bioChannelId1 = it.id 
-                showChannelSheet1 = false
-            }
-        )
-    }
-    
-    if (showChannelSheet2) {
-        ChannelSelectionSheet(
-            channels = adminChannels,
-            onDismiss = { showChannelSheet2 = false },
-            onChannelSelected = { 
-                bioChannelId2 = it.id
-                showChannelSheet2 = false
-            }
-        )
+
+    // ── Profile Photo Editor Overlay ──
+    AnimatedVisibility(
+        visible = editingAvatarUri != null,
+        enter = fadeIn() + scaleIn(initialScale = 0.8f) + expandIn(expandFrom = Alignment.Center),
+        exit = fadeOut() + scaleOut(targetScale = 0.8f) + shrinkOut(shrinkTowards = Alignment.Center)
+    ) {
+        editingAvatarUri?.let { uri ->
+            com.Kelasor.app.ui.components.ProfilePhotoEditorScreen(
+                imageUri = uri,
+                onSave = { editedUri ->
+                    selectedAvatarUri = editedUri
+                    editingAvatarUri = null
+                    try {
+                        val file = File(editedUri.path!!)
+                        profileViewModel.uploadAvatar(file)
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "خطا در آپلود تصویر", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                onDismiss = { editingAvatarUri = null }
+            )
+        }
     }
 }
 
 @Composable
-fun SectionHeader(title: String, icon: ImageVector) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            icon,
-            contentDescription = null,
-            tint = MessageAppTheme.extendedColors.accent,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            title,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
-
-@Composable
-fun BioChannelSelector(
-    label: String,
-    selectedChannelId: String?,
-    channels: List<Channel>,
-    onSelectValues: () -> Unit,
-    onRemove: () -> Unit
-) {
-    val selectedChannel = remember(selectedChannelId, channels) {
-        channels.find { it.id == selectedChannelId }
-    }
-    
-    OutlinedCard(
+fun EditSectionHeader(title: String, icon: ImageVector) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onSelectValues() },
-        shape = RoundedCornerShape(12.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (selectedChannel != null) {
-                    Text(selectedChannel.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-                } else {
-                    Text("انتخاب کنید...", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            if (selectedChannelId != null) {
-                IconButton(onClick = onRemove) {
-                    Icon(Icons.Default.Close, "Remove", tint = MaterialTheme.colorScheme.error)
-                }
-            }
-        }
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = MessageAppTheme.extendedColors.accent
+        )
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MessageAppTheme.extendedColors.accent,
+            fontFamily = VazirFontFamily
+        )
+    }
+}
+
+@Composable
+fun EditField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String = "",
+    singleLine: Boolean = true,
+    maxLines: Int = 1,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    isError: Boolean = false
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+            fontFamily = VazirFontFamily,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+        TextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text(placeholder, fontFamily = VazirFontFamily, fontSize = 14.sp) },
+            singleLine = singleLine,
+            maxLines = maxLines,
+            keyboardOptions = keyboardOptions,
+            textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = VazirFontFamily),
+            isError = isError,
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                disabledContainerColor = Color.Transparent,
+                focusedIndicatorColor = if (isError) MaterialTheme.colorScheme.error else MessageAppTheme.extendedColors.accent,
+                unfocusedIndicatorColor = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outlineVariant,
+                errorIndicatorColor = MaterialTheme.colorScheme.error
+            )
+        )
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChannelSelectionSheet(
-    channels: List<Channel>,
-    onDismiss: () -> Unit,
-    onChannelSelected: (Channel) -> Unit
+fun EditDropdownField(
+    label: String,
+    value: String,
+    options: List<String>,
+    onOptionSelected: (String) -> Unit,
+    enabled: Boolean = true
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
         Text(
-            "انتخاب کانال",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontFamily = VazirFontFamily,
+            modifier = Modifier.padding(bottom = 4.dp)
         )
-        if (channels.isEmpty()) {
-            Text(
-                "شما مدیر هیچ کانالی نیستید.",
-                modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        } else {
-            channels.forEach { channel ->
-                ListItem(
-                    headlineContent = { Text(channel.name) },
-                    supportingContent = { Text("${channel.subscriberCount} عضو") },
-                    leadingContent = {
-                        AvatarImage(
-                            imageUrl = channel.avatarUrl?.let { com.Kelasor.app.util.UrlUtils.getFullUrl(it) },
-                            name = channel.name,
-                            size = com.Kelasor.app.ui.components.AvatarSize.SMALL
-                        )
-                    },
-                    modifier = Modifier.clickable { onChannelSelected(channel) }
+        
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { if (enabled) expanded = it }
+        ) {
+            TextField(
+                value = value,
+                onValueChange = {},
+                readOnly = true,
+                enabled = enabled,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(),
+                placeholder = { Text("انتخاب کنید...", fontFamily = VazirFontFamily, fontSize = 14.sp) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = VazirFontFamily),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    disabledContainerColor = Color.Transparent,
+                    focusedIndicatorColor = MessageAppTheme.extendedColors.accent,
+                    unfocusedIndicatorColor = MaterialTheme.colorScheme.outlineVariant
                 )
+            )
+            
+            if (options.isNotEmpty()) {
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                ) {
+                    options.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option, fontFamily = VazirFontFamily) },
+                            onClick = {
+                                onOptionSelected(option)
+                                expanded = false
+                            }
+                        )
+                    }
+                }
             }
         }
-        Spacer(modifier = Modifier.height(32.dp))
     }
+}
+
+@Composable
+fun RoleChip(
+    emoji: String,
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val extendedColors = MessageAppTheme.extendedColors
+    Surface(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        color = if (isSelected) extendedColors.accent.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+        border = if (isSelected) androidx.compose.foundation.BorderStroke(1.dp, extendedColors.accent) else null,
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(vertical = 12.dp)
+        ) {
+            Text(text = emoji, fontSize = 24.sp)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = label,
+                fontFamily = VazirFontFamily,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                color = if (isSelected) extendedColors.accent else MaterialTheme.colorScheme.onSurface,
+                fontSize = 12.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun ChannelSelectorItem(
+    label: String,
+    selectedChannelId: String?,
+    availableChannels: List<com.Kelasor.app.domain.model.Channel>,
+    onChannelSelected: (String?) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedChannel = availableChannels.firstOrNull { it.id == selectedChannelId }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontFamily = VazirFontFamily,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+        
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = true }
+                .padding(vertical = 12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (selectedChannel != null) {
+                    AvatarImage(
+                        imageUrl = selectedChannel.avatarUrl,
+                        name = selectedChannel.name,
+                        size = com.Kelasor.app.ui.components.AvatarSize.SMALL,
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Text(
+                        selectedChannel.name,
+                        fontFamily = VazirFontFamily,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                    }
+                    Text(
+                        "انتخاب کانال",
+                        fontFamily = VazirFontFamily,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                if (selectedChannelId != null) {
+                    IconButton(onClick = { onChannelSelected(null) }, modifier = Modifier.size(24.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "حذف", modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+        }
+        
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.fillMaxWidth(0.9f)
+        ) {
+            if (availableChannels.isEmpty()) {
+                DropdownMenuItem(
+                    text = { Text("کانالی یافت نشد", fontFamily = VazirFontFamily) },
+                    onClick = { expanded = false },
+                    enabled = false
+                )
+            } else {
+                availableChannels.forEach { channel ->
+                    DropdownMenuItem(
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                AvatarImage(imageUrl = channel.avatarUrl, name = channel.name, size = com.Kelasor.app.ui.components.AvatarSize.SMALL, modifier = Modifier.size(24.dp))
+                                Text(channel.name, fontFamily = VazirFontFamily)
+                            }
+                        },
+                        onClick = {
+                            onChannelSelected(channel.id)
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+enum class PickerMode { DAYS, MONTHS, YEARS }
+
+@Composable
+fun JalaliDatePickerDialog(
+    initialDate: String, // yyyy-MM-dd
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit // yyyy-MM-dd
+) {
+    val extendedColors = MessageAppTheme.extendedColors
+    val now = Calendar.getInstance()
+    
+    // Parse initial date
+    val initJalali = if (initialDate.isNotBlank()) {
+        try {
+            val parts = initialDate.split("-")
+            DateUtils.gregorianToJalali(parts[0].toInt(), parts[1].toInt(), parts[2].toInt())
+        } catch (e: Exception) {
+            DateUtils.gregorianToJalali(now.get(Calendar.YEAR), now.get(Calendar.MONTH) + 1, now.get(Calendar.DAY_OF_MONTH))
+        }
+    } else {
+        DateUtils.gregorianToJalali(now.get(Calendar.YEAR), now.get(Calendar.MONTH) + 1, now.get(Calendar.DAY_OF_MONTH))
+    }
+
+    var selectedYear by remember { mutableStateOf(initJalali.first) }
+    var selectedMonth by remember { mutableStateOf(initJalali.second) }
+    var selectedDay by remember { mutableStateOf(initJalali.third) }
+
+    var viewYear by remember { mutableStateOf(selectedYear) }
+    var viewMonth by remember { mutableStateOf(selectedMonth) }
+    
+    var pickerMode by remember { mutableStateOf(PickerMode.DAYS) }
+
+    val shamsiMonthNames = listOf(
+        "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
+        "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"
+    )
+    val persianDayHeaders = listOf("ش", "ی", "د", "س", "چ", "پ", "ج")
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                "انتخاب تاریخ تولد",
+                fontFamily = VazirFontFamily,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Header Display
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(extendedColors.accent.copy(alpha = 0.1f))
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "${DateUtils.toPersianDigits(selectedDay)} ${shamsiMonthNames[selectedMonth - 1]} ${DateUtils.toPersianDigits(selectedYear)}",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = extendedColors.accent,
+                        fontFamily = VazirFontFamily,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Mode Selection Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = shamsiMonthNames[viewMonth - 1],
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { pickerMode = if (pickerMode == PickerMode.MONTHS) PickerMode.DAYS else PickerMode.MONTHS }
+                            .padding(horizontal = 12.dp, vertical = 4.dp),
+                        fontFamily = VazirFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (pickerMode == PickerMode.MONTHS) extendedColors.accent else MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = DateUtils.toPersianDigits(viewYear),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { pickerMode = if (pickerMode == PickerMode.YEARS) PickerMode.DAYS else PickerMode.YEARS }
+                            .padding(horizontal = 12.dp, vertical = 4.dp),
+                        fontFamily = VazirFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (pickerMode == PickerMode.YEARS) extendedColors.accent else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Box(modifier = Modifier.height(280.dp).fillMaxWidth()) {
+                    when (pickerMode) {
+                        PickerMode.DAYS -> {
+                            Column {
+                                // Month Navigation Arrows
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    IconButton(onClick = {
+                                        if (viewMonth == 1) { viewMonth = 12; viewYear-- }
+                                        else viewMonth--
+                                    }) {
+                                        Icon(androidx.compose.material.icons.Icons.Default.KeyboardArrowRight, contentDescription = "قبلی", tint = extendedColors.accent)
+                                    }
+                                    
+                                    Text(
+                                        text = "${shamsiMonthNames[viewMonth - 1]} ${DateUtils.toPersianDigits(viewYear)}",
+                                        fontFamily = VazirFontFamily,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+
+                                    IconButton(onClick = {
+                                        if (viewMonth == 12) { viewMonth = 1; viewYear++ }
+                                        else viewMonth++
+                                    }) {
+                                        Icon(androidx.compose.material.icons.Icons.Default.KeyboardArrowLeft, contentDescription = "بعدی", tint = extendedColors.accent)
+                                    }
+                                }
+
+                                // Weekday Headers
+                                Row(modifier = Modifier.fillMaxWidth()) {
+                                    persianDayHeaders.forEach { header ->
+                                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                                            Text(header, fontFamily = VazirFontFamily, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    }
+                                }
+
+                                // Calendar Grid
+                                val days = remember(viewYear, viewMonth) { getCalendarDays(viewYear, viewMonth) }
+                                val rows = days.chunked(7)
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    rows.forEach { week ->
+                                        Row(modifier = Modifier.fillMaxWidth()) {
+                                            week.forEach { day ->
+                                                val isSelected = day != null && day == selectedDay && viewMonth == selectedMonth && viewYear == selectedYear
+                                                Box(
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .aspectRatio(1f)
+                                                        .clip(CircleShape)
+                                                        .background(if (isSelected) extendedColors.accent else Color.Transparent)
+                                                        .clickable(enabled = day != null) {
+                                                            selectedDay = day!!
+                                                            selectedMonth = viewMonth
+                                                            selectedYear = viewYear
+                                                        },
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    if (day != null) {
+                                                        Text(
+                                                            text = DateUtils.toPersianDigits(day),
+                                                            fontFamily = VazirFontFamily,
+                                                            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                                            style = MaterialTheme.typography.bodyMedium
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        PickerMode.MONTHS -> {
+                            androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                                columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(3),
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(12) { index ->
+                                    val month = index + 1
+                                    val isSelected = month == viewMonth
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isSelected) extendedColors.accent else Color.Transparent)
+                                            .clickable {
+                                                viewMonth = month
+                                                pickerMode = PickerMode.DAYS
+                                            }
+                                            .padding(vertical = 12.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = shamsiMonthNames[index],
+                                            fontFamily = VazirFontFamily,
+                                            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        PickerMode.YEARS -> {
+                            val years = (1300..1405).toList().reversed()
+                            val listState = androidx.compose.foundation.lazy.grid.rememberLazyGridState(
+                                initialFirstVisibleItemIndex = years.indexOf(viewYear).coerceAtLeast(0)
+                            )
+                            androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                                columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(3),
+                                state = listState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(years.size) { index ->
+                                    val year = years[index]
+                                    val isSelected = year == viewYear
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isSelected) extendedColors.accent else Color.Transparent)
+                                            .clickable {
+                                                viewYear = year
+                                                pickerMode = PickerMode.DAYS
+                                            }
+                                            .padding(vertical = 12.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = DateUtils.toPersianDigits(year),
+                                            fontFamily = VazirFontFamily,
+                                            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val (gy, gm, gd) = DateUtils.jalaliToGregorian(selectedYear, selectedMonth, selectedDay)
+                val formatted = "$gy-${gm.toString().padStart(2, '0')}-${gd.toString().padStart(2, '0')}"
+                onConfirm(formatted)
+            }) {
+                Text("تایید", fontFamily = VazirFontFamily, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("لغو", fontFamily = VazirFontFamily)
+            }
+        }
+    )
+}
+
+private fun getCalendarDays(jYear: Int, jMonth: Int): List<Int?> {
+    val daysInMonth = DateUtils.jalaliMonthDays(jYear, jMonth)
+    val (gY, gM, gD) = DateUtils.jalaliToGregorian(jYear, jMonth, 1)
+    val cal = Calendar.getInstance()
+    cal.set(gY, gM - 1, gD)
+    val firstDowJava = cal.get(Calendar.DAY_OF_WEEK)
+    val offset = when (firstDowJava) {
+        Calendar.SATURDAY -> 0
+        Calendar.SUNDAY -> 1
+        Calendar.MONDAY -> 2
+        Calendar.TUESDAY -> 3
+        Calendar.WEDNESDAY -> 4
+        Calendar.THURSDAY -> 5
+        Calendar.FRIDAY -> 6
+        else -> 0
+    }
+    val cells = mutableListOf<Int?>()
+    repeat(offset) { cells.add(null) }
+    for (d in 1..daysInMonth) { cells.add(d) }
+    while (cells.size % 7 != 0) { cells.add(null) }
+    return cells
 }

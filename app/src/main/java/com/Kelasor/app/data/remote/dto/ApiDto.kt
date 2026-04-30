@@ -5,6 +5,7 @@ import com.google.gson.annotations.SerializedName
 // ═══════════════════════════════════════════════════════════════════════════════
 // 📦 Generic Response Wrapper
 // ═══════════════════════════════════════════════════════════════════════════════
+
 data class ApiResponse<T>(
     val success: Boolean,
     val message: String,
@@ -58,6 +59,16 @@ data class UserDto(
     val isOnline: Boolean = false,
     val isContact: Boolean? = false,
 
+    // New Mosbat Elm Fields
+    val firstName: String? = null,
+    val lastName: String? = null,
+    val nationalCode: String? = null,
+    val educationalRole: String? = null,
+    val gradeLevel: String? = null,
+    val major: String? = null,
+    val faculty: String? = null,
+    val birthDate: String? = null,
+
     // Profile Details
     val university: String? = null,
     val fieldOfStudy: String? = null,
@@ -85,14 +96,25 @@ data class UserDto(
     // Privacy Settings
     val profileVisibility: String? = null,
     val onlineVisibility: String? = null,
-    val phoneVisibility: String? = null
+    val phoneVisibility: String? = null,
+    val institutionId: String? = null,
+    val institutionLogoUrl: String? = null,
+    val institutionName: String? = null
 )
 
 // Positional args must match UserRepository usage
 data class UpdateUserRequest(
     val username: String? = null,
     val displayName: String? = null,
+    val firstName: String? = null,
+    val lastName: String? = null,
+    val nationalCode: String? = null,
+    val educationalRole: String? = null,
+    val gradeLevel: String? = null,
+    val major: String? = null,
+    val faculty: String? = null,
     val bio: String? = null,
+    val birthDate: String? = null,
     val university: String? = null,
     val fieldOfStudy: String? = null,
     val education: String? = null,
@@ -812,12 +834,23 @@ data class SpecialGroupDto(
 data class FieldOfStudyDto(
     val id: String,
     val name: String,
+    val educationLevel: String = "",
     val displayOrder: Int = 0
 )
 
 data class EducationLevelDto(
     val id: String,
     val name: String,
+    val roleValueEn: String? = null,
+    val displayOrder: Int = 0,
+    val hasFaculty: Boolean = false,
+    val hasFieldOfStudy: Boolean = false
+)
+
+data class FacultyDto(
+    val id: String,
+    val name: String,
+    val educationLevel: String? = null,
     val displayOrder: Int = 0
 )
 
@@ -828,10 +861,51 @@ data class UniversitySimpleDto(
     val province: String? = null
 )
 
+data class EducationalRoleOptionDto(
+    val id: String,
+    val labelFa: String,
+    val valueEn: String,
+    val emoji: String = "",
+    val displayOrder: Int = 0
+)
+
+data class ClubDto(
+    val id: String,
+    val name: String,
+    val displayOrder: Int
+)
+
+data class StudentOrgDto(
+    val id: String,
+    val name: String,
+    val displayOrder: Int
+)
+
 data class ReferenceDataDto(
     val universities: List<UniversitySimpleDto> = emptyList(),
     val fieldsOfStudy: List<FieldOfStudyDto> = emptyList(),
-    val educationLevels: List<EducationLevelDto> = emptyList()
+    val faculties: List<FacultyDto> = emptyList(),
+    val educationLevels: List<EducationLevelDto> = emptyList(),
+    val educationalRoles: List<EducationalRoleOptionDto> = emptyList(),
+    val clubs: List<ClubDto> = emptyList(),
+    val studentOrgs: List<StudentOrgDto> = emptyList()
+)
+
+data class BannerDto(
+    val id: String,
+    val title: String,
+    val imageUrl: String,
+    val linkUrl: String? = null,
+    val colorStart: Long = 0,
+    val colorEnd: Long = 0,
+    val section: String = "HOME"
+)
+
+data class MosbatElmHomeDataDto(
+    val banners: List<BannerDto> = emptyList(),
+    val featuredInstitutions: List<InstitutionDto> = emptyList(),
+    val upcomingCourses: List<CourseDto> = emptyList(),
+    val categories: List<String> = emptyList()
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -878,9 +952,16 @@ data class SmartFolderChannelDto(
 data class CourseDto(
     val id: String,
     val title: String,
+    val slogan: String? = null,
     val description: String? = null,
+    val favoritesCount: Int = 0,
+    val teachers: List<UserDto> = emptyList(),
+    val admins: List<UserDto> = emptyList(),
     val organizerId: String,
     val organizerName: String? = null,
+    val organizerAvatarUrl: String? = null,
+    val organizerDescription: String? = null,
+    val scientificAssociationName: String? = null,
     val institutionId: String? = null,
     val channelId: String? = null,
     val groupId: String? = null,
@@ -890,12 +971,157 @@ data class CourseDto(
     val startsAt: String,
     val endsAt: String,
     val enrollmentLimit: Int? = null,
+    val capacity: Int? = null,
     val enrolledCount: Long = 0,
     val isPublic: Boolean = true,
     val status: String = "DRAFT",
+    val adminNote: String? = null,
     val priceRials: Long = 0,
     val tags: List<String> = emptyList(),
+    val suitableFor: List<String> = emptyList(),
+    val chapters: List<CourseChapterDto> = emptyList(),
+    val isVerticalPoster: Boolean = false,
+    val discountPercentage: Int? = null,
     val createdAt: String? = null
+)
+
+data class CourseChapterDto(
+    val title: String,
+    val durationText: String
+)
+
+data class CreateCourseRequest(
+    val title: String,
+    val slogan: String? = null,
+    val description: String? = null,
+    val adminIds: List<String> = emptyList(),
+    val teacherIds: List<String> = emptyList(),
+    val institutionId: String? = null,
+    val coverImageUrl: String? = null,
+    val fieldOfStudy: String? = null,
+    val educationLevel: String? = null,
+    val startsAt: String,
+    val endsAt: String,
+    val enrollmentLimit: Int? = null,
+    val capacity: Int? = null,
+    val discountPercentage: Int? = null,
+    val syllabusDuration: String? = null,
+    val collaborators: List<String> = emptyList(),
+    val isPublic: Boolean = true,
+    val priceRials: Long = 0,
+    val tags: List<String> = emptyList(),
+    val suitableFor: List<String> = emptyList(),
+    val chapters: List<CourseChapterDto> = emptyList(),
+    val organizerDescription: String? = null,
+    val scientificAssociationName: String? = null,
+    val channelIds: List<String> = emptyList(),
+    val isVerticalPoster: Boolean = false
+)
+
+data class CourseReviewRequestDto(
+    val status: String,
+    val adminNote: String? = null
+)
+
+data class CourseCommentDto(
+    val id: String,
+    val courseId: String,
+    val userId: String,
+    val userDisplayName: String,
+    val userAvatarUrl: String? = null,
+    val content: String,
+    val rating: Int = 0,
+    val replyToCommentId: String? = null,
+    val createdAt: String? = null
+)
+
+data class AddCourseCommentRequest(
+    val content: String,
+    val rating: Int = 0,
+    val replyToCommentId: String? = null
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🤝 Collaboration DTOs
+// ═══════════════════════════════════════════════════════════════════════════════
+
+data class CourseCollaborationRequestDto(
+    val id: String,
+    val courseId: String,
+    val courseTitle: String,
+    val senderInstitutionId: String,
+    val senderInstitutionName: String,
+    val targetInstitutionId: String,
+    val status: String,
+    val message: String? = null,
+    val createdAt: String
+)
+
+data class CreateCollaborationRequest(
+    val targetInstitutionId: String,
+    val message: String? = null
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🏛️ Institution DTOs
+// ═══════════════════════════════════════════════════════════════════════════════
+
+data class InstitutionDto(
+    val id: String,
+    val name: String,
+    val type: String,
+    val logoUrl: String? = null,
+    val description: String? = null,
+    val province: String? = null,
+    val city: String? = null,
+    val verificationStatus: String = "PENDING_VERIFICATION",
+    val channelId: String? = null,
+    val ownerId: String,
+    val isActive: Boolean = false,
+    val universities: List<String>? = emptyList(),
+    val faculties: List<String>? = emptyList(),
+    val specialties: List<String>? = emptyList(),
+    val achievements: String? = null,
+    val associatedClubIds: List<String>? = emptyList(),
+    val associatedFieldOfStudyIds: List<String>? = emptyList(),
+    val associatedStudentOrgIds: List<String>? = emptyList(),
+    val instructorIds: List<String>? = emptyList(),
+    val adminIds: List<String>? = emptyList(),
+    val followerCount: Int = 0,
+    val followingCount: Int = 0,
+    val courseCount: Int = 0,
+    val studentCount: Int = 0,
+    val totalTrainingHours: Int = 0,
+    val rating: Double = 0.0,
+    val honors: List<InstitutionHonorDto> = emptyList()
+)
+
+data class InstitutionHonorDto(
+    val id: String? = null,
+    val title: String,
+    val description: String? = null,
+    val imageUrl: String? = null,
+    val date: String? = null
+)
+
+data class InstitutionRegisterRequestDto(
+    val name: String,
+    val type: String,
+    val registrationNumber: String? = null,
+    val contactPhone: String? = null,
+    val contactEmail: String? = null,
+    val province: String? = null,
+    val city: String? = null,
+    val address: String? = null,
+    val logoUrl: String? = null,
+    val description: String? = null,
+    val universities: List<String> = emptyList(),
+    val specialties: List<String> = emptyList(),
+    val associatedClubIds: List<String> = emptyList(),
+    val associatedFieldOfStudyIds: List<String> = emptyList(),
+    val associatedStudentOrgIds: List<String> = emptyList(),
+    val instructorIds: List<String> = emptyList(),
+    val adminIds: List<String> = emptyList()
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -56,7 +56,10 @@ fun LocationMessageBubble(
     isMyMessage: Boolean,
     time: String,
     status: MessageStatus = MessageStatus.SENT,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    reactions: Map<String, Int> = emptyMap(),
+    myReaction: String? = null,
+    onReactionClick: ((String) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val extendedColors = MessageAppTheme.extendedColors
@@ -195,6 +198,16 @@ fun LocationMessageBubble(
                     )
                 }
             }
+        }
+        // Reactions inside card
+        if (reactions.isNotEmpty()) {
+            ReactionRow(
+                reactions = reactions,
+                myReaction = myReaction,
+                isMyMessage = isMyMessage,
+                onReactionClick = onReactionClick,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+            )
         }
     }
 }

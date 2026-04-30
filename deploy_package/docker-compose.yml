@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy_proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./frontend:/srv
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+  backend:
+    image: eclipse-temurin:17-jre-alpine
+    container_name: springboot_backend
+    restart: always
+    working_dir: /app
+    volumes:
+      - ./backend/app.jar:/app/app.jar
+      - uploads_data:/app/uploads
+    ports:
+      - "8080:8080"
+    command: ["java", "-Xmx1024m", "-jar", "app.jar"]
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/kelasor_db
+      - SPRING_DATASOURCE_USERNAME=kelasor_user
+      - SPRING_DATASOURCE_PASSWORD=kelasor_pass
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres_db
+    restart: always
+    environment:
+      - POSTGRES_DB=kelasor_db
+      - POSTGRES_USER=kelasor_user
+      - POSTGRES_PASSWORD=kelasor_pass
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+volumes:
+  pg_data:
+  caddy_data:
+  caddy_config:
+  uploads_data:

@@ -103,6 +103,16 @@ class CourseController(
         return ResponseEntity.ok(ApiResponse(success = true, message = "Course deleted", data = Unit))
     }
 
+    @PostMapping("/{id}/favorite")
+    fun toggleFavorite(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: UUID
+    ): ResponseEntity<ApiResponse<Boolean>> {
+        val isFavorite: Boolean = courseService.toggleFavorite(id, principal.id)
+        val msg = if (isFavorite) "Course added to favorites" else "Course removed from favorites"
+        return ResponseEntity.ok(ApiResponse(success = true, message = msg, data = isFavorite))
+    }
+
     // ── Enrollment ──
 
     @PostMapping("/{id}/enroll")
@@ -141,6 +151,24 @@ class CourseController(
         return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = result))
     }
 
+    @GetMapping("/{id}/favorite")
+    fun isFavorite(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: UUID
+    ): ResponseEntity<ApiResponse<Boolean>> {
+        val result: Boolean = courseService.isFavorite(id, principal.id)
+        return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = result))
+    }
+
+    @GetMapping("/similar/{courseId}")
+    fun getSimilarCourses(
+        @PathVariable courseId: UUID,
+        pageable: Pageable
+    ): ResponseEntity<ApiResponse<Page<CourseResponse>>> {
+        val result: Page<CourseResponse> = courseService.getSimilarCourses(courseId, pageable)
+        return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = result))
+    }
+
     // ── Materials ──
 
     @PostMapping("/{id}/materials")
@@ -175,6 +203,27 @@ class CourseController(
     @GetMapping("/{id}/materials")
     fun getCourseMaterials(@PathVariable id: UUID): ResponseEntity<ApiResponse<List<CourseMaterialResponse>>> {
         val result: List<CourseMaterialResponse> = courseService.getCourseMaterials(id)
+        return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = result))
+    }
+
+    // ── Comments ──
+
+    @PostMapping("/{id}/comments")
+    fun addComment(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: UUID,
+        @RequestBody request: AddCommentRequest
+    ): ResponseEntity<ApiResponse<CourseCommentResponse>> {
+        val result: CourseCommentResponse = courseService.addComment(id, principal.id, request)
+        return ResponseEntity.ok(ApiResponse(success = true, message = "Comment added", data = result))
+    }
+
+    @GetMapping("/{id}/comments")
+    fun getComments(
+        @PathVariable id: UUID,
+        pageable: Pageable
+    ): ResponseEntity<ApiResponse<Page<CourseCommentResponse>>> {
+        val result: Page<CourseCommentResponse> = courseService.getComments(id, pageable)
         return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = result))
     }
 }

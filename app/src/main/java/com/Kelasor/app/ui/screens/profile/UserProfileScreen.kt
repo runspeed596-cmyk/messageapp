@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Message
@@ -29,6 +30,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -50,6 +52,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.Kelasor.app.ui.components.AvatarImage
 import com.Kelasor.app.ui.components.AvatarSize
@@ -64,6 +67,7 @@ import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Interests
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.HorizontalDivider
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -142,7 +146,9 @@ fun UserProfileScreen(
         },
         onShowInChat = {
             selectedSharedContent?.let { item ->
-                onStartChat(userId, item.messageId)
+                // Use actual chatId if available, fallback to userId for new chat resolution
+                val targetChatId: String = item.chatId ?: userId
+                onStartChat(targetChatId, item.messageId)
             }
         }
     )
@@ -254,6 +260,7 @@ fun UserProfileScreen(
                                     modifier = Modifier.padding(horizontal = 16.dp)
                                 )
                             }
+
                             // Online status - only show if allowed by privacy
                             if (state.canSeeOnlineStatus) {
                                 Spacer(modifier = Modifier.height(8.dp))
@@ -263,6 +270,33 @@ fun UserProfileScreen(
                                     color = if (user.isOnline) extendedColors.onlineIndicator
                                            else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+                            }
+                            
+                            // Educational Role Chip
+                            if (!user.educationalRole.isNullOrBlank()) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                val roleLabel = when(user.educationalRole) {
+                                    "SCHOOL_STUDENT" -> "🎒 دانش‌آموز"
+                                    "STUDENT" -> "🎒 دانش‌آموز"
+                                    "UNI_STUDENT" -> "🎓 دانشجو"
+                                    "TEACHER" -> "👨‍🏫 استاد/معلم"
+                                    "FREELANCER" -> "💼 آزاد"
+                                    "GRADUATE" -> "🎓 فارغ‌التحصیل"
+                                    else -> "📚 ${user.educationalRole}"
+                                }
+                                Surface(
+                                    color = extendedColors.accent.copy(alpha = 0.1f),
+                                    shape = RoundedCornerShape(16.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, extendedColors.accent.copy(alpha = 0.2f))
+                                ) {
+                                    Text(
+                                        text = roleLabel,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontFamily = VazirFontFamily,
+                                        color = extendedColors.accent
+                                    )
+                                }
                             }
                         }
                     }
@@ -406,6 +440,37 @@ fun UserProfileScreen(
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
+                            
+                            // Location Row
+                            if (!user.province.isNullOrBlank() || !user.city.isNullOrBlank()) {
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.LocationOn, contentDescription = null, tint = extendedColors.accent, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "موقعیت",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontFamily = VazirFontFamily,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Text(
+                                        text = listOfNotNull(user.province, user.city).joinToString("، "),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontFamily = VazirFontFamily,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+
                             // Divider
                             if (!user.bio.isNullOrEmpty()) {
                                 androidx.compose.material3.HorizontalDivider(
@@ -446,31 +511,20 @@ fun UserProfileScreen(
                             }
                             
                             // Extended Fields
-                            if (!user.university.isNullOrEmpty() || !user.fieldOfStudy.isNullOrEmpty() || !user.education.isNullOrEmpty()) {
+                            if (!user.gradeLevel.isNullOrEmpty() || !user.major.isNullOrEmpty() || !user.faculty.isNullOrEmpty() || !user.education.isNullOrEmpty()) {
                                 HorizontalDivider(
                                     modifier = Modifier.padding(vertical = 8.dp),
                                     color = MaterialTheme.colorScheme.outlineVariant
                                 )
                                 ProfileInfoSection(
-                                    title = "تحصیلات",
+                                    title = "هویت آموزشی",
                                     icon = Icons.Default.School,
                                     items = buildList {
-                                        user.university?.takeIf { it.isNotEmpty() }?.let { add("🎓 $it") }
-                                        user.fieldOfStudy?.takeIf { it.isNotEmpty() }?.let { add("📚 $it") }
-                                        user.education?.takeIf { it.isNotEmpty() }?.let { add("📖 $it") }
+                                        user.gradeLevel?.takeIf { it.isNotEmpty() }?.let { add("🎓 مقطع: $it") }
+                                        user.faculty?.takeIf { it.isNotEmpty() }?.let { add("🏛️ دانشکده: $it") }
+                                        user.major?.takeIf { it.isNotEmpty() }?.let { add("📚 رشته: $it") }
+                                        user.education?.takeIf { it.isNotEmpty() }?.let { add("📖 مدارک: $it") }
                                     }
-                                )
-                            }
-                            
-                            if (!user.workExperience.isNullOrEmpty()) {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(vertical = 8.dp),
-                                    color = MaterialTheme.colorScheme.outlineVariant
-                                )
-                                ProfileInfoSection(
-                                    title = "تجربه کاری",
-                                    icon = Icons.Default.Work,
-                                    items = listOf(user.workExperience)
                                 )
                             }
                             
@@ -483,19 +537,6 @@ fun UserProfileScreen(
                                     title = "مهارت‌ها",
                                     icon = Icons.Default.Stars,
                                     skills = user.skills.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                                )
-                            }
-                            
-                            if (!user.interests.isNullOrEmpty()) {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(vertical = 8.dp),
-                                    color = MaterialTheme.colorScheme.outlineVariant
-                                )
-                                SkillsChipsSection(
-                                    title = "علاقه‌مندی‌ها",
-                                    icon = Icons.Default.Interests,
-                                    skills = user.interests.split(",").map { it.trim() }.filter { it.isNotEmpty() },
-                                    chipColor = extendedColors.gradientEnd
                                 )
                             }
                             

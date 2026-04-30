@@ -1,13 +1,17 @@
 package com.iliyadev.springboot.controllers
 
-import com.iliyadev.springboot.models.ApiResponse
+import com.iliyadev.springboot.models.*
 import com.iliyadev.springboot.config.security.UserPrincipal
+import com.iliyadev.springboot.repositories.HomeBannerRepository
+import com.iliyadev.springboot.repositories.CourseRepository
 import com.iliyadev.springboot.services.*
 import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
+import java.time.Instant
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 📋 Teacher Verification Controller
@@ -138,7 +142,8 @@ class SubscriptionController(
 @RestController
 @RequestMapping("/api/institutions")
 class InstitutionController(
-    private val service: InstitutionService
+    private val service: InstitutionService,
+    private val fileUploadService: FileUploadService
 ) {
     @PostMapping("/register")
     fun register(
@@ -149,6 +154,29 @@ class InstitutionController(
         return ResponseEntity.ok(ApiResponse(success = true, message = "Institution registered", data = result))
     }
 
+    @PostMapping("/upload-logo")
+    fun uploadLogo(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @RequestParam("file") file: org.springframework.web.multipart.MultipartFile
+    ): ResponseEntity<ApiResponse<String>> {
+        val logoUrl: String = fileUploadService.uploadFile(
+            file.bytes,
+            file.originalFilename ?: "institution_logo.jpg",
+            file.contentType ?: "image/jpeg"
+        )
+        return ResponseEntity.ok(ApiResponse(success = true, message = "Logo uploaded", data = logoUrl))
+    }
+
+    @PutMapping("/{id}")
+    fun update(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: java.util.UUID,
+        @RequestBody request: InstitutionRegisterRequest
+    ): ResponseEntity<ApiResponse<InstitutionResponse>> {
+        val result: InstitutionResponse = service.updateInstitution(id, principal.id, request)
+        return ResponseEntity.ok(ApiResponse(success = true, message = "Institution updated", data = result))
+    }
+
     @GetMapping("/my")
     fun getMyInstitutions(
         @AuthenticationPrincipal principal: UserPrincipal
@@ -157,15 +185,15 @@ class InstitutionController(
         return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = result))
     }
 
-    @GetMapping("/{id}")
-    fun getById(@PathVariable id: java.util.UUID): ResponseEntity<ApiResponse<InstitutionResponse>> {
-        val result: InstitutionResponse = service.getInstitutionById(id)
+    @GetMapping("/active")
+    fun getActive(pageable: Pageable): ResponseEntity<ApiResponse<Page<InstitutionResponse>>> {
+        val result: Page<InstitutionResponse> = service.getActiveInstitutions(pageable)
         return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = result))
     }
 
-    @GetMapping
-    fun getActive(pageable: Pageable): ResponseEntity<ApiResponse<Page<InstitutionResponse>>> {
-        val result: Page<InstitutionResponse> = service.getActiveInstitutions(pageable)
+    @GetMapping("/{id}")
+    fun getById(@PathVariable id: java.util.UUID): ResponseEntity<ApiResponse<InstitutionResponse>> {
+        val result: InstitutionResponse = service.getInstitutionById(id)
         return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = result))
     }
 
@@ -177,6 +205,31 @@ class InstitutionController(
     ): ResponseEntity<ApiResponse<InstitutionResponse>> {
         val result: InstitutionResponse = service.linkChannel(id, channelId, principal.id)
         return ResponseEntity.ok(ApiResponse(success = true, message = "Channel linked", data = result))
+    }
+
+    @GetMapping("/{id}/honors")
+    fun getHonors(@PathVariable id: java.util.UUID): ResponseEntity<ApiResponse<List<InstitutionHonorDto>>> {
+        return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = service.getHonors(id)))
+    }
+
+    @GetMapping("/{id}/teachers")
+    fun getTeachers(@PathVariable id: java.util.UUID): ResponseEntity<ApiResponse<List<UserDto>>> {
+        return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = service.getTeachers(id)))
+    }
+
+    @GetMapping("/{id}/admins")
+    fun getAdmins(@PathVariable id: java.util.UUID): ResponseEntity<ApiResponse<List<UserDto>>> {
+        return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = service.getAdmins(id)))
+    }
+
+    @PostMapping("/{id}/honors")
+    fun addHonor(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: java.util.UUID,
+        @RequestBody request: InstitutionHonorDto
+    ): ResponseEntity<ApiResponse<InstitutionHonorDto>> {
+        val result = service.addHonor(id, principal.id, request.title, request.description, request.imageUrl, request.date)
+        return ResponseEntity.ok(ApiResponse(success = true, message = "Honor added", data = result))
     }
 }
 
@@ -195,5 +248,80 @@ class SmartFolderController(
     ): ResponseEntity<ApiResponse<List<SmartFolderResponse>>> {
         val result: List<SmartFolderResponse> = service.computeSmartFolders(principal.id)
         return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = result))
+    }
+}
+
+@RestController
+@RequestMapping("/api/mosbat-elm/home")
+class MosbatElmHomeController(
+    private val bannerRepository: HomeBannerRepository,
+    private val institutionService: InstitutionService,
+    private val courseRepository: CourseRepository
+) {
+    @GetMapping
+    fun getHomeData(): ResponseEntity<ApiResponse<MosbatElmHomeDataDto>> {
+        val bannerEntities = bannerRepository.findAllBySectionAndIsActiveTrueOrderByDisplayOrderAsc("MOSBAT_ELM")
+        val banners: List<HomeBannerDto> = bannerEntities.map { b -> b.toDto() }
+        
+        val institutionsPage = institutionService.getActiveInstitutions(PageRequest.of(0, 10))
+        val featuredInstitutions: List<InstitutionResponse> = institutionsPage.content
+        
+        val coursesPage = courseRepository.findUpcomingCourses(Instant.now(), PageRequest.of(0, 10))
+        val upcomingCourses: List<CourseDto> = coursesPage.content.map { c -> c.toDto() }
+        
+        val data = MosbatElmHomeDataDto(
+            banners = banners,
+            featuredInstitutions = featuredInstitutions,
+            upcomingCourses = upcomingCourses
+        )
+        return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = data))
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🤝 Course Collaboration Controller
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@RestController
+@RequestMapping("/api/course-collaborations")
+class CourseCollaborationController(
+    private val collaborationService: CourseCollaborationService
+) {
+    @PostMapping("/course/{courseId}/request")
+    fun requestCollaboration(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable courseId: java.util.UUID,
+        @RequestBody request: CreateCollaborationRequest
+    ): ResponseEntity<ApiResponse<CourseCollaborationRequestDto>> {
+        val result = collaborationService.createRequest(principal.id, courseId, request)
+        return ResponseEntity.ok(ApiResponse(success = true, message = "Collaboration requested", data = result))
+    }
+
+    @GetMapping("/academy/{academyId}/pending")
+    fun getPendingRequests(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable academyId: java.util.UUID,
+        pageable: Pageable
+    ): ResponseEntity<ApiResponse<Page<CourseCollaborationRequestDto>>> {
+        val result = collaborationService.getPendingRequests(principal.id, academyId, pageable)
+        return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = result))
+    }
+
+    @PostMapping("/{requestId}/accept")
+    fun acceptRequest(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable requestId: java.util.UUID
+    ): ResponseEntity<ApiResponse<CourseCollaborationRequestDto>> {
+        val result = collaborationService.acceptRequest(principal.id, requestId)
+        return ResponseEntity.ok(ApiResponse(success = true, message = "Collaboration accepted", data = result))
+    }
+
+    @PostMapping("/{requestId}/reject")
+    fun rejectRequest(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable requestId: java.util.UUID
+    ): ResponseEntity<ApiResponse<CourseCollaborationRequestDto>> {
+        val result = collaborationService.rejectRequest(principal.id, requestId)
+        return ResponseEntity.ok(ApiResponse(success = true, message = "Collaboration rejected", data = result))
     }
 }

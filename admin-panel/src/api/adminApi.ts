@@ -157,13 +157,43 @@ export interface FieldOfStudy {
 export interface EducationLevel {
     id?: string;
     name: string;
+    roleValueEn?: string;
     displayOrder: number;
 }
 
 export interface Faculty {
     id?: string;
     name: string;
+    educationLevel?: string;
     displayOrder: number;
+}
+
+export interface EducationalRoleOption {
+    id?: string;
+    labelFa: string;
+    valueEn: string;
+    emoji: string;
+    displayOrder: number;
+}
+
+export interface ReferenceClub {
+    id?: string;
+    name: string;
+    displayOrder: number;
+}
+
+export interface ReferenceStudentOrg {
+    id?: string;
+    name: string;
+    displayOrder: number;
+}
+
+export interface PanelAdmin {
+    id: string;
+    username: string;
+    displayName: string;
+    isSuperAdmin: boolean;
+    createdAt: string;
 }
 
 export type OfficialChannelCategory =
@@ -351,6 +381,11 @@ export const adminApi = {
     saveFaculty: (faculty: Faculty) => api.post<ApiResponse<Faculty>>('/admin/faculties', faculty),
     deleteFaculty: (id: string) => api.delete<ApiResponse<void>>(`/admin/faculties/${id}`),
 
+    // Educational Role management
+    getEducationalRoles: () => api.get<ApiResponse<EducationalRoleOption[]>>('/admin/educational-roles'),
+    saveEducationalRole: (role: EducationalRoleOption) => api.post<ApiResponse<EducationalRoleOption>>('/admin/educational-roles', role),
+    deleteEducationalRole: (id: string) => api.delete<ApiResponse<void>>(`/admin/educational-roles/${id}`),
+
     // Official Channels management
     getOfficialChannels: () => api.get<ApiResponse<OfficialChannel[]>>('/admin/special-folder/official-channels'),
     createOfficialChannel: (req: CreateOfficialChannelRequest) => api.post<ApiResponse<OfficialChannel>>('/admin/special-folder/official-channels', req),
@@ -370,13 +405,76 @@ export const adminApi = {
     removeGroupAdmin: (groupId: string, userId: string) => api.delete<ApiResponse<void>>(`/admin/special-folder/official-groups/${groupId}/admins/${userId}`),
 
     // Auth
-    login: (credentials: any) => api.post<ApiResponse<{ token: string }>>('/admin/auth/login', credentials),
+    login: (credentials: any) => api.post<ApiResponse<{ token: string; isSuperAdmin: boolean }>>('/admin/auth/login', credentials),
+
+    getPanelAdmins: () => api.get<ApiResponse<PanelAdmin[]>>('/admin/panel-admins'),
+    createPanelAdmin: (admin: { username: string; password: string; displayName: string; isSuperAdmin: boolean }) =>
+        api.post<ApiResponse<PanelAdmin>>('/admin/panel-admins', admin),
+    deletePanelAdmin: (id: string) => api.delete<ApiResponse<void>>(`/admin/panel-admins/${id}`),
+
+    // User management
+    getUser: (id: string) => api.get<ApiResponse<any>>(`/admin/users/${id}`),
 
     // Advertisement management
     getAdRequests: (status?: string) => api.get<ApiResponse<{ adRequests: AdRequest[]; totalCount: number }>>('/admin/ads', { params: { status } }),
     approveAd: (id: string) => api.put<ApiResponse<void>>(`/admin/ads/${id}/approve`),
     rejectAd: (id: string) => api.put<ApiResponse<void>>(`/admin/ads/${id}/reject`),
+
+    // Course Moderation (Mosbat Elm)
+    getPendingCourses: (page: number = 0, size: number = 20) =>
+        api.get<ApiResponse<{ content: CourseResponse[]; totalElements: number }>>('/admin/mosbat-elm/courses/pending', { params: { page, size } }),
+    reviewCourse: (courseId: string, adminId: string, status: string, adminNote?: string) =>
+        api.post<ApiResponse<CourseResponse>>(`/admin/mosbat-elm/courses/${courseId}/review?adminId=${adminId}`, { status, adminNote }),
+
+    // Club management (کانون‌ها)
+    getClubs: () => api.get<ApiResponse<ReferenceClub[]>>('/admin/clubs'),
+    saveClub: (club: ReferenceClub) => api.post<ApiResponse<ReferenceClub>>('/admin/clubs', club),
+    deleteClub: (id: string) => api.delete<ApiResponse<void>>(`/admin/clubs/${id}`),
+
+    // Student Organization management (تشکل‌های دانشجویی)
+    getStudentOrgs: () => api.get<ApiResponse<ReferenceStudentOrg[]>>('/admin/student-orgs'),
+    saveStudentOrg: (org: ReferenceStudentOrg) => api.post<ApiResponse<ReferenceStudentOrg>>('/admin/student-orgs', org),
+    deleteStudentOrg: (id: string) => api.delete<ApiResponse<void>>(`/admin/student-orgs/${id}`),
+
+    // Mosbat Elm Slider Banners
+    getMosbatElmBanners: () => api.get<ApiResponse<HomeBanner[]>>('/admin/mosbat-elm/banners'),
+    saveMosbatElmBanner: (banner: HomeBanner) => api.post<ApiResponse<HomeBanner>>('/admin/mosbat-elm/banners', banner),
+    deleteMosbatElmBanner: (id: string) => api.delete<ApiResponse<void>>(`/admin/mosbat-elm/banners/${id}`),
 };
 
 export default api;
+
+export interface CourseResponse {
+    id: string;
+    title: string;
+    slogan?: string;
+    description?: string;
+    favoritesCount: number;
+    teachers: { id: string; displayName: string; avatarUrl?: string }[];
+    admins: { id: string; displayName: string; avatarUrl?: string }[];
+    organizerId: string;
+    organizerName?: string;
+    organizerAvatarUrl?: string;
+    organizerDescription?: string;
+    scientificAssociationName?: string;
+    institutionId?: string;
+    channelId?: string;
+    groupId?: string;
+    coverImageUrl?: string;
+    fieldOfStudy?: string;
+    educationLevel?: string;
+    startsAt: string;
+    endsAt: string;
+    enrollmentLimit?: number;
+    capacity?: number;
+    enrolledCount: number;
+    isPublic: boolean;
+    status: string;
+    adminNote?: string;
+    priceRials: number;
+    tags: string[];
+    suitableFor: string[];
+    chapters: { title: string; durationText: string }[];
+    createdAt: string;
+}
 

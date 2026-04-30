@@ -1,0 +1,191 @@
+<resources>
+    <string name="app_name">کلاسور</string>
+    
+    <!-- General -->
+    <string name="back">بازگشت</string>
+    <string name="cancel">انصراف</string>
+    <string name="close">بستن</string>
+    <string name="save">ذخیره</string>
+    <string name="ok">تایید</string>
+    
+    <!-- Auth -->
+    <string name="login">ورود</string>
+    <string name="register">ثبت نام</string>
+    
+    <!-- Profile Screen -->
+    <string name="profile_title">پروفایل من</string>
+    <string name="edit_profile">ویرایش پروفایل</string>
+    <string name="edit_profile_subtitle">نام، بیو و تصویر پروفایل</string>
+    <string name="settings">تنظیمات</string>
+    <string name="settings_subtitle">زبان، حالت تاریک و سایر تنظیمات</string>
+    <string name="logout">خروج از حساب</string>
+    <string name="logout_subtitle">از حساب کاربری خود خارج شوید</string>
+    
+    <!-- Settings Screen -->
+    <string name="settings_title">تنظیمات</string>
+    <string name="appearance">ظاهر</string>
+    <string name="dark_mode">حالت تاریک</string>
+    <string name="dark_mode_subtitle">استفاده از پوسته تاریک</string>
+    <string name="language">زبان</string>
+    <string name="language_persian">فارسی</string>
+    <string name="select_language">انتخاب زبان</string>
+    <string name="about">درباره</string>
+    <string name="about_app">درباره برنامه</string>
+    <string name="about_app_subtitle">نسخه ۱.۰.۰</string>
+    <string name="about_dialog_title">درباره پیام‌رسان</string>
+    <string name="about_app_name">پیام‌رسان</string>
+    <string name="about_version">نسخه: ۱.۰.۰</string>
+    <string name="about_description">یک اپلیکیشن پیام‌رسان امن و سریع</string>
+    
+    <string name="privacy_security">حریم خصوصی و امنیت</string>
+    <string name="profile_visibility">قابلیت دیدن پروفایل</string>
+    <string name="online_visibility">قابلیت دیدن آنلاین بودن</string>
+    <string name="phone_visibility">قابلیت دیدن شماره تلفن</string>
+    <string name="everyone">همه</string>
+    <string name="my_contacts">فقط مخاطبین</string>
+    <string name="nobody">هیچ‌کس</string>
+    <string name="saved_messages">ذخیره‌شده</string>
+    <string name="contacts">مخاطبین</string>
+
+    <!-- Bottom Navigation -->
+    <string name="nav_chats">چت‌ها</string>
+    <string name="nav_groups">گروه‌ها</string>
+    <string name="nav_channels">کانال‌ها</string>
+    <string name="nav_profile">پروفایل</string>
+
+    <!-- Chat List -->
+    <string name="global_search">جستجوی جهانی</string>
+    <string name="your_chats">چت‌های شما</string>
+    <string name="pinned">سنجاق شده</string>
+    <string name="all_chats">همه چت‌ها</string>
+    <string name="new_chat">چت جدید</string>
+    <string name="no_messages">پیامی وجود ندارد</string>
+
+    <!-- Dialogs -->
+    <string name="delete_chat_title">حذف چت</string>
+    <string name="delete_chat_message">آیا از حذف این چت اطمینان دارید؟</string>
+    <string name="delete">حذف</string>
+
+
+    <!-- Actions -->
+    <string name="pin">سنجاق</string>
+    <string name="archive">بایگانی</string>
+
+    <!-- Conversation -->
+    <string name="typing">در حال نوشتن...</string>
+    <string name="online">آنلاین</string>
+
+    <string name="more">بیشتر</string>
+    <string name="view_profile">نمایش پروفایل</string>
+    <string name="delete_chat_desc">آیا از حذف این چت اطمینان دارید؟ این عملیات فقط چت را از لیست شما حذف می‌کند.</string>
+    <string name="today">امروز</string>
+    <string name="loading_messages">در حال بارگذاری پیام‌ها...</string>
+    <string name="uploading">در حال آپلود...</string>
+    <string name="attachment">پیوست</string>
+    <string name="emoji">ایموجی</string>
+    <string name="message_hint">پیام...</string>
+    <string name="send">ارسال</string>
+    <string name="enter_message_error">لطفاً پیامی وارد کنید</string>
+
+    <!-- New Chat -->
+    <string name="search_hint">جستجوی نام یا شماره...</string>
+    <string name="user_not_found">کاربری یافت نشد</string>
+    <string name="search_results">نتایج جستجو</string>
+    <string name="your_contacts">مخاطبین شما در اپلیکیشن</string>
+    <string name="no_contacts_found">هیچ‌یک از مخاطبین شما در اپلیکیشن ثبت‌نام نکرده‌اند.\nبرای پیدا کردن کاربران، جستجو کنید.</string>
+    <string name="access_contacts_title">دسترسی به مخاطبین</string>
+    <string name="access_contacts_rationale">برای نمایش مخاطبین شما که در اپلیکیشن ثبت‌نام کرده‌اند، به دسترسی مخاطبین نیاز داریم.</string>
+    <string name="allow_access">اجازه دسترسی</string>
+
+    <!-- Profile -->
+    <string name="profile_picture_updated">تصویر پروفایل با موفقیت تغییر کرد</string>
+    <string name="edit_profile_title">ویرایش پروفایل</string>
+
+    <string name="change_image">تغییر تصویر</string>
+    <string name="full_name">نام و نام خانوادگی</string>
+    <string name="username">نام کاربری</string>
+    <string name="bio">بیوگرافی</string>
+    <string name="profile_title_default">پروفایل</string>
+    <string name="more_options">گزینه‌های بیشتر</string>
+    <string name="last_seen_recently">آخرین بازدید اخیراً</string>
+    <string name="action_message">پیام</string>
+    <string name="action_call">تماس</string>
+    <string name="information">اطلاعات</string>
+    <string name="mobile_number">شماره موبایل</string>
+    <string name="bio_short">بیو</string>
+    <string name="error_loading">خطا در بارگذاری</string>
+    
+    <!-- Auth -->
+    <string name="welcome">خوش آمدید</string>
+    <string name="login_title">برای ورود شماره موبایل خود را وارد کنید</string>
+    <string name="phone_placeholder">09123456789</string>
+    <string name="login_button">ورود</string>
+    <string name="login_terms">با ورود به اپلیکیشن، قوانین و مقررات را می‌پذیرید</string>
+    <string name="register_title">ثبت‌نام</string>
+    <string name="add_profile_picture">افزودن عکس پروفایل</string>
+    <string name="register_terms">با ثبت‌نام در اپلیکیشن، قوانین و مقررات را می‌پذیرید</string>
+
+    <!-- OTP & UserInfo -->
+    <string name="verify_number">تأیید شماره</string>
+    <string name="verification_code_sent">کد تأیید ارسال شد</string>
+    <string name="enter_verification_code">کد ۶ رقمی ارسال شده به %1$s را وارد کنید</string>
+    <string name="verify">تأیید</string>
+    <string name="resend_code">ارسال مجدد کد</string>
+    <string name="resend_code_timer">ارسال مجدد کد تا %1$d ثانیه دیگر</string>
+    <string name="complete_profile">تکمیل پروفایل</string>
+    <string name="select_photo">انتخاب عکس</string>
+    <string name="first_name">نام</string>
+    <string name="last_name">نام خانوادگی</string>
+    <string name="username_english">نام کاربری (انگلیسی)</string>
+    <string name="bio_optional">بایو (دلبخواه)</string>
+    <string name="register_and_login">ثبت و ورود</string>
+
+    <!-- Group -->
+    <string name="create_group">ایجاد گروه</string>
+    <string name="select_image">انتخاب تصویر</string>
+    <string name="group_name">نام گروه</string>
+    <string name="description_optional">توضیحات (اختیاری)</string>
+    <string name="public_group">گروه عمومی</string>
+    <string name="public_group_desc">همه می‌توانند این گروه را پیدا کنند</string>
+    <string name="group_members">اعضای گروه</string>
+    <string name="members_count">%1$d عضو</string>
+    <string name="search_users_hint">جستجوی کاربران...</string>
+    <string name="group_info">اطلاعات گروه</string>
+    <string name="add_people">اضافه کردن افراد</string>
+    <string name="add_member">اضافه کردن عضو</string>
+    <string name="search_by_id_hint">جستجو بر اساس نام یا آی‌دی...</string>
+    <string name="your_contacts_list">مخاطبین شما</string>
+
+    <string name="description">توضیحات</string>
+    <string name="members_section">اعضا (%1$d)</string>
+    <string name="groups_title">گروه‌ها</string>
+    <string name="new_group">گروه جدید</string>
+
+    <!-- Channel -->
+    <string name="channels_title">کانال‌ها</string>
+    <string name="new_channel">کانال جدید</string>
+    <string name="create_channel">ایجاد کانال</string>
+    <string name="channel_name">نام کانال</string>
+    <string name="subscriber">مشترک</string>
+    <string name="subscribers_count">%1$d مشترک</string>
+    <string name="member">عضو</string>
+    <string name="about_channel">درباره کانال</string>
+    <string name="posts">پست‌ها</string>
+    <string name="share">اشتراک‌گذاری</string>
+    <string name="join">عضویت</string>
+    <string name="time_hours_ago">%d ساعت پیش</string>
+    <string name="public_channel">کانال عمومی</string>
+    <string name="private_channel">کانال خصوصی</string>
+    <string name="public_channel_desc">همه می‌توانند این کانال را پیدا کرده و عضو شوند</string>
+    <string name="private_channel_desc">فقط با لینک دعوت می‌توان عضو شد</string>
+
+    <!-- Splash -->
+    <string name="splash_app_name">کلاسور</string>
+    <string name="splash_tagline">پلتفرم جامع دانشجویان</string>
+
+    <string name="search_placeholder">جستجو...</string>
+    <string name="clear_search">پاک کردن</string>
+    <string name="menu">منو</string>
+    <string name="my_profile_menu">پروفایل من</string>
+    <string name="mapbox_access_token">pk.eyJ1IjoiaWxpYXhwIiwiYSI6ImNtbDd2dW16YjAwa2IzZHNpa2w1OGd4aDMifQ.DZrFiBgVWNqXxG-Prhkb1Q</string>
+</resources>

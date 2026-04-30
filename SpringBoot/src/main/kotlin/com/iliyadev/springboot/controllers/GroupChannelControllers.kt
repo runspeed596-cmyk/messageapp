@@ -389,6 +389,14 @@ class ChannelController(
             ResponseEntity.notFound().build()
         }
     }
+    @GetMapping("/by-user/{targetUserId}")
+    fun getChannelsByUser(
+        @RequestAttribute("userId") userId: UUID,
+        @PathVariable targetUserId: UUID
+    ): ResponseEntity<ApiResponse<List<ChannelDto>>> {
+        val channels = channelService.getChannelsByUser(targetUserId)
+        return ResponseEntity.ok(ApiResponse(true, "موفق", channels))
+    }
     @PutMapping("/{id}")
     fun updateChannel(
         @RequestAttribute("userId") userId: UUID,

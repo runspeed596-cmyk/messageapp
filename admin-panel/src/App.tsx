@@ -13,6 +13,8 @@ import UserProfiles from './pages/UserProfiles';
 import OfficialChannelsGroups from './pages/OfficialChannelsGroups';
 import Advertisements from './pages/Advertisements';
 import WorldOfScienceSettings from './pages/WorldOfScienceSettings';
+import AdminManagement from './pages/AdminManagement';
+import CourseModeration from './pages/CourseModeration';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -95,6 +97,18 @@ function AppContent() {
       <Route path="/world-of-science-settings" element={
         <ProtectedRoute>
           <AdminLayout><WorldOfScienceSettings /></AdminLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/course-moderation" element={
+        <ProtectedRoute>
+          <AdminLayout><CourseModeration /></AdminLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/admin-management" element={
+        <ProtectedRoute>
+          <AdminLayout><AdminManagement /></AdminLayout>
         </ProtectedRoute>
       } />
 

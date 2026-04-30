@@ -20,6 +20,9 @@ class SecurityConfig(
         http
             .csrf { it.disable() }
             .cors { } 
+            .headers { headers ->
+                headers.cacheControl { it.disable() }
+            }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { auth ->
                 auth
@@ -36,6 +39,7 @@ class SecurityConfig(
                     .requestMatchers("/v3/api-docs/**").permitAll()
                     .requestMatchers("/uploads/**").permitAll()
                     .requestMatchers("/api/files/thumbnail/**").permitAll()
+                    .requestMatchers("/api/reference-data/**").permitAll()
                     .requestMatchers("/ws/**").permitAll()
                     .anyRequest().authenticated()
             }

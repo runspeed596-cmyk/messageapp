@@ -7,6 +7,7 @@ import com.iliyadev.springboot.websocket.WebSocketMessageHandler
 import com.iliyadev.springboot.websocket.WsChatEvent
 import com.iliyadev.springboot.websocket.WsChatParticipant
 import com.iliyadev.springboot.websocket.WsMessage
+import com.iliyadev.springboot.websocket.WsReactionEvent
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -42,8 +43,8 @@ class AuthService(
             this.createdAt = Instant.now()
         }
         otpCodeRepository.save(otpCode)
-        // DEV MODE: Skip Najva SMS, just log the OTP code
-        println("🔑 [DEV] OTP for $normalizedPhone: $code")
+        // DEV MODE: Only log OTP, do NOT send via Najva SMS
+        println("📱 [DEV] OTP for $normalizedPhone: $code")
         return SendOtpResponse(
             success = true,
             message = "کد تأیید ارسال شد",
@@ -172,14 +173,30 @@ class UserService(
             user.username = request.username
         }
         if (request.displayName != null) user.displayName = request.displayName
+        if (request.firstName != null) user.firstName = request.firstName
+        if (request.lastName != null) user.lastName = request.lastName
+        if (request.nationalCode != null) {
+            if (user.nationalCode != request.nationalCode && userRepository.existsByNationalCode(request.nationalCode)) {
+                throw java.lang.IllegalArgumentException("این کد ملی قبلاً ثبت شده است")
+            }
+            user.nationalCode = request.nationalCode
+        }
+        if (request.educationalRole != null) {
+            user.educationalRole = request.educationalRole
+        }
+        if (request.gradeLevel != null) user.gradeLevel = request.gradeLevel
+        if (request.major != null) user.major = request.major
+        if (request.faculty != null) user.faculty = request.faculty
         if (request.bio != null) user.bio = request.bio
+        if (request.birthDate != null) user.birthDate = request.birthDate
 
         // Profile Enhancements - Persistent update
         var profileFieldsChanged = false
         if (request.university != null || request.fieldOfStudy != null || request.education != null || 
             request.skills != null || request.interests != null || request.workExperience != null || 
             request.achievements != null || request.isTeacher != null || request.teachingField != null ||
-            request.teachingUniversity != null || request.province != null || request.city != null) {
+            request.teachingUniversity != null || request.province != null || request.city != null ||
+            request.faculty != null) {
             
             var details = user.profileDetails
             if (details == null) {
@@ -189,7 +206,8 @@ class UserService(
             
             if (request.university != null) { details.university = request.university; profileFieldsChanged = true }
             if (request.fieldOfStudy != null) { details.fieldOfStudy = request.fieldOfStudy; profileFieldsChanged = true }
-            if (request.education != null) details.education = request.education
+            if (request.education != null) { details.education = request.education; profileFieldsChanged = true }
+            if (request.faculty != null) { details.faculty = request.faculty; profileFieldsChanged = true }
             if (request.skills != null) details.skills = request.skills
             if (request.interests != null) details.interests = request.interests
             if (request.workExperience != null) details.workExperience = request.workExperience
@@ -532,9 +550,21 @@ class ChatService(
         webSocketMessageHandler.notifyNewChat(recipientId, chatEvent)
     }
     fun getChatById(chatId: UUID, userId: UUID): ChatDto? {
-        val chat = chatRepository.findById(chatId).orElse(null) ?: return null
-        if (chat.participants.none { it.id == userId }) return null
-        return chatToDto(chat, userId)
+        // First try to find as a direct Chat ID
+        val chat = chatRepository.findById(chatId).orElse(null)
+        if (chat != null) {
+            if (chat.participants.none { it.id == userId }) return null
+            return chatToDto(chat, userId)
+        }
+        // FALLBACK: chatId might be a userId (e.g., Saved Messages passes user.id as chatId)
+        // Try to find or create a private chat between currentUser and the given ID
+        val targetUser = userRepository.findById(chatId).orElse(null) ?: return null
+        val existingChats = chatRepository.findPrivateChatBetween(userId, chatId)
+        if (existingChats.isNotEmpty()) {
+            return chatToDto(existingChats.first(), userId)
+        }
+        // Auto-create self-chat or private chat if not found
+        return createPrivateChat(userId, chatId)
     }
     @Transactional
     fun updateChatSettings(chatId: UUID, userId: UUID, isPinned: Boolean?, isMuted: Boolean?, isArchived: Boolean?): ChatDto? {
@@ -899,6 +929,19 @@ class MessageService(
             }
         }
         notifyChatUpdateToParticipants(chat, message, userId)
+        // Broadcast real-time reaction update to all chat participants
+        val user = userRepository.findById(userId).orElse(null)
+        val reactionEvent = WsReactionEvent(
+            messageId = messageId,
+            chatId = chat.id!!,
+            userId = userId,
+            userName = user?.displayName ?: "User",
+            reaction = reaction
+        )
+        val recipientIds = chat.participants
+            .mapNotNull { it.id }
+            .filter { it != userId }
+        webSocketMessageHandler.broadcastReactionUpdate(chat.id!!, reactionEvent, recipientIds)
         return true
     }
     // ═══ PIN MESSAGE ═══

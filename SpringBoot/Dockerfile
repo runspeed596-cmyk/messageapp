@@ -1,26 +1,8 @@
 # ============================================
-# Stage 1: Build the application
+# Runtime-only image (JAR pre-built locally)
 # ============================================
-FROM gradle:8.5-jdk21-alpine AS builder
-
-WORKDIR /app
-
-# Copy Gradle wrapper and build files first for better caching
-COPY gradle/ gradle/
-COPY gradlew .
-COPY gradlew.bat .
-COPY build.gradle.kts .
-COPY settings.gradle.kts .
-
-# Copy source code
-COPY src/ src/
-
-# Build the application (skip tests for faster build)
-RUN gradle bootJar --no-daemon -x test
-
-# ============================================
-# Stage 2: Create the runtime image
-# ============================================
+# Iranian servers cannot download Gradle dependencies (sanctions).
+# Build the JAR locally and include it in the deployment ZIP.
 FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
@@ -32,8 +14,8 @@ RUN addgroup -g 1001 appgroup && \
 # Create uploads directory
 RUN mkdir -p /app/uploads && chown -R appuser:appgroup /app
 
-# Copy the built JAR from builder stage
-COPY --from=builder /app/build/libs/*.jar app.jar
+# Copy the pre-built JAR
+COPY build/libs/*.jar app.jar
 
 # Switch to non-root user
 USER appuser
@@ -46,4 +28,9 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
     CMD wget -q --spider http://localhost:8080/actuator/health || exit 1
 
 # Run the application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", \
+  "-Xms512m", "-Xmx2g", \
+  "-XX:+UseG1GC", \
+  "-XX:MaxGCPauseMillis=200", \
+  "-Djava.security.egd=file:/dev/./urandom", \
+  "-jar", "app.jar"]

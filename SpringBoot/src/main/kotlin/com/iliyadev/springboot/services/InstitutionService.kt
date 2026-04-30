@@ -17,14 +17,22 @@ import java.util.UUID
 
 data class InstitutionRegisterRequest(
     val name: String,
-    val type: String,
+    val type: InstitutionType,
     val registrationNumber: String? = null,
     val contactPhone: String? = null,
     val contactEmail: String? = null,
     val province: String? = null,
     val city: String? = null,
     val address: String? = null,
-    val logoUrl: String? = null
+    val logoUrl: String? = null,
+    val description: String? = null,
+    val universities: List<String> = emptyList(),
+    val specialties: List<String> = emptyList(),
+    val associatedClubIds: List<String> = emptyList(),
+    val associatedFieldOfStudyIds: List<String> = emptyList(),
+    val associatedStudentOrgIds: List<String> = emptyList(),
+    val instructorIds: List<UUID> = emptyList(),
+    val adminIds: List<UUID> = emptyList()
 )
 
 data class InstitutionReviewRequest(
@@ -32,30 +40,13 @@ data class InstitutionReviewRequest(
     val adminNote: String? = null
 )
 
-data class InstitutionResponse(
-    val id: UUID,
-    val name: String,
-    val type: String,
-    val registrationNumber: String?,
-    val contactPhone: String?,
-    val contactEmail: String?,
-    val province: String?,
-    val city: String?,
-    val address: String?,
-    val logoUrl: String?,
-    val ownerId: UUID,
-    val channelId: UUID?,
-    val verificationStatus: VerificationStatus,
-    val adminNote: String?,
-    val isActive: Boolean,
-    val createdAt: Instant
-)
-
 @Service
 class InstitutionService(
     private val institutionRepository: InstitutionRepository,
     private val userRepository: UserRepository,
-    private val channelRepository: ChannelRepository
+    private val channelRepository: ChannelRepository,
+    private val courseRepository: CourseRepository,
+    private val userFollowRepository: UserFollowRepository
 ) {
     @Transactional
     fun registerInstitution(ownerId: UUID, request: InstitutionRegisterRequest): InstitutionResponse {
@@ -74,10 +65,55 @@ class InstitutionService(
             city = request.city,
             address = request.address,
             logoUrl = request.logoUrl,
+            description = request.description,
+            universities = request.universities.toMutableList(),
+            specialties = request.specialties.toMutableList(),
+            associatedClubIds = request.associatedClubIds.toMutableList(),
+            associatedFieldOfStudyIds = request.associatedFieldOfStudyIds.toMutableList(),
+            associatedStudentOrgIds = request.associatedStudentOrgIds.toMutableList(),
+            instructorIds = request.instructorIds.toMutableList(),
+            adminIds = request.adminIds.toMutableList(),
             owner = owner,
             verificationStatus = VerificationStatus.PENDING_VERIFICATION
         )
         val saved: Institution = institutionRepository.save(institution)
+        
+        // Link to user (owner)
+        owner.institutionId = saved.id
+        owner.institutionLogoUrl = saved.logoUrl
+        owner.institutionName = saved.name
+        userRepository.save(owner)
+        
+        return mapToResponse(saved)
+    }
+
+    @Transactional
+    fun updateInstitution(institutionId: UUID, ownerId: UUID, request: InstitutionRegisterRequest): InstitutionResponse {
+        val entity: Institution = institutionRepository.findById(institutionId)
+            .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Institution not found") }
+        if (entity.owner?.id != ownerId) {
+            throw ResponseStatusException(HttpStatus.FORBIDDEN, "Only the institution owner can update it")
+        }
+        entity.name = request.name
+        entity.type = request.type
+        if (request.logoUrl != null) entity.logoUrl = request.logoUrl
+        if (request.description != null) entity.description = request.description
+        if (request.province != null) entity.province = request.province
+        if (request.city != null) entity.city = request.city
+        entity.universities = request.universities.toMutableList()
+        entity.specialties = request.specialties.toMutableList()
+        entity.associatedClubIds = request.associatedClubIds.toMutableList()
+        entity.associatedFieldOfStudyIds = request.associatedFieldOfStudyIds.toMutableList()
+        entity.associatedStudentOrgIds = request.associatedStudentOrgIds.toMutableList()
+        entity.instructorIds = request.instructorIds.toMutableList()
+        entity.adminIds = request.adminIds.toMutableList()
+        entity.updatedAt = Instant.now()
+        val saved: Institution = institutionRepository.save(entity)
+        // Update user's cached institution fields
+        val owner: User = entity.owner!!
+        owner.institutionLogoUrl = saved.logoUrl
+        owner.institutionName = saved.name
+        userRepository.save(owner)
         return mapToResponse(saved)
     }
 
@@ -171,7 +207,7 @@ class InstitutionService(
         return InstitutionResponse(
             id = entity.id!!,
             name = entity.name,
-            type = entity.type,
+            type = entity.type.name,
             registrationNumber = entity.registrationNumber,
             contactPhone = entity.contactPhone,
             contactEmail = entity.contactEmail,
@@ -179,12 +215,64 @@ class InstitutionService(
             city = entity.city,
             address = entity.address,
             logoUrl = entity.logoUrl,
+            description = entity.description,
+            universities = entity.universities.toList(),
+            specialties = entity.specialties.toList(),
+            associatedClubIds = entity.associatedClubIds.toList(),
+            associatedFieldOfStudyIds = entity.associatedFieldOfStudyIds.toList(),
+            associatedStudentOrgIds = entity.associatedStudentOrgIds.toList(),
+            instructorIds = entity.instructorIds.toList(),
+            adminIds = entity.adminIds.toList(),
             ownerId = entity.owner!!.id!!,
             channelId = entity.channel?.id,
-            verificationStatus = entity.verificationStatus,
+            verificationStatus = entity.verificationStatus.name,
             adminNote = entity.adminNote,
             isActive = entity.isActive,
-            createdAt = entity.createdAt
+            createdAt = entity.createdAt,
+            followerCount = entity.owner?.id?.let { userFollowRepository.countFollowersByUserId(it) } ?: 0,
+            followingCount = entity.owner?.id?.let { userFollowRepository.countFollowingByUserId(it) } ?: 0,
+            courseCount = courseRepository.findByInstitutionId(entity.id!!, org.springframework.data.domain.Pageable.unpaged()).totalElements.toInt(),
+            studentCount = 0,
+            totalTrainingHours = 0,
+            rating = 4.8,
+            honors = entity.honors.map { it.toDto() }
         )
+    }
+
+    fun getHonors(institutionId: UUID): List<InstitutionHonorDto> {
+        val entity = institutionRepository.findById(institutionId)
+            .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Institution not found") }
+        return entity.honors.map { it.toDto() }
+    }
+
+    fun getTeachers(institutionId: UUID): List<UserDto> {
+        val entity = institutionRepository.findById(institutionId)
+            .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Institution not found") }
+        return userRepository.findAllById(entity.instructorIds).map { it.toDto() }
+    }
+
+    fun getAdmins(institutionId: UUID): List<UserDto> {
+        val entity = institutionRepository.findById(institutionId)
+            .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Institution not found") }
+        return userRepository.findAllById(entity.adminIds).map { it.toDto() }
+    }
+
+    @Transactional
+    fun addHonor(institutionId: UUID, ownerId: UUID, title: String, description: String?, imageUrl: String?, date: java.time.LocalDate?): InstitutionHonorDto {
+        val entity = institutionRepository.findById(institutionId)
+            .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Institution not found") }
+        if (entity.owner?.id != ownerId) {
+            throw ResponseStatusException(HttpStatus.FORBIDDEN, "Only the owner can add honors")
+        }
+        val honor = InstitutionHonor(
+            institution = entity,
+            title = title,
+            description = description,
+            imageUrl = imageUrl,
+            date = date
+        )
+        entity.honors.add(honor)
+        institutionRepository.save(entity)
+        return honor.toDto()
     }
 }

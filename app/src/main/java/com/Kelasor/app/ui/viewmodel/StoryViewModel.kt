@@ -34,10 +34,12 @@ class StoryViewModel @Inject constructor(
     private val storyRepository: StoryRepository,
     private val userRepository: com.Kelasor.app.data.repository.UserRepository,
     private val userDao: com.Kelasor.app.data.local.dao.UserDao,
+    private val contactsRepository: com.Kelasor.app.data.repository.ContactsRepository,
     private val webSocketManager: com.Kelasor.app.data.websocket.WebSocketManager,
     @ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
 
+    private var loadStoriesJob: kotlinx.coroutines.Job? = null
     private val _uiState = MutableStateFlow<StoriesUiState>(StoriesUiState.Loading)
     val uiState: StateFlow<StoriesUiState> = _uiState.asStateFlow()
 
@@ -62,6 +64,8 @@ class StoryViewModel @Inject constructor(
     // For navigation to viewer
     private val _selectedStoryUser = MutableStateFlow<StoryUser?>(null)
     val selectedStoryUser: StateFlow<StoryUser?>  = _selectedStoryUser.asStateFlow()
+    private val _selectedStoryIndex = MutableStateFlow(0)
+    val selectedStoryIndex: StateFlow<Int> = _selectedStoryIndex.asStateFlow()
 
     init {
         loadStories()
@@ -94,7 +98,9 @@ class StoryViewModel @Inject constructor(
     }
 
     fun loadStories() {
-        viewModelScope.launch {
+        // Cancel previous collector to prevent stacked jobs
+        loadStoriesJob?.cancel()
+        loadStoriesJob = viewModelScope.launch {
             if (_uiState.value !is StoriesUiState.Success) {
                 _uiState.value = StoriesUiState.Loading
             }
@@ -243,15 +249,30 @@ class StoryViewModel @Inject constructor(
 
     /**
      * Resolves contact names for story users.
-     * If a user's phone is saved in device contacts, their local contact name replaces the server displayName.
+     * Loads device contacts once per batch and matches by phone number for instant resolution.
+     * Falls back to cached contactName from userDao if device contacts don't match.
      */
     private suspend fun resolveContactNames(users: List<StoryUser>): List<StoryUser> {
+        val deviceContacts = try {
+            contactsRepository.getDeviceContacts()
+        } catch (e: Exception) {
+            emptyList()
+        }
+        val contactsByPhone = deviceContacts.associateBy { it.phoneNumber }
         return users.map { storyUser ->
             if (storyUser.isCurrentUser) return@map storyUser
             val userEntity = userDao.getUserById(storyUser.userId)
-            val contactName = userEntity?.contactName
-            if (!contactName.isNullOrBlank()) {
-                storyUser.copy(displayName = contactName)
+            val phoneNumber = userEntity?.phoneNumber
+            val deviceContactName = if (!phoneNumber.isNullOrBlank()) {
+                val normalized = phoneNumber.replace(Regex("[^0-9+]"), "")
+                    .let { if (it.startsWith("+98")) "0" + it.substring(3) else it }
+                    .removePrefix("+")
+                contactsByPhone[normalized]?.name
+            } else null
+            val resolvedName = deviceContactName
+                ?: userEntity?.contactName?.takeIf { it.isNotBlank() }
+            if (resolvedName != null) {
+                storyUser.copy(displayName = resolvedName)
             } else {
                 storyUser
             }
@@ -315,11 +336,33 @@ class StoryViewModel @Inject constructor(
     }
 
     fun openStoryViewer(user: StoryUser) {
+        _selectedStoryIndex.value = 0
         _selectedStoryUser.value = user
+    }
+
+    /**
+     * Opens the story viewer for a specific story by its ID.
+     * Searches through all loaded stories (personal, group, channel) to find the matching story.
+     */
+    fun openStoryById(storyId: String) {
+        val allStoryUsers = mutableListOf<StoryUser>()
+        (_uiState.value as? StoriesUiState.Success)?.storyUsers?.let { allStoryUsers.addAll(it) }
+        (_groupUiState.value as? StoriesUiState.Success)?.storyUsers?.let { allStoryUsers.addAll(it) }
+        (_channelUiState.value as? StoriesUiState.Success)?.storyUsers?.let { allStoryUsers.addAll(it) }
+        for (user in allStoryUsers) {
+            val storyIndex = user.stories.indexOfFirst { it.id == storyId }
+            if (storyIndex != -1) {
+                _selectedStoryIndex.value = storyIndex
+                _selectedStoryUser.value = user
+                return
+            }
+        }
+        android.util.Log.w("StoryViewModel", "Story not found for id: $storyId")
     }
 
     fun closeStoryViewer() {
         _selectedStoryUser.value = null
+        _selectedStoryIndex.value = 0
         _viewersState.value = emptyList() // Reset viewers
     }
 

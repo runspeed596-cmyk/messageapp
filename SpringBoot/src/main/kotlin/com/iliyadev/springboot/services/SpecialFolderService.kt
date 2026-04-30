@@ -14,7 +14,8 @@ class SpecialFolderService(
     private val channelRepository: ChannelRepository,
     private val groupMemberRepository: GroupMemberRepository,
     private val channelSubscriberRepository: ChannelSubscriberRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val roleChannelMappingRepository: RoleChannelMappingRepository
 ) {
     @Transactional
     fun getSpecialFolder(userId: UUID): SpecialFolderDto {
@@ -118,6 +119,37 @@ class SpecialFolderService(
         val userUniversity: String? = user.profileDetails?.university
         val userFieldOfStudy: String? = user.profileDetails?.fieldOfStudy
         val userEducationLevel: String? = user.profileDetails?.education
+        val userRole = user.educationalRole
+        val userGradeLevel = user.gradeLevel
+        val userMajor = user.major
+        
+        // Auto-join mandatory role-based channels
+        if (!userRole.isNullOrBlank()) {
+            val mappings = roleChannelMappingRepository.findByEducationalRole(userRole)
+            for (mapping in mappings) {
+                // Must match grade and major if specified in mapping
+                if (mapping.gradeLevel != null && mapping.gradeLevel != userGradeLevel) continue
+                if (mapping.major != null && mapping.major != userMajor) continue
+                
+                mapping.channel?.let { channel ->
+                    val existingSub = channelSubscriberRepository.findByChannelIdAndUserId(channel.id!!, userId)
+                    if (existingSub == null) {
+                        val newSub = ChannelSubscriber(
+                            channel = channel,
+                            user = user,
+                            isAdmin = false,
+                            isMandatory = true
+                        )
+                        channelSubscriberRepository.save(newSub)
+                    } else if (!existingSub.isMandatory) {
+                        existingSub.isMandatory = true
+                        channelSubscriberRepository.save(existingSub)
+                    }
+                    Unit
+                }
+            }
+        }
+        
         // Auto-join official channels
         val officialChannels: List<Channel> = channelRepository.findByIsOfficialTrue()
         for (channel: Channel in officialChannels) {

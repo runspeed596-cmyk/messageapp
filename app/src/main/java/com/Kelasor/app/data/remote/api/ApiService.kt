@@ -248,6 +248,37 @@ interface ApiService {
     suspend fun deleteChannel(@Path("id") id: String): Response<ApiResponse<Unit>>
     @POST("api/channels/{id}/subscribe")
     suspend fun subscribeToChannel(@Path("id") id: String): Response<ApiResponse<Unit>>
+    
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // 🏛️ Institution / Mosbat Elm Endpoints
+    // ═══════════════════════════════════════════════════════════════════════════════
+    @GET("api/institutions/active")
+    suspend fun getActiveInstitutions(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 50
+    ): Response<com.Kelasor.app.data.remote.dto.ApiResponse<com.Kelasor.app.data.remote.dto.PageResponse<com.Kelasor.app.data.remote.dto.InstitutionDto>>>
+
+    @GET("api/institutions/{id}/honors")
+    suspend fun getInstitutionHonors(
+        @Path("id") id: String
+    ): Response<com.Kelasor.app.data.remote.dto.ApiResponse<List<com.Kelasor.app.data.remote.dto.InstitutionHonorDto>>>
+
+    @GET("api/institutions/{id}/teachers")
+    suspend fun getInstitutionTeachers(
+        @Path("id") id: String
+    ): Response<com.Kelasor.app.data.remote.dto.ApiResponse<List<UserDto>>>
+
+    @GET("api/institutions/{id}/admins")
+    suspend fun getInstitutionAdmins(
+        @Path("id") id: String
+    ): Response<com.Kelasor.app.data.remote.dto.ApiResponse<List<UserDto>>>
+
+    @POST("api/institutions/{id}/honors")
+    suspend fun addInstitutionHonor(
+        @Path("id") id: String,
+        @Body request: com.Kelasor.app.data.remote.dto.InstitutionHonorDto
+    ): Response<com.Kelasor.app.data.remote.dto.ApiResponse<com.Kelasor.app.data.remote.dto.InstitutionHonorDto>>
+
     @DELETE("api/channels/{id}/subscribe")
     suspend fun unsubscribeFromChannel(@Path("id") id: String): Response<ApiResponse<Unit>>
     @GET("api/channels/{id}/posts")
@@ -561,6 +592,146 @@ interface ApiService {
         @Query("size") size: Int = 20
     ): Response<ApiResponse<List<CourseDto>>>
 
+    @GET("api/mosbat-elm/home")
+    suspend fun getMosbatElmHomeData(): Response<ApiResponse<MosbatElmHomeDataDto>>
+
+    @POST("api/users/list")
+    suspend fun getUsersByIds(@Body ids: List<String>): Response<ApiResponse<List<UserDto>>>
+
+    @GET("api/institutions/{id}")
+    suspend fun getInstitution(
+        @Path("id") id: String
+    ): Response<ApiResponse<InstitutionDto>>
+
+    @GET("api/courses/institution/{institutionId}")
+    suspend fun getInstitutionCourses(
+        @Path("institutionId") institutionId: String,
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 50
+    ): Response<ApiResponse<PageResponse<CourseDto>>>
+
+    @POST("api/courses")
+    suspend fun createCourse(
+        @Body request: CreateCourseRequest
+    ): Response<ApiResponse<CourseDto>>
+
+    @PUT("api/courses/{id}")
+    suspend fun updateCourse(
+        @Path("id") courseId: String,
+        @Body request: CreateCourseRequest
+    ): Response<ApiResponse<CourseDto>>
+
+    @GET("api/courses/{id}")
+    suspend fun getCourseById(
+        @Path("id") courseId: String
+    ): Response<ApiResponse<CourseDto>>
+
+    @POST("api/courses/{id}/favorite")
+    suspend fun toggleCourseFavorite(
+        @Path("id") courseId: String
+    ): Response<ApiResponse<Boolean>>
+
+    @GET("api/courses/{id}/favorite")
+    suspend fun isCourseFavorite(
+        @Path("id") courseId: String
+    ): Response<ApiResponse<Boolean>>
+
+    @POST("api/courses/{id}/enroll")
+    suspend fun enrollInCourse(
+        @Path("id") courseId: String
+    ): Response<ApiResponse<Unit>>
+
+    @GET("api/courses/{id}/enrolled")
+    suspend fun isEnrolledInCourse(
+        @Path("id") courseId: String
+    ): Response<ApiResponse<Boolean>>
+
+    @GET("api/courses/similar/{courseId}")
+    suspend fun getSimilarCourses(
+        @Path("courseId") courseId: String,
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 10
+    ): Response<ApiResponse<PageResponse<CourseDto>>>
+
+    @GET("api/courses")
+    suspend fun getPublicCourses(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 20
+    ): Response<ApiResponse<PageResponse<CourseDto>>>
+
+    @GET("api/courses/upcoming")
+    suspend fun getUpcomingCourses(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 20
+    ): Response<ApiResponse<PageResponse<CourseDto>>>
+
+    @GET("api/courses/my")
+    suspend fun getMyCourses(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 20
+    ): Response<ApiResponse<PageResponse<CourseDto>>>
+
+    @GET("api/courses/{id}/comments")
+    suspend fun getCourseComments(
+        @Path("id") courseId: String,
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 20
+    ): Response<ApiResponse<PageResponse<CourseCommentDto>>>
+
+    @POST("api/courses/{id}/comments")
+    suspend fun addCourseComment(
+        @Path("id") courseId: String,
+        @Body request: AddCourseCommentRequest
+    ): Response<ApiResponse<CourseCommentDto>>
+
+    @DELETE("api/courses/{id}")
+    suspend fun deleteCourse(
+        @Path("id") courseId: String
+    ): Response<ApiResponse<Unit>>
+
+    @GET("api/channels/by-user/{userId}")
+    suspend fun getChannelsByUser(
+        @Path("userId") userId: String
+    ): Response<ApiResponse<List<ChannelDto>>>
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // 🤝 Course Collaboration Endpoints (Mosbat Elm)
+    // ═══════════════════════════════════════════════════════════════════════════════
+
+    @POST("api/course-collaborations/course/{courseId}/request")
+    suspend fun requestCollaboration(
+        @Path("courseId") courseId: String,
+        @Body request: CreateCollaborationRequest
+    ): Response<ApiResponse<CourseCollaborationRequestDto>>
+
+    @GET("api/course-collaborations/academy/{academyId}/pending")
+    suspend fun getPendingCollaborations(
+        @Path("academyId") academyId: String,
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 20
+    ): Response<ApiResponse<PageResponse<CourseCollaborationRequestDto>>>
+
+    @POST("api/course-collaborations/{requestId}/accept")
+    suspend fun acceptCollaboration(
+        @Path("requestId") requestId: String
+    ): Response<ApiResponse<CourseCollaborationRequestDto>>
+
+    @POST("api/course-collaborations/{requestId}/reject")
+    suspend fun rejectCollaboration(
+        @Path("requestId") requestId: String
+    ): Response<ApiResponse<CourseCollaborationRequestDto>>
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // 🛡️ Admin Endpoints (Mosbat Elm)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    
+    @POST("api/admin/mosbat-elm/courses/{id}/review")
+    suspend fun reviewCourse(
+        @Path("id") courseId: String,
+        @Query("adminId") adminId: String,
+        @Body request: CourseReviewRequestDto
+    ): Response<ApiResponse<CourseDto>>
+
     // ═══════════════════════════════════════════════════════════════════════════════
     // 📝 Exam Endpoints
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -668,5 +839,22 @@ interface ApiService {
         @Query("page") page: Int = 0,
         @Query("size") size: Int = 20
     ): Response<ChannelListResponse>
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // 🏛️ Institution Endpoints
+    // ═══════════════════════════════════════════════════════════════════════════════
+
+    @POST("api/institutions/register")
+    suspend fun registerInstitution(@Body request: InstitutionRegisterRequestDto): Response<ApiResponse<InstitutionDto>>
+
+    @Multipart
+    @POST("api/institutions/upload-logo")
+    suspend fun uploadInstitutionLogo(@Part file: MultipartBody.Part): Response<ApiResponse<String>>
+
+    @PUT("api/institutions/{id}")
+    suspend fun updateInstitution(
+        @Path("id") id: String,
+        @Body request: InstitutionRegisterRequestDto
+    ): Response<ApiResponse<InstitutionDto>>
 }
 

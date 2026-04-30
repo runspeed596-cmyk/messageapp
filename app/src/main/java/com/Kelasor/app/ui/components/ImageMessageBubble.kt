@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
@@ -65,7 +66,10 @@ fun ImageMessageBubble(
     onPreviewClick: (String, MediaType) -> Unit,
     modifier: Modifier = Modifier,
     caption: String? = null,
-    status: MessageStatus = MessageStatus.SENT
+    status: MessageStatus = MessageStatus.SENT,
+    reactions: Map<String, Int> = emptyMap(),
+    myReaction: String? = null,
+    onReactionClick: ((String) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val extendedColors = MessageAppTheme.extendedColors
@@ -177,6 +181,16 @@ fun ImageMessageBubble(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 10.dp, vertical = 6.dp)
+            )
+        }
+        // Reactions inside card
+        if (reactions.isNotEmpty()) {
+            ReactionRow(
+                reactions = reactions,
+                myReaction = myReaction,
+                isMyMessage = isMyMessage,
+                onReactionClick = onReactionClick,
+                modifier = Modifier.padding(horizontal = 8.dp).offset(y = (-4).dp)
             )
         }
         // Time + status

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -57,7 +58,10 @@ fun VideoNoteBubble(
     time: String,
     modifier: Modifier = Modifier,
     durationText: String? = null,
-    status: MessageStatus = MessageStatus.SENT
+    status: MessageStatus = MessageStatus.SENT,
+    reactions: Map<String, Int> = emptyMap(),
+    myReaction: String? = null,
+    onReactionClick: ((String) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val extendedColors = MessageAppTheme.extendedColors
@@ -174,6 +178,19 @@ fun VideoNoteBubble(
                     )
                 }
             }
+        }
+        // Reaction row
+        if (reactions.isNotEmpty()) {
+            ReactionRow(
+                reactions = reactions,
+                myReaction = myReaction,
+                isMyMessage = isMyMessage,
+                onReactionClick = onReactionClick,
+                modifier = Modifier
+                    .align(Alignment.Start)
+                    .padding(start = 4.dp)
+                    .offset(y = (-8).dp)
+            )
         }
     }
 }

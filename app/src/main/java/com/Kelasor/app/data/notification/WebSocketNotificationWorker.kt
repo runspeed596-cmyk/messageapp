@@ -44,14 +44,27 @@ class WebSocketNotificationWorker @AssistedInject constructor(
                 androidx.work.ExistingWorkPolicy.KEEP, // KEEP existing worker — never cancel a running worker
                 workRequest
             )
-            Log.i(TAG, "🚀 Started WebSocket foreground service")
+            // Also schedule periodic fallback to restart if the foreground worker gets killed
+            schedulePeriodicFallback(context)
+            Log.i(TAG, "🚀 Started WebSocket foreground service + periodic fallback")
         }
 
         /**
-         * Schedule periodic fallback (optional, if service gets killed)
-         * But essentially we want to restart the service if killed.
-         * For now, we rely on startService being called on App start.
+         * Schedule periodic fallback every 15 minutes.
+         * If the main foreground worker is killed by OS battery optimization,
+         * this periodic worker will restart it.
          */
+        fun schedulePeriodicFallback(context: Context) {
+            val periodicWork = PeriodicWorkRequestBuilder<WebSocketNotificationWorker>(
+                15, TimeUnit.MINUTES
+            ).build()
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                "${WORK_NAME}_periodic",
+                ExistingPeriodicWorkPolicy.KEEP,
+                periodicWork
+            )
+        }
+
         fun schedulePeriodicSync(context: Context) {
              startService(context)
         }

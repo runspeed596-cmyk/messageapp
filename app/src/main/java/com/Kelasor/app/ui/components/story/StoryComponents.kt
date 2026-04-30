@@ -62,13 +62,13 @@ fun StoriesList(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 1. "Add Story" item (Current User)
+        // 1. Current user: show AddStoryItem if no stories, StoryItem if has stories
         item {
             if (currentUser != null && currentUser.stories.isNotEmpty()) {
-                 StoryItem(
-                     storyUser = currentUser,
-                     onClick = { onStoryClick(currentUser) }
-                 )
+                StoryItem(
+                    storyUser = currentUser,
+                    onClick = { onStoryClick(currentUser) }
+                )
             } else {
                 AddStoryItem(
                     currentUser = currentUser,
@@ -77,14 +77,17 @@ fun StoriesList(
             }
         }
 
-        // 2. Friends' stories
-        items(storyUsers) { storyUser ->
-            if (!excludeCurrentUserFromList || !storyUser.isCurrentUser) { 
-                StoryItem(
-                    storyUser = storyUser,
-                    onClick = { onStoryClick(storyUser) }
-                )
-            }
+        // 2. Friends' stories (filter before items to avoid invisible empty items with spacing)
+        val filteredStoryUsers = if (excludeCurrentUserFromList) {
+            storyUsers.filter { !it.isCurrentUser }
+        } else {
+            storyUsers
+        }
+        items(filteredStoryUsers) { storyUser ->
+            StoryItem(
+                storyUser = storyUser,
+                onClick = { onStoryClick(storyUser) }
+            )
         }
     }
 }

@@ -19,7 +19,11 @@ class AdminManagementController(
     private val discountRepository: DiscountRepository,
     private val fieldOfStudyRepository: FieldOfStudyRepository,
     private val educationLevelRepository: EducationLevelRepository,
-    private val facultyRepository: FacultyRepository
+    private val facultyRepository: FacultyRepository,
+    private val educationalRoleOptionRepository: EducationalRoleOptionRepository,
+    private val panelAdminService: PanelAdminService,
+    private val clubRepository: ClubRepository,
+    private val studentOrgRepository: StudentOrgRepository
 ) {
 
     // 👤 User Management
@@ -29,10 +33,64 @@ class AdminManagementController(
         return ResponseEntity.ok(ApiResponse(true, "Success", users))
     }
 
+    @GetMapping("/users/{id}")
+    fun getUser(@PathVariable id: UUID): ResponseEntity<ApiResponse<UserDto>> {
+        val user = userRepository.findById(id).orElse(null)
+        if (user == null) {
+            return ResponseEntity.badRequest().body(ApiResponse(false, "کاربر یافت نشد"))
+        }
+        return ResponseEntity.ok(ApiResponse(true, "Success", user.toDto()))
+    }
+
     @DeleteMapping("/users/{id}")
     fun deleteUser(@PathVariable id: UUID): ResponseEntity<ApiResponse<Unit>> {
         userRepository.deleteById(id)
         return ResponseEntity.ok(ApiResponse(true, "User deleted"))
+    }
+
+    // 🛡️ Panel Admin Management
+    @GetMapping("/panel-admins")
+    fun getPanelAdmins(): ResponseEntity<ApiResponse<List<PanelAdminDto>>> {
+        val admins = panelAdminService.fetchAllAdmins().map { PanelAdminDto(
+            id = it.id.toString(),
+            username = it.username,
+            displayName = it.displayName,
+            isSuperAdmin = it.isSuperAdmin,
+            createdAt = it.createdAt.toString()
+        )}
+        return ResponseEntity.ok(ApiResponse(true, "Success", admins))
+    }
+
+    @PostMapping("/panel-admins")
+    fun createPanelAdmin(@RequestBody request: CreatePanelAdminRequest): ResponseEntity<ApiResponse<PanelAdminDto>> {
+        return try {
+            val admin = panelAdminService.createAdmin(
+                username = request.username,
+                password = request.password,
+                displayName = request.displayName,
+                isSuperAdmin = request.isSuperAdmin
+            )
+            val dto = PanelAdminDto(
+                id = admin.id.toString(),
+                username = admin.username,
+                displayName = admin.displayName,
+                isSuperAdmin = admin.isSuperAdmin,
+                createdAt = admin.createdAt.toString()
+            )
+            ResponseEntity.ok(ApiResponse(true, "ادمین با موفقیت ایجاد شد", dto))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(ApiResponse(false, e.message ?: "خطا"))
+        }
+    }
+
+    @DeleteMapping("/panel-admins/{id}")
+    fun deletePanelAdmin(@PathVariable id: UUID): ResponseEntity<ApiResponse<Unit>> {
+        return try {
+            panelAdminService.deleteAdmin(id)
+            ResponseEntity.ok(ApiResponse(true, "ادمین با موفقیت حذف شد"))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(ApiResponse(false, e.message ?: "خطا"))
+        }
     }
 
     // 🖼️ Banner Management
@@ -195,5 +253,83 @@ class AdminManagementController(
         facultyRepository.deleteById(id)
         return ResponseEntity.ok(ApiResponse(true, "Faculty deleted"))
     }
+
+    // 🎭 Educational Role Management
+    @GetMapping("/educational-roles")
+    fun getEducationalRoles(): ResponseEntity<ApiResponse<List<EducationalRoleOption>>> =
+        ResponseEntity.ok(ApiResponse(true, "Success", educationalRoleOptionRepository.findAllByOrderByDisplayOrderAsc()))
+
+    @PostMapping("/educational-roles")
+    fun createEducationalRole(@RequestBody role: EducationalRoleOption): ResponseEntity<ApiResponse<EducationalRoleOption>> =
+        ResponseEntity.ok(ApiResponse(true, "Role created", educationalRoleOptionRepository.save(role)))
+
+    @DeleteMapping("/educational-roles/{id}")
+    fun deleteEducationalRole(@PathVariable id: UUID): ResponseEntity<ApiResponse<Unit>> {
+        educationalRoleOptionRepository.deleteById(id)
+        return ResponseEntity.ok(ApiResponse(true, "Role deleted"))
+    }
+
+    // 🏛️ Club Management (کانون‌ها)
+    @GetMapping("/clubs")
+    fun getClubs(): ResponseEntity<ApiResponse<List<Club>>> =
+        ResponseEntity.ok(ApiResponse(true, "Success", clubRepository.findAllByOrderByDisplayOrderAsc()))
+
+    @PostMapping("/clubs")
+    fun createClub(@RequestBody club: Club): ResponseEntity<ApiResponse<Club>> =
+        ResponseEntity.ok(ApiResponse(true, "Club created", clubRepository.save(club)))
+
+    @DeleteMapping("/clubs/{id}")
+    fun deleteClub(@PathVariable id: UUID): ResponseEntity<ApiResponse<Unit>> {
+        clubRepository.deleteById(id)
+        return ResponseEntity.ok(ApiResponse(true, "Club deleted"))
+    }
+
+    // 🎓 Student Organization Management (تشکل‌های دانشجویی)
+    @GetMapping("/student-orgs")
+    fun getStudentOrgs(): ResponseEntity<ApiResponse<List<StudentOrg>>> =
+        ResponseEntity.ok(ApiResponse(true, "Success", studentOrgRepository.findAllByOrderByDisplayOrderAsc()))
+
+    @PostMapping("/student-orgs")
+    fun createStudentOrg(@RequestBody org: StudentOrg): ResponseEntity<ApiResponse<StudentOrg>> =
+        ResponseEntity.ok(ApiResponse(true, "Student org created", studentOrgRepository.save(org)))
+
+    @DeleteMapping("/student-orgs/{id}")
+    fun deleteStudentOrg(@PathVariable id: UUID): ResponseEntity<ApiResponse<Unit>> {
+        studentOrgRepository.deleteById(id)
+        return ResponseEntity.ok(ApiResponse(true, "Student org deleted"))
+    }
+
+    // 🖼️ Mosbat Elm Banner Management (اسلایدر مثبت علم)
+    @GetMapping("/mosbat-elm/banners")
+    fun getMosbatElmBanners(): ResponseEntity<ApiResponse<List<HomeBanner>>> =
+        ResponseEntity.ok(ApiResponse(true, "Success", bannerRepository.findAllBySectionAndIsActiveTrueOrderByDisplayOrderAsc("MOSBAT_ELM")))
+
+    @PostMapping("/mosbat-elm/banners")
+    fun createMosbatElmBanner(@RequestBody banner: HomeBanner): ResponseEntity<ApiResponse<HomeBanner>> {
+        banner.section = "MOSBAT_ELM"
+        return ResponseEntity.ok(ApiResponse(true, "Banner created", bannerRepository.save(banner)))
+    }
+
+    @DeleteMapping("/mosbat-elm/banners/{id}")
+    fun deleteMosbatElmBanner(@PathVariable id: UUID): ResponseEntity<ApiResponse<Unit>> {
+        bannerRepository.deleteById(id)
+        return ResponseEntity.ok(ApiResponse(true, "Banner deleted"))
+    }
 }
+
+// DTOs for Panel Admin
+data class PanelAdminDto(
+    val id: String,
+    val username: String,
+    val displayName: String,
+    val isSuperAdmin: Boolean,
+    val createdAt: String
+)
+
+data class CreatePanelAdminRequest(
+    val username: String,
+    val password: String,
+    val displayName: String,
+    val isSuperAdmin: Boolean = false
+)
 

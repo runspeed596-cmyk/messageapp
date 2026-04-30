@@ -1,0 +1,167 @@
+package com.hasani.messageapp.ui.viewmodel
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.hasani.messageapp.data.repository.AuthRepository
+import com.hasani.messageapp.data.repository.AuthResult
+import com.hasani.messageapp.data.repository.OtpResult
+import com.hasani.messageapp.data.repository.UserRepository
+import com.hasani.messageapp.domain.model.User
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+data class AuthState(
+    val isLoading: Boolean = false,
+    val isLoggedIn: Boolean? = null, // Null means checking, False means not logged in, True means logged in
+    val isAuthCheckComplete: Boolean = false, // True when DataStore has been read
+    val currentUser: User? = null,
+    val error: String? = null,
+    val otpSent: Boolean = false,
+    val otpExpiresInSeconds: Int = 0,
+    val isNewUser: Boolean = false
+)
+
+sealed class AuthEvent {
+    data object OtpSent : AuthEvent()
+    data class LoginSuccess(val isNewUser: Boolean) : AuthEvent()
+    data object LogoutSuccess : AuthEvent()
+    data class Error(val message: String) : AuthEvent()
+}
+
+@HiltViewModel
+class AuthViewModel @Inject constructor(
+    private val authRepository: AuthRepository,
+    private val userRepository: UserRepository
+) : ViewModel() {
+    private val _state = MutableStateFlow(AuthState())
+    val state: StateFlow<AuthState> = _state.asStateFlow()
+    private val _events = MutableSharedFlow<AuthEvent>()
+    val events: SharedFlow<AuthEvent> = _events.asSharedFlow()
+    
+    init {
+        android.util.Log.d("AuthViewModel", "🚀 AuthViewModel initialized")
+        viewModelScope.launch {
+            authRepository.isLoggedIn.collect { isLoggedIn ->
+                android.util.Log.d("AuthViewModel", "🔄 isLoggedIn changed to: $isLoggedIn")
+                _state.update { it.copy(isLoggedIn = isLoggedIn, isAuthCheckComplete = true) }
+            }
+        }
+    }
+
+    fun sendOtp(phoneNumber: String) {
+        viewModelScope.launch {
+            authRepository.sendOtp(phoneNumber).collect { result ->
+                when (result) {
+                    is OtpResult.Loading -> {
+                        _state.update { it.copy(isLoading = true, error = null) }
+                    }
+                    is OtpResult.Success -> {
+                        _state.update {
+                            it.copy(
+                                isLoading = false,
+                                otpSent = true,
+                                otpExpiresInSeconds = result.expiresInSeconds
+                            )
+                        }
+                        _events.emit(AuthEvent.OtpSent)
+                    }
+                    is OtpResult.Error -> {
+                        _state.update { it.copy(isLoading = false, error = result.message) }
+                        _events.emit(AuthEvent.Error(result.message))
+                    }
+                }
+            }
+        }
+    }
+
+    fun verifyOtp(phoneNumber: String, code: String) {
+        viewModelScope.launch {
+            authRepository.verifyOtp(phoneNumber, code).collect { result ->
+                when (result) {
+                    is AuthResult.Loading -> {
+                        _state.update { it.copy(isLoading = true, error = null) }
+                    }
+                    is AuthResult.Success -> {
+                        _state.update {
+                            it.copy(
+                                isLoading = false,
+                                isLoggedIn = true,
+                                currentUser = result.user,
+                                isNewUser = result.isNewUser
+                            )
+                        }
+                        _events.emit(AuthEvent.LoginSuccess(result.isNewUser))
+                    }
+                    is AuthResult.Error -> {
+                        _state.update { it.copy(isLoading = false, error = result.message) }
+                        _events.emit(AuthEvent.Error(result.message))
+                    }
+                }
+            }
+        }
+    }
+
+    fun logout() {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true) }
+            val success = authRepository.logout()
+            _state.update { AuthState() } // Reset state, isLoggedIn will become null/false eventually via flow? 
+            // Better to force it to false or null, but the repo flow should update it.
+            // For safety in UI immediate reaction:
+             _state.update { AuthState(isLoggedIn = false, isAuthCheckComplete = true) }
+            _events.emit(AuthEvent.LogoutSuccess)
+        }
+    }
+
+    fun clearError() {
+        _state.update { it.copy(error = null) }
+    }
+
+    fun updateProfile(
+        firstName: String, 
+        lastName: String, 
+        username: String, 
+        bio: String, 
+        avatarFile: java.io.File? = null,
+        university: String? = null,
+        fieldOfStudy: String? = null,
+        education: String? = null,
+        skills: String? = null,
+        interests: String? = null,
+        workExperience: String? = null,
+        achievements: String? = null
+    ) {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true) }
+            
+            // Upload avatar if exists
+            if (avatarFile != null) {
+                 userRepository.uploadAvatar(avatarFile).collect { result ->
+                     if (result is com.hasani.messageapp.data.repository.UserResult.Error) {
+                         // We continue even if avatar upload fails
+                     }
+                 }
+            }
+
+            val displayName = "$firstName $lastName"
+            userRepository.updateProfile(
+                username, displayName, bio,
+                university, fieldOfStudy, education, skills, interests, workExperience, achievements
+            ).collect { result ->
+                when (result) {
+                    is com.hasani.messageapp.data.repository.UserResult.Success -> {
+                        _state.update { it.copy(isLoading = false, currentUser = result.data) }
+                        _events.emit(AuthEvent.LoginSuccess(isNewUser = false))
+                    }
+                    is com.hasani.messageapp.data.repository.UserResult.Error -> {
+                        _state.update { it.copy(isLoading = false, error = result.message) }
+                        _events.emit(AuthEvent.Error(result.message))
+                    }
+                    else -> {}
+                }
+            }
+        }
+    }
+}

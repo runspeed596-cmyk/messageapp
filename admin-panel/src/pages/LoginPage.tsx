@@ -17,6 +17,9 @@ const LoginPage = () => {
         try {
             const response = await adminApi.login({ username, password });
             if (response.data.success) {
+                if (response.data.data.adminId) {
+                    localStorage.setItem('admin_id', response.data.data.adminId);
+                }
                 login(response.data.data.token);
             } else {
                 setError(response.data.message);

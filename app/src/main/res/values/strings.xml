@@ -136,6 +136,8 @@
     <string name="select_photo">انتخاب عکس</string>
     <string name="first_name">نام</string>
     <string name="last_name">نام خانوادگی</string>
+    <string name="national_code">کد ملی</string>
+    <string name="national_code_hint">کد ملی ۱۰ رقمی خود را وارد کنید</string>
     <string name="username_english">نام کاربری (انگلیسی)</string>
     <string name="bio_optional">بایو (دلبخواه)</string>
     <string name="register_and_login">ثبت و ورود</string>

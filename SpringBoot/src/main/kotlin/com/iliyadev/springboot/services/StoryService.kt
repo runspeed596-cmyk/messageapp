@@ -36,9 +36,9 @@ class StoryService(
     ): Story {
         val user = userRepository.findById(userId).orElseThrow { IllegalArgumentException("User not found") }
         
-        // Check limit: Max 1 active story for non-premium users
+        // Check limit: Max 10 active stories for non-premium users
         val activeStories = storyRepository.findActiveStoriesByUser(user, Instant.now())
-        if (!user.isPremium && activeStories.size >= 1) {
+        if (!user.isPremium && activeStories.size >= 10) {
             throw IllegalArgumentException("Story limit reached. Upgrade to Premium to post more.")
         }
 
@@ -89,6 +89,7 @@ class StoryService(
                 username = user.username,
                 displayName = if (user.id == currentUserId) "استوری شما" else user.displayName,
                 avatarUrl = user.avatarUrl,
+                bio = user.bio,
                 stories = stories.map { it.toDto(currentUserId) },
                 isCurrentUser = user.id == currentUserId
             )
@@ -176,6 +177,8 @@ class StoryService(
             throw IllegalArgumentException("Access denied")
         }
         
+        // Delete related replies first (FK constraint on story_replies)
+        storyReplyRepository.deleteByStoryId(story.id!!)
         // Delete related views
         storyViewRepository.deleteByStory(story)
         // Broadcast deletion before removing from DB
@@ -264,6 +267,7 @@ class StoryService(
                  username = group.id.toString(),
                  displayName = group.name,
                  avatarUrl = group.avatarUrl,
+                 bio = null,
                  stories = stories.map { it.toDto(userId) },
                  isCurrentUser = canManage
              )
@@ -287,6 +291,7 @@ class StoryService(
                  username = channel.publicId ?: channel.id.toString(),
                  displayName = channel.name,
                  avatarUrl = channel.avatarUrl,
+                 bio = null,
                  stories = stories.map { it.toDto(userId) },
                  isCurrentUser = canManage
              )
@@ -310,7 +315,10 @@ class StoryService(
             try {
                 val chatDto = chatService.createPrivateChat(userId, storyOwnerId)
                 if (chatDto != null) {
-                    val msgContent = "\uD83D\uDCE9 پاسخ استوری:\n$content"
+                    // Embed story reference tag for client to render as tappable story preview
+                    val storyMediaUrl = story.mediaUrl ?: ""
+                    val storyType = story.type?.name ?: "IMAGE"
+                    val msgContent = "[STORY_REPLY:${storyId}:${storyMediaUrl}:${storyType}]${content}"
                     val sendRequest = SendMessageRequest(content = msgContent)
                     messageService.sendMessage(chatDto.id, userId, sendRequest)
                 }

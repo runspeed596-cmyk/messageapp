@@ -38,6 +38,18 @@ class DatabaseConstraintFixer(
                     logger.warn("⚠️ Could not update $constraintName: ${e.message}")
                 }
             }
+            // Fix courses status constraint
+            try {
+                val courseStatuses = listOf("DRAFT", "PENDING", "APPROVED", "REJECTED", "ACTIVE", "COMPLETED", "CANCELLED")
+                val courseCheckExpr = courseStatuses.joinToString(", ") { "'$it'" }
+                conn.createStatement().use { stmt ->
+                    stmt.execute("ALTER TABLE courses DROP CONSTRAINT IF EXISTS courses_status_check")
+                    stmt.execute("ALTER TABLE courses ADD CONSTRAINT courses_status_check CHECK (status::text = ANY(ARRAY[$courseCheckExpr]))")
+                }
+                logger.info("✅ Updated courses_status_check with all CourseStatus values")
+            } catch (e: Exception) {
+                logger.warn("⚠️ Could not update courses_status_check: ${e.message}")
+            }
         }
     }
 }

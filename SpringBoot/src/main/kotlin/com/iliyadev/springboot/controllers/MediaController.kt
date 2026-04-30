@@ -25,16 +25,14 @@ class MediaController {
         return try {
             val filePath = Paths.get(uploadDir, folder, filename)
             val resource = UrlResource(filePath.toUri())
-
             if (!resource.exists() || !resource.isReadable) {
                 return ResponseEntity.notFound().build()
             }
-
             val contentType = Files.probeContentType(filePath) ?: "application/octet-stream"
-
             ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"$filename\"")
+                .header(HttpHeaders.CACHE_CONTROL, "public, max-age=2592000, immutable")
                 .body(resource)
         } catch (e: Exception) {
             ResponseEntity.notFound().build()

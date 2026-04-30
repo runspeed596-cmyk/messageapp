@@ -39,17 +39,15 @@ class MediaServeController {
 
     private fun serveFile(subDir: String, fileName: String): ResponseEntity<Resource> {
         val path = Paths.get(uploadDir, subDir, fileName)
-        
         if (!Files.exists(path)) {
             return ResponseEntity.notFound().build()
         }
-
         val resource = FileSystemResource(path)
         val contentType = Files.probeContentType(path) ?: "application/octet-stream"
-
         return ResponseEntity.ok()
             .contentType(MediaType.parseMediaType(contentType))
             .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"$fileName\"")
+            .header(HttpHeaders.CACHE_CONTROL, "public, max-age=2592000, immutable")
             .body(resource)
     }
 }

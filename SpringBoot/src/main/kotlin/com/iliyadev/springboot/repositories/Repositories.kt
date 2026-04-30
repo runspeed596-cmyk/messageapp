@@ -19,11 +19,11 @@ import java.util.UUID
 interface UserRepository : JpaRepository<User, UUID> {
     fun findByPhoneNumber(phoneNumber: String): User?
     fun findByUsername(username: String): User?
-    fun existsByPhoneNumber(phoneNumber: String): Boolean
+    fun findByPhoneNumberIn(phoneNumbers: List<String>): List<User>
     fun existsByUsername(username: String): Boolean
+    fun existsByNationalCode(nationalCode: String): Boolean
     @Query("SELECT u FROM User u WHERE LOWER(u.displayName) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(u.username) LIKE LOWER(CONCAT('%', :query, '%'))")
     fun searchByNameOrUsername(@Param("query") query: String, pageable: Pageable): Page<User>
-    fun findByPhoneNumberIn(phoneNumbers: List<String>): List<User>
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -218,6 +218,17 @@ interface GroupMessageReactionRepository : JpaRepository<GroupMessageReaction, U
 interface StoryReplyRepository : JpaRepository<StoryReply, UUID> {
     fun findByStoryIdOrderByCreatedAtDesc(storyId: UUID): List<StoryReply>
     fun countByStoryId(storyId: UUID): Long
+    fun deleteByStoryId(storyId: UUID)
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ⚙️ Role to Channel Mapping Repository
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Repository
+interface RoleChannelMappingRepository : JpaRepository<RoleChannelMapping, UUID> {
+    fun findByEducationalRole(educationalRole: String): List<RoleChannelMapping>
+    fun findByEducationalRoleAndGradeLevel(educationalRole: String, gradeLevel: String?): List<RoleChannelMapping>
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -247,6 +258,8 @@ interface InstitutionRepository : JpaRepository<Institution, UUID> {
     fun countByIsActiveTrue(): Long
     fun countByVerificationStatus(status: VerificationStatus): Long
 }
+
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 💳 Subscription Plan Repository (Mosbat Elm)
@@ -299,10 +312,13 @@ interface WalletTransactionRepository : JpaRepository<WalletTransaction, UUID> {
 @Repository
 interface CourseRepository : JpaRepository<Course, UUID> {
     fun findByOrganizerId(organizerId: UUID, pageable: Pageable): Page<Course>
+    fun findByStatus(status: CourseStatus, pageable: Pageable): Page<Course>
     fun findByStatusAndIsPublicTrue(status: CourseStatus, pageable: Pageable): Page<Course>
     fun findByInstitutionId(institutionId: UUID, pageable: Pageable): Page<Course>
-    @Query("SELECT c FROM Course c WHERE c.status = 'PUBLISHED' AND c.startsAt > :now ORDER BY c.startsAt ASC")
+    @Query("SELECT c FROM Course c WHERE c.status = 'APPROVED' AND c.startsAt > :now ORDER BY c.startsAt ASC")
     fun findUpcomingCourses(@Param("now") now: Instant, pageable: Pageable): Page<Course>
+    @Query("SELECT c FROM Course c WHERE c.status = 'APPROVED' AND c.id != :courseId AND (c.fieldOfStudy = :fieldOfStudy OR EXISTS (SELECT t FROM c.tags t WHERE t IN :tags)) ORDER BY c.createdAt DESC")
+    fun findSimilarCourses(@Param("courseId") courseId: UUID, @Param("fieldOfStudy") fieldOfStudy: String?, @Param("tags") tags: List<String>, pageable: Pageable): Page<Course>
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -315,6 +331,7 @@ interface CourseEnrollmentRepository : JpaRepository<CourseEnrollment, UUID> {
     fun existsByCourseIdAndUserId(courseId: UUID, userId: UUID): Boolean
     fun countByCourseIdAndIsActiveTrue(courseId: UUID): Long
     fun findByUserIdAndIsActiveTrue(userId: UUID, pageable: Pageable): Page<CourseEnrollment>
+    fun deleteByCourseId(courseId: UUID)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -324,6 +341,28 @@ interface CourseEnrollmentRepository : JpaRepository<CourseEnrollment, UUID> {
 @Repository
 interface CourseMaterialRepository : JpaRepository<CourseMaterial, UUID> {
     fun findByCourseIdOrderBySortOrderAsc(courseId: UUID): List<CourseMaterial>
+    fun deleteByCourseId(courseId: UUID)
+}
+
+interface CourseCommentRepository : JpaRepository<CourseComment, UUID> {
+    fun findByCourseIdOrderByCreatedAtDesc(courseId: UUID, pageable: Pageable): Page<CourseComment>
+    fun countByCourseId(courseId: UUID): Long
+    fun deleteByCourseId(courseId: UUID)
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🤝 Course Collaboration Repository (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Repository
+interface CourseCollaborationRequestRepository : JpaRepository<CourseCollaborationRequest, UUID> {
+    fun findByTargetInstitutionIdAndStatusOrderByCreatedAtDesc(
+        targetInstitutionId: UUID,
+        status: CollaborationStatus,
+        pageable: Pageable
+    ): Page<CourseCollaborationRequest>
+    
+    fun countByTargetInstitutionIdAndStatus(targetInstitutionId: UUID, status: CollaborationStatus): Long
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -186,14 +186,11 @@ class SyncCoordinator @Inject constructor(
                         if (existingChat?.isDeletedLocally == true) {
                             return@launch
                         }
-
                         // Save users first
                         val users = chatDto.participants.map { it.toEntity() }
                         userDao.insertUsers(users)
-                        
                         // Save chat
                         chatDao.insertChat(chatDto.toEntity())
-                        
                         // Save participant relations
                         val participantEntities = chatDto.participants.map { user ->
                             com.Kelasor.app.data.local.entity.ChatParticipantEntity(
@@ -202,8 +199,13 @@ class SyncCoordinator @Inject constructor(
                             )
                         }
                         chatDao.insertChatParticipants(participantEntities)
-                        
-                        Log.d(TAG, "Synced chat details for $chatId")
+                        // Handle chatId redirect: if returned chatId differs from requested,
+                        // the requested ID was likely a userId. Sync messages for the real chatId.
+                        if (chatDto.id != chatId) {
+                            Log.d(TAG, "Chat ID redirect: $chatId → ${chatDto.id} (syncing messages)")
+                            syncMessages(chatDto.id)
+                        }
+                        Log.d(TAG, "Synced chat details for $chatId (resolved: ${chatDto.id})")
                     }
                 }
             } catch (e: Exception) {

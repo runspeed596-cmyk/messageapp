@@ -24,6 +24,10 @@ sealed class Routes(val route: String) {
     // ─────────────────────────────────────────────────────────────────────────────
     data object Bazaar : Routes("bazaar")
     data object Elm : Routes("elm")
+    data object MosbatElm : Routes("mosbat_elm")
+    data object CourseDetail : Routes("course_detail/{courseId}") {
+        fun createRoute(courseId: String): String = "course_detail/$courseId"
+    }
     data object Home : Routes("home")
     data object Messaging : Routes("messaging") // Was ChatList/Main logically
     data object Treasure : Routes("treasure")
@@ -83,6 +87,14 @@ sealed class Routes(val route: String) {
     // ─────────────────────────────────────────────────────────────────────────────
     data object CreateChannel : Routes("createChannel")
     data object CreateCourse : Routes("createCourse")
+    data object EditCourse : Routes("editCourse/{courseId}") {
+        fun createRoute(courseId: String): String = "editCourse/$courseId"
+    }
+    data object OrganizerSetup : Routes("organizerSetup")
+    data object AcademyProfileSetup : Routes("academyProfileSetup")
+    data object AcademyProfile : Routes("academyProfile/{institutionId}") {
+        fun createRoute(institutionId: String): String = "academyProfile/$institutionId"
+    }
     data object ChannelView : Routes("channelView/{channelId}") {
         fun createRoute(channelId: String, messageId: String? = null): String {
             return if (messageId != null) "channelView/$channelId?messageId=$messageId" else "channelView/$channelId"
@@ -96,6 +108,15 @@ sealed class Routes(val route: String) {
     // ─────────────────────────────────────────────────────────────────────────────
     data object EditProfile : Routes("editProfile")
     data object Settings : Routes("settings")
+    data object SettingsAccount : Routes("settings_account")
+    data object SettingsChat : Routes("settings_chat")
+    data object SettingsPrivacy : Routes("settings_privacy")
+    data object SettingsNotifications : Routes("settings_notifications")
+    data object SettingsDataStorage : Routes("settings_data_storage")
+    data object SettingsFolders : Routes("settings_folders")
+    data object SettingsDevices : Routes("settings_devices")
+    data object SettingsLanguage : Routes("settings_language")
+    data object Wallet : Routes("wallet")
     data object ArchivedChats : Routes("archivedChats")
     data    object UserProfile : Routes("user_profile") {
         fun createRoute(userId: String, fromChat: Boolean = false) = "$route/$userId?fromChat=$fromChat"

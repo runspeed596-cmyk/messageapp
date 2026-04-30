@@ -105,6 +105,16 @@ dependencies {
     // WorkManager for background notification sync
     implementation(libs.workmanager.runtime)
     
+    // ─── High-Performance Messaging Layer ───
+    implementation(libs.flatbuffers.java)
+    implementation(libs.lz4.java)
+    implementation(libs.paging.runtime)
+    implementation(libs.paging.compose)
+    implementation(libs.room.paging)
+    
+    // Lottie Compose for animated emojis
+    implementation("com.airbnb.android:lottie-compose:6.3.0")
+    
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

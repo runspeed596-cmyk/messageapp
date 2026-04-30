@@ -477,18 +477,28 @@ class GroupConversationViewModel @Inject constructor(
                 val fileName = getFileNameFromUri(context, uri) ?: "media_${System.currentTimeMillis()}"
                 val mimeType = context.contentResolver.getType(uri) ?: if (isVideo) "video/mp4" else "image/jpeg"
                 val isVideoFile = mimeType.startsWith("video/")
-                
-                val tempFile = java.io.File(context.cacheDir, fileName)
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    tempFile.outputStream().use { output ->
-                        input.copyTo(output)
+                val tempFile: java.io.File
+                if (!isVideoFile) {
+                    tempFile = java.io.File(context.cacheDir, "compressed_${System.currentTimeMillis()}.jpg")
+                    val compressed = com.Kelasor.app.util.MediaCompressor.compressImage(context, uri, tempFile)
+                    if (!compressed) {
+                        tempFile.delete()
+                        val fallback = java.io.File(context.cacheDir, fileName)
+                        context.contentResolver.openInputStream(uri)?.use { input ->
+                            fallback.outputStream().use { output -> input.copyTo(output) }
+                        }
+                        tempFile.renameTo(fallback)
+                    }
+                } else {
+                    tempFile = java.io.File(context.cacheDir, fileName)
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        tempFile.outputStream().use { output -> input.copyTo(output) }
                     }
                 }
-                
-                val requestBody = tempFile.asRequestBody(mimeType.toMediaTypeOrNull())
-                val part = okhttp3.MultipartBody.Part.createFormData("file", fileName, requestBody)
+                val uploadMime = if (!isVideoFile) "image/jpeg" else mimeType
+                val requestBody = tempFile.asRequestBody(uploadMime.toMediaTypeOrNull())
+                val part = okhttp3.MultipartBody.Part.createFormData("file", tempFile.name, requestBody)
                 val response = chatRepository.uploadFile(part)
-                
                 response.fold(
                     onSuccess = { fileUrl ->
                         val messageType = if (isVideoFile) "VIDEO" else "IMAGE"

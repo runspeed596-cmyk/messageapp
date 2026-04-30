@@ -26,6 +26,16 @@ data class UserEntity(
     val isCurrentUser: Boolean = false,
     val isContact: Boolean = false, // Added security field
     
+    // New Mosbat Elm Fields
+    val firstName: String? = null,
+    val lastName: String? = null,
+    val nationalCode: String? = null,
+    val educationalRole: String? = null,
+    val gradeLevel: String? = null,
+    val major: String? = null,
+    val faculty: String? = null,
+    val birthDate: String? = null,
+    
     // Profile Enhancements
     val university: String? = null,
     val fieldOfStudy: String? = null,
@@ -50,7 +60,10 @@ data class UserEntity(
     // Privacy settings - stored to enforce privacy on cached data
     val profileVisibility: String = "EVERYONE",
     val onlineVisibility: String = "EVERYONE",
-    val phoneVisibility: String = "CONTACTS"
+    val phoneVisibility: String = "CONTACTS",
+    val institutionId: String? = null,
+    val institutionLogoUrl: String? = null,
+    val institutionName: String? = null
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -82,6 +82,8 @@ class UserController(
             }
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(ApiResponse(false, e.message ?: "خطا"))
+        } catch (e: Exception) {
+            ResponseEntity.status(500).body(ApiResponse(false, "خطا در بروزرسانی: ${e.message}"))
         }
     }
 
@@ -145,6 +147,11 @@ class UserController(
     fun matchContacts(@RequestBody phoneNumbers: List<String>): ResponseEntity<UserSearchResult> {
         val result = userService.matchContacts(phoneNumbers)
         return ResponseEntity.ok(result)
+    }
+    @PostMapping("/list")
+    fun getUsersByIds(@RequestBody ids: List<UUID>): ResponseEntity<ApiResponse<List<UserDto>>> {
+        val users = ids.mapNotNull { userService.getUserById(it)?.toDto() }
+        return ResponseEntity.ok(ApiResponse(true, "موفق", users))
     }
     
 

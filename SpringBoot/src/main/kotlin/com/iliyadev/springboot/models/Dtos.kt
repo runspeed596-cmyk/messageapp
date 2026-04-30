@@ -3,10 +3,11 @@ package com.iliyadev.springboot.models
 import java.time.Instant
 import java.util.UUID
 import com.iliyadev.springboot.models.Poll
+import com.fasterxml.jackson.annotation.JsonFormat
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 🔐 Auth DTOs
-// ═══════════════════════════════════════════════════════════════════════════════
+// â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• 
+// ðŸ”  Auth DTOs
+// â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• 
 
 data class SendOtpRequest(
     val phoneNumber: String
@@ -36,19 +37,25 @@ data class RefreshTokenRequest(
     val refreshToken: String
 )
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 👤 User DTOs
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ðŸ‘¤ User DTOs
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 data class UserDto(
     val id: UUID,
     val username: String,
     val displayName: String,
+    val firstName: String? = null,
+    val lastName: String? = null,
+    val nationalCode: String? = null,
+    val educationalRole: String? = null,
+    val gradeLevel: String? = null,
+    val major: String? = null,
     val phoneNumber: String?,
-    val avatarUrl: String?,
-    val bio: String?,
-    val isOnline: Boolean?,
-    val lastSeen: Instant?,
+    val avatarUrl: String? = null,
+    val bio: String? = null,
+    val isOnline: Boolean? = null,
+    val lastSeen: Instant? = null,
     val points: Long = 0,
     val isContact: Boolean, // Added security field
     val profileVisibility: VisibilityOption = VisibilityOption.EVERYONE,
@@ -73,13 +80,25 @@ data class UserDto(
     val teachingUniversity: String? = null,
     // Location for targeting
     val province: String? = null,
-    val city: String? = null
+    val city: String? = null,
+    val faculty: String? = null,
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    val birthDate: java.time.LocalDate? = null,
+    val institutionId: UUID? = null,
+    val institutionLogoUrl: String? = null,
+    val institutionName: String? = null
 )
 
 fun User.toDto(): UserDto = UserDto(
     id = id!!,
     username = username,
     displayName = displayName,
+    firstName = firstName,
+    lastName = lastName,
+    nationalCode = nationalCode,
+    educationalRole = educationalRole,
+    gradeLevel = gradeLevel,
+    major = major,
     phoneNumber = phoneNumber,
     avatarUrl = avatarUrl,
     bio = bio,
@@ -104,7 +123,12 @@ fun User.toDto(): UserDto = UserDto(
     teachingField = profileDetails?.teachingField,
     teachingUniversity = profileDetails?.teachingUniversity,
     province = profileDetails?.province,
-    city = profileDetails?.city
+    city = profileDetails?.city,
+    faculty = faculty,
+    birthDate = birthDate,
+    institutionId = institutionId,
+    institutionLogoUrl = institutionLogoUrl,
+    institutionName = institutionName
 )
 
 /**
@@ -114,7 +138,7 @@ fun User.toDto(): UserDto = UserDto(
  * Privacy only affects avatar, phone, online status, and bio.
  */
 fun User.toRestrictedDto(isContact: Boolean): UserDto {
-    // 🔒 SECURITY CRITICAL: Strict Privacy Enforcement 🔒
+    // ðŸ”’ SECURITY CRITICAL: Strict Privacy Enforcement ðŸ”’
     // This logic is the SOURCE OF TRUTH.
     // Explicitly determine phone visibility based on strict rules.
     
@@ -147,7 +171,13 @@ fun User.toRestrictedDto(isContact: Boolean): UserDto {
     return UserDto(
         id = id!!,
         username = username,
-        displayName = displayName, // ALWAYS visible - not affected by profile privacy
+        displayName = displayName,
+        firstName = firstName,
+        lastName = lastName,
+        nationalCode = nationalCode,
+        educationalRole = educationalRole,
+        gradeLevel = gradeLevel,
+        major = major,
         phoneNumber = finalPhoneNumber,
         avatarUrl = if (showProfile) avatarUrl else null,
         bio = if (showProfile) bio else null,
@@ -172,13 +202,17 @@ fun User.toRestrictedDto(isContact: Boolean): UserDto {
         teachingField = if (showProfile) profileDetails?.teachingField else null,
         teachingUniversity = if (showProfile) profileDetails?.teachingUniversity else null,
         province = if (showProfile) profileDetails?.province else null,
-        city = if (showProfile) profileDetails?.city else null
+        city = if (showProfile) profileDetails?.city else null,
+        faculty = faculty,
+        birthDate = if (showProfile) birthDate else null,
+        institutionId = if (showProfile) institutionId else null,
+        institutionLogoUrl = if (showProfile) institutionLogoUrl else null
     )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 🏠 Home Dashboard DTOs
-// ═══════════════════════════════════════════════════════════════════════════════
+// â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• 
+// ðŸ   Home Dashboard DTOs
+// â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• 
 
 data class HomeDataResponse(
     val userCount: Long,
@@ -195,7 +229,8 @@ data class HomeBannerDto(
     val imageUrl: String,
     val linkUrl: String?,
     val colorStart: Long,
-    val colorEnd: Long
+    val colorEnd: Long,
+    val section: String = "HOME"
 )
 
 fun HomeBanner.toDto() = HomeBannerDto(
@@ -204,7 +239,8 @@ fun HomeBanner.toDto() = HomeBannerDto(
     imageUrl = imageUrl,
     linkUrl = linkUrl,
     colorStart = colorStart,
-    colorEnd = colorEnd
+    colorEnd = colorEnd,
+    section = section
 )
 
 data class DiscountDto(
@@ -334,9 +370,9 @@ data class EventReportRequest(
     val type: ElmEventType = ElmEventType.COMPETITION
 )
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 💬 Chat DTOs
-// ═══════════════════════════════════════════════════════════════════════════════
+// â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• 
+// ðŸ’¬ Chat DTOs
+// â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• 
 
 data class ChatDto(
     val id: UUID,
@@ -361,9 +397,9 @@ data class ChatListResponse(
     val totalCount: Int
 )
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 📨 Message DTOs
-// ═══════════════════════════════════════════════════════════════════════════════
+// â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• 
+// ðŸ“¨ Message DTOs
+// â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• 
 
 data class MessageDto(
     val id: UUID,
@@ -450,9 +486,9 @@ fun Message.toDto(userId: UUID? = null): MessageDto {
     )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 👥 Group DTOs
-// ═══════════════════════════════════════════════════════════════════════════════
+// â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• 
+// ðŸ‘¥ Group DTOs
+// â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• 
 
 data class GroupDto(
     val id: UUID,
@@ -630,9 +666,9 @@ fun GroupMessage.toMessageDto(userId: UUID? = null): MessageDto = MessageDto(
     amplitudes = amplitudes
 )
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 📢 Channel DTOs
-// ═══════════════════════════════════════════════════════════════════════════════
+// â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• 
+// ðŸ“¢ Channel DTOs
+// â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• 
 
 data class ChannelDto(
     val id: UUID,
@@ -730,23 +766,32 @@ data class ChannelPostCommentDto(
 )
 
 data class UpdateUserRequest(
-    val username: String?,
-    val displayName: String?,
-    val bio: String?,
-    val university: String?,
-    val fieldOfStudy: String?,
-    val education: String?,
-    val skills: String?,
-    val interests: String?,
-    val workExperience: String?,
-    val achievements: String?,
-    val bioChannelId1: UUID?,
-    val bioChannelId2: UUID?,
+    val username: String? = null,
+    val displayName: String? = null,
+    val firstName: String? = null,
+    val lastName: String? = null,
+    val nationalCode: String? = null,
+    val educationalRole: String? = null,
+    val gradeLevel: String? = null,
+    val major: String? = null,
+    val faculty: String? = null,
+    val bio: String? = null,
+    val university: String? = null,
+    val fieldOfStudy: String? = null,
+    val education: String? = null,
+    val skills: String? = null,
+    val interests: String? = null,
+    val workExperience: String? = null,
+    val achievements: String? = null,
+    val bioChannelId1: UUID? = null,
+    val bioChannelId2: UUID? = null,
     val isTeacher: Boolean? = null,
     val teachingField: String? = null,
     val teachingUniversity: String? = null,
     val province: String? = null,
-    val city: String? = null
+    val city: String? = null,
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    val birthDate: java.time.LocalDate? = null
 )
 
 data class UserSearchResult(
@@ -762,7 +807,17 @@ data class UpdatePrivacyRequest(
 
 fun ChannelPostComment.toDto(): ChannelPostCommentDto = ChannelPostCommentDto(
     id = id!!,
-    user = user?.toDto() ?: UserDto(UUID.randomUUID(), "Unknown", "Unknown", null, null, null, false, null, isContact = false),
+    user = user?.toDto() ?: UserDto(
+        id = UUID.randomUUID(),
+        username = "Unknown",
+        displayName = "Unknown",
+        phoneNumber = null,
+        avatarUrl = null,
+        bio = null,
+        isOnline = false,
+        lastSeen = null,
+        isContact = false
+    ),
     content = content,
     createdAt = createdAt
 )
@@ -831,9 +886,9 @@ data class AddChannelMembersRequest(
     val memberIds: List<UUID>
 )
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 🔄 Common Response
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ðŸ”„ Common Response
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 data class ApiResponse<T>(
     val success: Boolean,
@@ -847,9 +902,9 @@ data class ErrorResponse(
     val errorCode: String? = null
 )
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 📸 Story DTOs
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ðŸ“¸ Story DTOs
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 data class StoryDto(
     val id: UUID,
@@ -882,7 +937,14 @@ data class StoryUserDto(
     val userId: UUID,
     val username: String,
     val displayName: String,
+    val firstName: String? = null,
+    val lastName: String? = null,
+    val nationalCode: String? = null,
+    val educationalRole: String? = null,
+    val gradeLevel: String? = null,
+    val major: String? = null,
     val avatarUrl: String?,
+    val bio: String?,
     val stories: List<StoryDto>,
     val isCurrentUser: Boolean = false
 )
@@ -926,9 +988,9 @@ fun StoryView.toDto(): StoryViewDto {
     )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 📊 Poll DTOs
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ðŸ“Š Poll DTOs
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 data class PollDto(
     val id: UUID,
@@ -984,9 +1046,9 @@ fun Poll.toDto(currentUserId: UUID?): PollDto {
     )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 📋 Profile Details DTOs
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ðŸ“‹ Profile Details DTOs
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 data class ProfileDetailsDto(
     val userId: UUID,
@@ -1002,6 +1064,11 @@ data class ProfileDetailsDto(
     val teachingUniversity: String? = null,
     val province: String? = null,
     val city: String? = null,
+    
+    // Academy Profile
+    val academyName: String? = null,
+    val academyHashtags: List<String> = emptyList(),
+    val faculty: String? = null,
     val updatedAt: Instant?
 )
 
@@ -1009,6 +1076,7 @@ data class UpdateProfileDetailsRequest(
     val university: String?,
     val fieldOfStudy: String?,
     val education: String?,
+    val faculty: String?,
     val interests: List<String>?,
     val achievements: List<String>?,
     val skills: List<String>?,
@@ -1017,13 +1085,16 @@ data class UpdateProfileDetailsRequest(
     val teachingField: String? = null,
     val teachingUniversity: String? = null,
     val province: String? = null,
-    val city: String? = null
+    val city: String? = null,
+    val academyName: String? = null,
+    val academyHashtags: List<String>? = null
 )
 
 fun UserProfileDetails.toDto(): ProfileDetailsDto {
     val interestsList = interests?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
     val achievementsList = achievements?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
     val skillsList = skills?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
+    val academyHashtagsList = academyHashtags?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
     
     return ProfileDetailsDto(
         userId = user?.id!!,
@@ -1039,13 +1110,16 @@ fun UserProfileDetails.toDto(): ProfileDetailsDto {
         teachingUniversity = teachingUniversity,
         province = province,
         city = city,
+        academyName = academyName,
+        academyHashtags = academyHashtagsList,
+        faculty = faculty,
         updatedAt = updatedAt
     )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 👥 Follow System DTOs
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ðŸ‘¥ Follow System DTOs
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 data class FollowDto(
     val id: UUID,
@@ -1083,9 +1157,9 @@ fun UserFollow.toFollowingDto(): FollowDto = FollowDto(
     createdAt = createdAt
 )
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 🤝 Collaboration DTOs
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ðŸ¤ Collaboration DTOs
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 data class CollaborationRequestDto(
     val id: UUID,
@@ -1121,9 +1195,9 @@ fun CollaborationRequest.toDto(): CollaborationRequestDto = CollaborationRequest
     respondedAt = respondedAt
 )
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 🔔 Notification DTOs
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ðŸ”” Notification DTOs
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 data class NotificationDto(
     val id: UUID,
@@ -1162,9 +1236,9 @@ fun Notification.toDto(): NotificationDto = NotificationDto(
     createdAt = createdAt
 )
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 👤 Extended User DTO (with social data)
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ðŸ‘¤ Extended User DTO (with social data)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 data class UserWithSocialDto(
     val id: UUID,
@@ -1183,9 +1257,9 @@ data class UserWithSocialDto(
     val profileDetails: ProfileDetailsDto?
 )
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 📌 Pin / Forward / Schedule DTOs
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ðŸ“Œ Pin / Forward / Schedule DTOs
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 data class PinMessageRequest(
     val isPinned: Boolean
@@ -1207,9 +1281,9 @@ data class ScheduleMessageRequest(
     val amplitudes: List<Int>? = null
 )
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 💬 Story Reply DTOs
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ðŸ’¬ Story Reply DTOs
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 data class StoryReplyRequest(
     val content: String
@@ -1235,9 +1309,9 @@ fun StoryReply.toDto(): StoryReplyDto = StoryReplyDto(
     createdAt = createdAt
 )
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 👤 Username Setting DTO
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ðŸ‘¤ Username Setting DTO
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 data class SetUsernameRequest(
     val username: String
@@ -1248,9 +1322,254 @@ data class UsernameAvailabilityResponse(
     val isAvailable: Boolean
 )
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ⭐ Special Folder DTOs
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ðŸ“š Reference Data & Ad DTOs
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+data class FieldOfStudyDto(
+    val id: String,
+    val name: String,
+    val educationLevel: String,
+    val displayOrder: Int
+)
+
+fun FieldOfStudy.toDto(): FieldOfStudyDto = FieldOfStudyDto(
+    id = id.toString(),
+    name = name,
+    educationLevel = educationLevel,
+    displayOrder = displayOrder
+)
+
+data class EducationLevelDto(
+    val id: String,
+    val name: String,
+    val roleValueEn: String? = null,
+    val hasFieldOfStudy: Boolean = false,
+    val hasFaculty: Boolean = false,
+    val displayOrder: Int
+)
+
+fun EducationLevel.toDto(): EducationLevelDto = EducationLevelDto(
+    id = id.toString(),
+    name = name,
+    roleValueEn = roleValueEn,
+    hasFieldOfStudy = hasFieldOfStudy,
+    hasFaculty = hasFaculty,
+    displayOrder = displayOrder
+)
+
+data class FacultyDto(
+    val id: String,
+    val name: String,
+    val educationLevel: String? = null,
+    val displayOrder: Int
+)
+
+fun Faculty.toDto(): FacultyDto = FacultyDto(
+    id = id.toString(),
+    name = name,
+    educationLevel = educationLevel,
+    displayOrder = displayOrder
+)
+
+data class UniversitySimpleDto(
+    val id: String,
+    val name: String,
+    val city: String?,
+    val province: String?
+)
+
+fun University.toSimpleDto(): UniversitySimpleDto = UniversitySimpleDto(
+    id = id.toString(),
+    name = name,
+    city = city,
+    province = province
+)
+
+data class EducationalRoleOptionDto(
+    val id: String,
+    val labelFa: String,
+    val valueEn: String,
+    val emoji: String,
+    val displayOrder: Int
+)
+
+fun EducationalRoleOption.toDto(): EducationalRoleOptionDto = EducationalRoleOptionDto(
+    id = id.toString(),
+    labelFa = labelFa,
+    valueEn = valueEn,
+    emoji = emoji,
+    displayOrder = displayOrder
+)
+
+data class ClubDto(
+    val id: String,
+    val name: String,
+    val displayOrder: Int
+)
+
+fun Club.toDto() = ClubDto(
+    id = id.toString(),
+    name = name,
+    displayOrder = displayOrder
+)
+
+data class StudentOrgDto(
+    val id: String,
+    val name: String,
+    val displayOrder: Int
+)
+
+fun StudentOrg.toDto() = StudentOrgDto(
+    id = id.toString(),
+    name = name,
+    displayOrder = displayOrder
+)
+
+data class ReferenceDataDto(
+    val universities: List<UniversitySimpleDto>,
+    val fieldsOfStudy: List<FieldOfStudyDto>,
+    val educationLevels: List<EducationLevelDto>,
+    val faculties: List<FacultyDto>,
+    val educationalRoles: List<EducationalRoleOptionDto> = emptyList(),
+    val clubs: List<ClubDto> = emptyList(),
+    val studentOrgs: List<StudentOrgDto> = emptyList()
+)
+
+data class InstitutionResponse(
+    val id: UUID,
+    val name: String,
+    val type: String,
+    val registrationNumber: String?,
+    val contactPhone: String?,
+    val contactEmail: String?,
+    val province: String?,
+    val city: String?,
+    val address: String?,
+    val logoUrl: String?,
+    val description: String?,
+    val universities: List<String>,
+    val specialties: List<String>,
+    val associatedClubIds: List<String>,
+    val associatedFieldOfStudyIds: List<String>,
+    val associatedStudentOrgIds: List<String>,
+    val instructorIds: List<UUID>,
+    val adminIds: List<UUID>,
+    val ownerId: UUID,
+    val channelId: UUID?,
+    val verificationStatus: String,
+    val adminNote: String?,
+    val isActive: Boolean,
+    val createdAt: Instant,
+    val followerCount: Int = 0,
+    val followingCount: Int = 0,
+    val courseCount: Int = 0,
+    val studentCount: Int = 0,
+    val totalTrainingHours: Int = 0,
+    val rating: Double = 0.0,
+    val honors: List<InstitutionHonorDto> = emptyList()
+)
+
+data class InstitutionHonorDto(
+    val id: UUID,
+    val title: String,
+    val description: String?,
+    val imageUrl: String?,
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    val date: java.time.LocalDate?
+)
+
+fun InstitutionHonor.toDto() = InstitutionHonorDto(
+    id = id!!,
+    title = title,
+    description = description,
+    imageUrl = imageUrl,
+    date = date
+)
+
+data class MosbatElmHomeDataDto(
+    val banners: List<HomeBannerDto>,
+    val featuredInstitutions: List<InstitutionResponse>,
+    val upcomingCourses: List<CourseDto>,
+    val categories: List<String> = listOf("student_orgs", "clubs", "universities", "institutions", "general", "special", "discounted", "all")
+)
+
+data class AiBotMessageDto(
+    val id: String,
+    val botId: String,
+    val content: String,
+    val role: String,
+    val createdAt: String
+)
+
+fun AiBotMessage.toDto(): AiBotMessageDto = AiBotMessageDto(
+    id = id.toString(),
+    botId = botId.toString(),
+    content = content,
+    role = role,
+    createdAt = createdAt.toString()
+)
+
+data class SendAiBotMessageRequest(
+    val content: String
+)
+
+data class AdRequestDto(
+    val id: UUID,
+    val requesterId: UUID,
+    val requesterName: String,
+    val requesterAvatar: String?,
+    val sourceMessageId: String,
+    val sourceType: String,
+    val sourceId: String?,
+    val targetChannelId: UUID,
+    val targetChannelName: String,
+    val targetChannelAvatar: String?,
+    val messageContent: String,
+    val messageMediaUrl: String?,
+    val messageType: String,
+    val status: String,
+    val createdAt: Instant,
+    val reviewedAt: Instant?
+)
+
+data class CreateAdRequest(
+    val messageContent: String,
+    val targetChannelId: UUID,
+    val sourceType: String = "CHAT",
+    val sourceId: String? = null,
+    val sourceMessageId: String = "",
+    val messageMediaUrl: String? = null,
+    val messageType: String = "TEXT"
+)
+
+data class AdRequestListResponse(
+    val adRequests: List<AdRequestDto>,
+    val totalCount: Int
+)
+
+fun AdRequest.toDto(): AdRequestDto = AdRequestDto(
+    id = id!!,
+    requesterId = requester?.id ?: UUID.randomUUID(),
+    requesterName = requester?.displayName ?: "Unknown",
+    requesterAvatar = requester?.avatarUrl,
+    sourceMessageId = sourceMessageId,
+    sourceType = sourceType,
+    sourceId = sourceId,
+    targetChannelId = targetChannel?.id ?: UUID.randomUUID(),
+    targetChannelName = targetChannel?.name ?: "Unknown",
+    targetChannelAvatar = targetChannel?.avatarUrl,
+    messageContent = messageContent,
+    messageMediaUrl = messageMediaUrl,
+    messageType = messageType.name,
+    status = status.name,
+    createdAt = createdAt,
+    reviewedAt = reviewedAt
+)
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â­ Special Folder DTOs
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 data class SpecialFolderDto(
     val aiBots: List<AiBotDto>,
@@ -1372,146 +1691,138 @@ data class OfficialGroupAdminDto(
     val targetUniversity: String? = null
 )
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 📚 Reference Data DTOs
-// ═══════════════════════════════════════════════════════════════════════════════
 
-data class FieldOfStudyDto(
-    val id: String,
-    val name: String,
-    val educationLevel: String,
-    val displayOrder: Int
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ðŸ“š Course & Academy DTOs (Mosbat Elm)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+data class CourseChapterDto(
+    val title: String,
+    val durationText: String
 )
 
-fun FieldOfStudy.toDto(): FieldOfStudyDto = FieldOfStudyDto(
-    id = id.toString(),
-    name = name,
-    educationLevel = educationLevel,
-    displayOrder = displayOrder
-)
-
-data class EducationLevelDto(
-    val id: String,
-    val name: String,
-    val displayOrder: Int
-)
-
-fun EducationLevel.toDto(): EducationLevelDto = EducationLevelDto(
-    id = id.toString(),
-    name = name,
-    displayOrder = displayOrder
-)
-
-data class FacultyDto(
-    val id: String,
-    val name: String,
-    val displayOrder: Int
-)
-
-fun Faculty.toDto(): FacultyDto = FacultyDto(
-    id = id.toString(),
-    name = name,
-    displayOrder = displayOrder
-)
-
-data class UniversitySimpleDto(
-    val id: String,
-    val name: String,
-    val city: String?,
-    val province: String?
-)
-
-fun University.toSimpleDto(): UniversitySimpleDto = UniversitySimpleDto(
-    id = id.toString(),
-    name = name,
-    city = city,
-    province = province
-)
-
-data class ReferenceDataDto(
-    val universities: List<UniversitySimpleDto>,
-    val fieldsOfStudy: List<FieldOfStudyDto>,
-    val educationLevels: List<EducationLevelDto>,
-    val faculties: List<FacultyDto>
-)
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// 🤖 AI Bot Chat DTOs
-// ═══════════════════════════════════════════════════════════════════════════════
-
-data class AiBotMessageDto(
-    val id: String,
-    val botId: String,
-    val content: String,
-    val role: String, // USER or ASSISTANT
-    val createdAt: String
-)
-
-fun AiBotMessage.toDto(): AiBotMessageDto = AiBotMessageDto(
-    id = id.toString(),
-    botId = botId.toString(),
-    content = content,
-    role = role,
-    createdAt = createdAt.toString()
-)
-
-data class SendAiBotMessageRequest(
-    val content: String
-)
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// 📢 Advertisement DTOs
-// ═══════════════════════════════════════════════════════════════════════════════
-
-data class AdRequestDto(
+data class CourseDto(
     val id: UUID,
-    val requesterId: UUID,
-    val requesterName: String,
-    val requesterAvatar: String?,
-    val sourceMessageId: String,
-    val sourceType: String,
-    val sourceId: String?,
-    val targetChannelId: UUID,
-    val targetChannelName: String,
-    val targetChannelAvatar: String?,
-    val messageContent: String,
-    val messageMediaUrl: String?,
-    val messageType: String,
+    val title: String,
+    val slogan: String?,
+    val description: String?,
+    val coverImageUrl: String?,
+    val organizerId: UUID?,
+    val institutionId: UUID?,
+    val organizerName: String?,
+    val organizerAvatarUrl: String?,
+    val organizerDescription: String?,
+    val scientificAssociationName: String?,
+    val priceRials: Long,
+    val capacity: Int?,
+    val enrollmentLimit: Int?,
+    val enrolledCount: Long = 0,
+    val fieldOfStudy: String? = null,
+    val educationLevel: String? = null,
+    val channelId: UUID? = null,
+    val groupId: UUID? = null,
+    val startsAt: Instant,
+    val endsAt: Instant,
+    val tags: List<String>,
+    val suitableFor: List<String>,
+    val chapters: List<CourseChapterDto>,
+    val teachers: List<UserDto>,
+    val admins: List<UserDto>,
+    val favoritesCount: Int,
+    val isPublic: Boolean,
     val status: String,
+    val adminNote: String? = null,
+    val discountPercentage: Int = 0,
+    val syllabusDuration: String? = null,
+    val averageRating: Double = 0.0,
+    val reviewCount: Int = 0,
+    val isVerticalPoster: Boolean = false,
     val createdAt: Instant,
-    val reviewedAt: Instant?
+    val updatedAt: Instant
 )
 
-data class CreateAdRequest(
-    val messageContent: String,
-    val targetChannelId: UUID,
-    val sourceType: String = "CHAT",
-    val sourceId: String? = null,
-    val sourceMessageId: String = "",
-    val messageMediaUrl: String? = null,
-    val messageType: String = "TEXT"
+data class CreateCourseRequest(
+    val title: String,
+    val slogan: String? = null,
+    val description: String? = null,
+    val coverImageUrl: String? = null,
+    val priceRials: Long = 0,
+    val capacity: Int? = null,
+    val enrollmentLimit: Int? = null,
+    val discountPercentage: Int? = null,
+    val syllabusDuration: String? = null,
+    val fieldOfStudy: String? = null,
+    val educationLevel: String? = null,
+    val startsAt: Instant,
+    val endsAt: Instant? = null,
+    val tags: List<String> = emptyList(),
+    val suitableFor: List<String> = emptyList(),
+    val chapters: List<CourseChapterDto> = emptyList(),
+    val collaborators: List<String> = emptyList(),
+    val teacherIds: List<UUID> = emptyList(),
+    val adminIds: List<UUID> = emptyList(),
+    val organizerDescription: String? = null,
+    val scientificAssociationName: String? = null,
+    val channelIds: List<UUID> = emptyList(),
+    val isPublic: Boolean = true
 )
 
-data class AdRequestListResponse(
-    val adRequests: List<AdRequestDto>,
-    val totalCount: Int
-)
-
-fun AdRequest.toDto(): AdRequestDto = AdRequestDto(
+fun Course.toDto(): CourseDto = CourseDto(
     id = id!!,
-    requesterId = requester?.id ?: UUID.randomUUID(),
-    requesterName = requester?.displayName ?: "Unknown",
-    requesterAvatar = requester?.avatarUrl,
-    sourceMessageId = sourceMessageId,
-    sourceType = sourceType,
-    sourceId = sourceId,
-    targetChannelId = targetChannel?.id ?: UUID.randomUUID(),
-    targetChannelName = targetChannel?.name ?: "Unknown",
-    targetChannelAvatar = targetChannel?.avatarUrl,
-    messageContent = messageContent,
-    messageMediaUrl = messageMediaUrl,
-    messageType = messageType.name,
+    title = title,
+    slogan = slogan,
+    description = description,
+    coverImageUrl = coverImageUrl,
+    organizerId = organizer?.id,
+    institutionId = institutionId,
+    organizerName = organizer?.displayName,
+    organizerAvatarUrl = organizer?.avatarUrl,
+    organizerDescription = organizerDescription,
+    scientificAssociationName = scientificAssociationName,
+    priceRials = priceRials,
+    capacity = capacity,
+    enrollmentLimit = enrollmentLimit,
+    fieldOfStudy = fieldOfStudy,
+    educationLevel = educationLevel,
+    channelId = channel?.id,
+    groupId = group?.id,
+    startsAt = startsAt,
+    endsAt = endsAt,
+    tags = tags,
+    suitableFor = suitableFor,
+    chapters = chapters.map { CourseChapterDto(it.title, it.durationText) },
+    teachers = teachers.map { it.toDto() },
+    admins = admins.map { it.toDto() },
+    favoritesCount = favoritesCount,
+    isPublic = isPublic,
     status = status.name,
+    adminNote = adminNote,
+    discountPercentage = discountPercentage,
+    syllabusDuration = syllabusDuration,
+    averageRating = averageRating,
+    reviewCount = reviewCount,
+    isVerticalPoster = isVerticalPoster,
     createdAt = createdAt,
-    reviewedAt = reviewedAt
+    updatedAt = updatedAt
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🤝 Course Collaboration DTOs
+// ═══════════════════════════════════════════════════════════════════════════════
+
+data class CourseCollaborationRequestDto(
+    val id: UUID,
+    val courseId: UUID,
+    val courseTitle: String,
+    val senderInstitutionId: UUID,
+    val senderInstitutionName: String,
+    val targetInstitutionId: UUID,
+    val status: String,
+    val message: String?,
+    val createdAt: Instant
+)
+
+data class CreateCollaborationRequest(
+    val targetInstitutionId: UUID,
+    val message: String? = null
 )

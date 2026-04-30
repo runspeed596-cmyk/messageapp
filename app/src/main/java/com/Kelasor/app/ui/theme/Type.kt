@@ -20,6 +20,20 @@ val VazirFontFamily = FontFamily(
     Font(R.font.vazir_bold, FontWeight.Bold)
 )
 
+val PinarFontFamily = FontFamily(
+    Font(R.font.pinar, FontWeight.Bold)
+)
+
+val DanaFontFamily = FontFamily(
+    Font(R.font.dana_regular, FontWeight.Normal),
+    Font(R.font.dana_medium, FontWeight.Medium),
+    Font(R.font.dana_bold, FontWeight.Bold)
+)
+
+val DoranFontFamily = FontFamily(
+    Font(R.font.doran_vf, FontWeight.Bold)
+)
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🎨 Premium Typography System
 // ═══════════════════════════════════════════════════════════════════════════════

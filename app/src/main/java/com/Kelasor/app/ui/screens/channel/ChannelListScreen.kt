@@ -109,7 +109,7 @@ fun ChannelListScreen(
     val currentUserProfile by storyViewModel.currentUser.collectAsState()
     
     // Story Media Picker
-    var showAddStorySheet by remember { mutableStateOf(false) }
+    // showAddStorySheet removed — wired directly to showChannelSelectionSheet
 
     
     // Filter channels for stories (Admin only)
@@ -119,6 +119,7 @@ fun ChannelListScreen(
     
     // Channel Selection Logic
     var showChannelSelectionSheet by remember { mutableStateOf(false) }
+    var showMyStoriesChannelSheet by remember { mutableStateOf(false) }
     var selectedChannelIdForStory by remember { mutableStateOf<String?>(null) }
     
     // Premium Dialog State
@@ -215,10 +216,20 @@ fun ChannelListScreen(
                             com.Kelasor.app.ui.components.story.StoriesList(
                                 currentUser = currentUser,
                                 storyUsers = storyUsers,
-                                onStoryClick = { storyUser ->
-                                    storyViewModel.openStoryViewer(storyUser)
+                                onStoryClick = { su ->
+                                    if (su.isCurrentUser) {
+                                        if (adminChannels.size == 1) {
+                                            onNavigateToChannelStories(adminChannels.first().id, adminChannels.first().name)
+                                        } else if (adminChannels.isNotEmpty()) {
+                                            showMyStoriesChannelSheet = true
+                                        } else {
+                                            onMyStoriesClick()
+                                        }
+                                    } else {
+                                        storyViewModel.openStoryViewer(su)
+                                    }
                                 },
-                                onAddStoryClick = { showAddStorySheet = true }
+                                onAddStoryClick = { showChannelSelectionSheet = true }
                             )
                         }
                     }
@@ -384,7 +395,11 @@ fun ChannelListScreen(
                                     .clickable {
                                         selectedChannelIdForStory = channel.id
                                         showChannelSelectionSheet = false
-                                        onNavigateToChannelStories(channel.id, channel.name)
+                                        storyPickerLauncher.launch(
+                                            androidx.activity.result.PickVisualMediaRequest(
+                                                androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageAndVideo
+                                            )
+                                        )
                                     }
                                     .padding(vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
@@ -407,29 +422,54 @@ fun ChannelListScreen(
             }
         }
         
-        // Story Viewer Overlay
-        AnimatedVisibility(
-            visible = selectedStoryUser != null,
-            enter = androidx.compose.animation.scaleIn() + fadeIn(),
-            exit = androidx.compose.animation.scaleOut() + fadeOut()
-        ) {
-            selectedStoryUser?.let { user ->
-                com.Kelasor.app.ui.screens.story.StoryViewerScreen(
-                    viewModel = storyViewModel,
-                    storyUser = user,
-                    initialStoryIndex = 0,
-                    onClose = { storyViewModel.closeStoryViewer() },
-                    onStoryViewed = { story ->
-                        storyViewModel.markStoryAsViewed(story.id)
-                    },
-                    onNavigateToProfile = { userId ->
-                        storyViewModel.closeStoryViewer()
-                        onNavigateToUserProfile(userId)
+        // Story Viewer Overlay — REMOVED to prevent duplicate ExoPlayer instances.
+        // The viewer is centralized in ChatListScreen which shares the same StoryViewModel.
+
+        // My Stories - Channel Selection Bottom Sheet (navigate to channel stories manager)
+        if (showMyStoriesChannelSheet) {
+            androidx.compose.material3.ModalBottomSheet(
+                onDismissRequest = { showMyStoriesChannelSheet = false },
+                sheetState = androidx.compose.material3.rememberModalBottomSheetState()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = "استوری‌های من - انتخاب کانال",
+                        style = com.Kelasor.app.ui.theme.MessageAppTypography.chatName,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    LazyColumn {
+                        items(adminChannels) { channel ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        showMyStoriesChannelSheet = false
+                                        onNavigateToChannelStories(channel.id, channel.name)
+                                    }
+                                    .padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                com.Kelasor.app.ui.components.AvatarImage(
+                                    imageUrl = channel.avatarUrl,
+                                    name = channel.name,
+                                    size = com.Kelasor.app.ui.components.AvatarSize.SMALL
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = channel.name,
+                                    style = com.Kelasor.app.ui.theme.MessageAppTypography.chatName
+                                )
+                            }
+                        }
                     }
-                )
+                    Spacer(modifier = Modifier.height(32.dp))
+                }
             }
         }
-
         
         if (showPremiumDialog) {
             com.Kelasor.app.ui.components.PremiumUpgradeDialog(

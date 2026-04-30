@@ -4,6 +4,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.with
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -69,6 +72,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import com.Kelasor.app.ui.screens.treasure.TreasureScreen
 import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.viewmodel.ChatListViewModel
+import com.Kelasor.app.data.websocket.ConnectionState
+import com.Kelasor.app.ui.components.AppConnectionState
+import com.Kelasor.app.ui.components.TelegramStyleConnectionBanner
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🏠 Main Screen with Bottom Navigation
@@ -80,6 +86,9 @@ fun MainScreen(
     onNavigateToNewChat: () -> Unit,
     onNavigateToCreateGroup: () -> Unit,
     onNavigateToCreateChannel: () -> Unit,
+    onNavigateToOrganizerSetup: () -> Unit,
+    onNavigateToCreateCourse: () -> Unit = {},
+    onNavigateToEditCourse: (String) -> Unit = {},
     onNavigateToMyStories: () -> Unit,
     onNavigateToCreateTextStory: () -> Unit,
     onNavigateToGroupStories: (String, String) -> Unit = { _, _ -> },
@@ -100,6 +109,7 @@ fun MainScreen(
     onPlayVideo: (String) -> Unit = {},
     onNavigateToAiBotList: () -> Unit = {},
     onNavigateToEditProfile: () -> Unit = {},
+    onNavigateToAcademyProfile: (String) -> Unit = {},
     onLogout: () -> Unit,
     chatListViewModel: ChatListViewModel = hiltViewModel(),
     // notificationViewModel: com.Kelasor.app.ui.viewmodel.NotificationViewModel = hiltViewModel()
@@ -108,6 +118,20 @@ fun MainScreen(
     val bottomNavController = rememberNavController()
     val navBackStackEntry by bottomNavController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: Routes.Home.route
+
+    // ── Connection Status (Telegram-style) ──
+    val connectionViewModel: MainConnectionViewModel = hiltViewModel()
+    val wsConnectionState by connectionViewModel.connectionState.collectAsState()
+    val isNetworkAvailable by connectionViewModel.isNetworkAvailable.collectAsState()
+    val appConnectionState: AppConnectionState = remember(wsConnectionState, isNetworkAvailable) {
+        when {
+            !isNetworkAvailable -> AppConnectionState.WAITING_FOR_NETWORK
+            wsConnectionState == ConnectionState.CONNECTED -> AppConnectionState.CONNECTED
+            wsConnectionState == ConnectionState.CONNECTING -> AppConnectionState.CONNECTING
+            wsConnectionState == ConnectionState.ERROR -> AppConnectionState.DISCONNECTED
+            else -> AppConnectionState.DISCONNECTED
+        }
+    }
 
     // Handle Back Press to return to Home Tab if on other tabs
     BackHandler(enabled = currentRoute != Routes.Home.route) {
@@ -132,11 +156,51 @@ fun MainScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             composable(Routes.Bazaar.route) { BazaarScreen() }
+            composable(Routes.MosbatElm.route) {
+                com.Kelasor.app.ui.screens.mosbat_elm.MosbatElmScreen(
+                    onNavigateToElm = onNavigateToElm,
+                    onNavigateToProfile = onNavigateToProfile,
+                    onNavigateToOrganizerSetup = onNavigateToOrganizerSetup,
+                    onNavigateToCreateCourse = onNavigateToCreateCourse,
+                    appConnectionState = appConnectionState,
+                    onNavigateToCourseDetail = { courseId -> 
+                        bottomNavController.navigate(Routes.CourseDetail.createRoute(courseId)) 
+                    },
+                    onNavigateToInstitution = { institutionId ->
+                        onNavigateToAcademyProfile(institutionId)
+                    },
+                    onNavigateToNotifications = onNavigateToNotifications,
+                    onNavigateToCategory = { category ->
+                        bottomNavController.navigate("mosbat_elm_category/$category")
+                    }
+                )
+            }
+            composable("mosbat_elm_category/{category}") { backStackEntry ->
+                val category = backStackEntry.arguments?.getString("category") ?: ""
+                com.Kelasor.app.ui.screens.mosbat_elm.CategoryScreen(
+                    categoryName = category,
+                    onBack = { bottomNavController.popBackStack() },
+                    onNavigateToCourseDetail = { courseId -> 
+                        bottomNavController.navigate(Routes.CourseDetail.createRoute(courseId)) 
+                    }
+                )
+            }
+            composable(Routes.CourseDetail.route) { backStackEntry ->
+                val courseId = backStackEntry.arguments?.getString("courseId") ?: "1"
+                com.Kelasor.app.ui.screens.mosbat_elm.CourseDetailScreen(
+                    courseId = courseId,
+                    onBack = { bottomNavController.popBackStack() },
+                    onOrganizerClick = onNavigateToAcademyProfile,
+                    onNavigateToEditCourse = onNavigateToEditCourse
+                )
+            }
             composable(Routes.Home.route) { 
                 HomeScreen(
                     onNavigate = { route ->
                         if (route == Routes.Elm.route) {
                             onNavigateToElm()
+                        } else if (route == Routes.Notifications.route) {
+                            onNavigateToNotifications()
                         } else {
                             bottomNavController.navigate(route) {
                                 launchSingleTop = true
@@ -165,6 +229,7 @@ fun MainScreen(
                     onNavigateToNotifications = onNavigateToNotifications,
                     onNavigateToAiBotList = onNavigateToAiBotList,
                     onNavigateToEditProfile = onNavigateToEditProfile,
+                    appConnectionState = appConnectionState,
                     chatListViewModel = chatListViewModel
                 )
             }
@@ -193,8 +258,8 @@ fun MainScreen(
             }
         }
         
-        // Floating Bottom Navigation with Backdrop - Hidden in Messaging section
-        val showBottomNav = currentRoute != Routes.Messaging.route
+        // Floating Bottom Navigation with Backdrop - Hidden in Messaging section and CourseDetail
+        val showBottomNav = currentRoute != Routes.Messaging.route && currentRoute?.startsWith("course_detail") != true
         androidx.compose.animation.AnimatedVisibility(
             visible = showBottomNav,
             modifier = Modifier.align(androidx.compose.ui.Alignment.BottomCenter),
@@ -209,16 +274,12 @@ fun MainScreen(
                 BottomNavBar(
                     currentRoute = currentRoute,
                     onItemClick = { route ->
-                        if (route == Routes.Elm.route) {
-                            onNavigateToElm()
-                        } else {
-                            bottomNavController.navigate(route) {
-                                popUpTo(bottomNavController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
+                        bottomNavController.navigate(route) {
+                            popUpTo(bottomNavController.graph.findStartDestination().id) {
+                                saveState = true
                             }
+                            launchSingleTop = true
+                            restoreState = true
                         }
                     },
                     unreadMessageCount = 0
@@ -255,12 +316,22 @@ fun MessagingContent(
     onNavigateToNotifications: () -> Unit,
     onNavigateToAiBotList: () -> Unit = {},
     onNavigateToEditProfile: () -> Unit = {},
+    appConnectionState: com.Kelasor.app.ui.components.AppConnectionState = com.Kelasor.app.ui.components.AppConnectionState.CONNECTED,
     chatListViewModel: ChatListViewModel,
     specialFolderViewModel: SpecialFolderViewModel = hiltViewModel(),
-    smartFolderViewModel: SmartFolderViewModel = hiltViewModel()
+    smartFolderViewModel: SmartFolderViewModel = hiltViewModel(),
+    storyViewModel: com.Kelasor.app.ui.viewmodel.StoryViewModel = hiltViewModel()
 ) {
     val extendedColors = MessageAppTheme.extendedColors
     val specialFolderState by specialFolderViewModel.state.collectAsState()
+    
+    // Trigger data reload on reconnection
+    LaunchedEffect(appConnectionState) {
+        if (appConnectionState == com.Kelasor.app.ui.components.AppConnectionState.CONNECTED) {
+            chatListViewModel.refreshChats()
+        }
+    }
+
     var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
     val tabs = listOf("پیام‌ها", "گروه‌ها", "کانال‌ها", "اساتید", "دوره‌ها", "ویژه")
     var isSearchActive by remember { mutableStateOf(false) }
@@ -302,7 +373,7 @@ fun MessagingContent(
                     .padding(top = androidx.compose.foundation.layout.WindowInsets
                         .statusBars
                         .asPaddingValues()
-                        .calculateTopPadding())
+                        .calculateTopPadding() + 12.dp)
             ) {
                 // Row 1: Profile + Title + Search Icon
                 Row(
@@ -319,13 +390,29 @@ fun MessagingContent(
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                    Text(
-                        text = "پیام رسان",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
+                    
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = appConnectionState,
+                        transitionSpec = {
+                            fadeIn(animationSpec = androidx.compose.animation.core.tween(220)).togetherWith(fadeOut(animationSpec = androidx.compose.animation.core.tween(110)))
+                        },
+                        label = "ConnectionStateAnimation",
                         modifier = Modifier.weight(1f)
-                    )
+                    ) { state ->
+                        val titleText = when (state) {
+                            com.Kelasor.app.ui.components.AppConnectionState.CONNECTING -> "در حال اتصال..."
+                            com.Kelasor.app.ui.components.AppConnectionState.UPDATING -> "به روزرسانی..."
+                            com.Kelasor.app.ui.components.AppConnectionState.WAITING_FOR_NETWORK -> "در انتظار شبکه..."
+                            else -> "پیام رسان"
+                        }
+                        Text(
+                            text = titleText,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    
                     IconButton(onClick = { isSearchActive = !isSearchActive }) {
                         Icon(
                             imageVector = if (isSearchActive) Icons.Default.Close else Icons.Default.Search,
@@ -481,7 +568,8 @@ fun MessagingContent(
                             onNavigateToCreateTextStory = onNavigateToCreateTextStory,
                             onNavigateToUserProfile = onNavigateToUserProfile,
                             viewModel = chatListViewModel,
-                            searchQuery = searchQuery
+                            searchQuery = searchQuery,
+                            storyViewModel = storyViewModel
                         )
                     }
                     1 -> {
@@ -491,7 +579,9 @@ fun MessagingContent(
                             onNavigateToUserProfile = onNavigateToUserProfile,
                             onNavigateToGroupDetail = onNavigateToGroupDetail,
                             onNavigateToGroupStories = onNavigateToGroupStories,
-                            searchQuery = searchQuery
+                            onMyStoriesClick = onNavigateToMyStories,
+                            searchQuery = searchQuery,
+                            storyViewModel = storyViewModel
                         )
                     }
                     2 -> {
@@ -499,7 +589,9 @@ fun MessagingContent(
                             onChannelClick = onNavigateToChannelView,
                             onCreateChannelClick = onNavigateToCreateChannel,
                             onNavigateToChannelStories = onNavigateToChannelStories,
-                            searchQuery = searchQuery
+                            onMyStoriesClick = onNavigateToMyStories,
+                            searchQuery = searchQuery,
+                            storyViewModel = storyViewModel
                         )
                     }
                     3 -> {
@@ -510,7 +602,10 @@ fun MessagingContent(
                             emptyMessage = "هنوز کانالی از اساتید تایید شده ثبت نشده",
                             accentColor = Color(0xFF1565C0),
                             onChannelClick = onNavigateToChannelView,
-                            viewModel = smartFolderViewModel
+                            onMyStoriesClick = onNavigateToMyStories,
+                            onNavigateToChannelStories = onNavigateToChannelStories,
+                            viewModel = smartFolderViewModel,
+                            storyViewModel = storyViewModel
                         )
                     }
                     4 -> {
@@ -521,7 +616,10 @@ fun MessagingContent(
                             emptyMessage = "هنوز دوره‌ای ثبت نشده",
                             accentColor = Color(0xFFE65100),
                             onChannelClick = onNavigateToChannelView,
-                            viewModel = smartFolderViewModel
+                            onMyStoriesClick = onNavigateToMyStories,
+                            onNavigateToChannelStories = onNavigateToChannelStories,
+                            viewModel = smartFolderViewModel,
+                            storyViewModel = storyViewModel
                         )
                     }
                     5 -> {
@@ -531,6 +629,37 @@ fun MessagingContent(
                             onNavigateToAiBotList = onNavigateToAiBotList
                         )
                     }
+                }
+            }
+        }
+
+        // ── Centralized Story Viewer Overlay ──
+        // SINGLE instance across all pager tabs — prevents duplicate ExoPlayer audio
+        val selectedStoryUser by storyViewModel.selectedStoryUser.collectAsState()
+        if (selectedStoryUser != null) {
+            selectedStoryUser?.let { user ->
+                if (user.stories.isNotEmpty()) {
+                    androidx.compose.ui.window.Dialog(
+                        onDismissRequest = { storyViewModel.closeStoryViewer() },
+                        properties = androidx.compose.ui.window.DialogProperties(
+                            usePlatformDefaultWidth = false,
+                            decorFitsSystemWindows = false
+                        )
+                    ) {
+                        com.Kelasor.app.ui.screens.story.StoryViewerScreen(
+                            viewModel = storyViewModel,
+                            storyUser = user,
+                            initialStoryIndex = 0,
+                            onClose = { storyViewModel.closeStoryViewer() },
+                            onStoryViewed = { story -> storyViewModel.markStoryAsViewed(story.id) },
+                            onNavigateToProfile = { userId ->
+                                storyViewModel.closeStoryViewer()
+                                onNavigateToUserProfile(userId)
+                            }
+                        )
+                    }
+                } else {
+                    LaunchedEffect(Unit) { storyViewModel.closeStoryViewer() }
                 }
             }
         }

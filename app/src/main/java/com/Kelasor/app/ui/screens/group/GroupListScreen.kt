@@ -107,7 +107,7 @@ fun GroupListScreen(
     val currentUserProfile by storyViewModel.currentUser.collectAsState()
     
     // Story Media Picker
-    var showAddStorySheet by remember { mutableStateOf(false) }
+    // showAddStorySheet removed — wired directly to showGroupSelectionSheet
 
     // Filter groups for stories (Admin/Owner only)
     val adminGroups = remember(state.groups) {
@@ -119,6 +119,7 @@ fun GroupListScreen(
     
     // Group Selection Logic
     var showGroupSelectionSheet by remember { mutableStateOf(false) }
+    var showMyStoriesGroupSheet by remember { mutableStateOf(false) }
     var selectedGroupIdForStory by remember { mutableStateOf<String?>(null) }
     
     // Premium Dialog State
@@ -217,10 +218,20 @@ fun GroupListScreen(
                             com.Kelasor.app.ui.components.story.StoriesList(
                                 currentUser = currentUser,
                                 storyUsers = storyUsers,
-                                onStoryClick = { storyUser ->
-                                    storyViewModel.openStoryViewer(storyUser)
+                                onStoryClick = { su ->
+                                    if (su.isCurrentUser) {
+                                        if (adminGroups.size == 1) {
+                                            onNavigateToGroupStories(adminGroups.first().id, adminGroups.first().name)
+                                        } else if (adminGroups.isNotEmpty()) {
+                                            showMyStoriesGroupSheet = true
+                                        } else {
+                                            onMyStoriesClick()
+                                        }
+                                    } else {
+                                        storyViewModel.openStoryViewer(su)
+                                    }
                                 },
-                                onAddStoryClick = { showAddStorySheet = true }
+                                onAddStoryClick = { showGroupSelectionSheet = true }
                             )
                         }
                     }
@@ -385,7 +396,11 @@ fun GroupListScreen(
                                     .clickable {
                                         selectedGroupIdForStory = group.id
                                         showGroupSelectionSheet = false
-                                        onNavigateToGroupStories(group.id, group.name)
+                                        storyPickerLauncher.launch(
+                                            androidx.activity.result.PickVisualMediaRequest(
+                                                androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageAndVideo
+                                            )
+                                        )
                                     }
                                     .padding(vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
@@ -408,26 +423,52 @@ fun GroupListScreen(
             }
         }
         
-        // Story Viewer Overlay
-        AnimatedVisibility(
-            visible = selectedStoryUser != null,
-            enter = androidx.compose.animation.scaleIn() + fadeIn(),
-            exit = androidx.compose.animation.scaleOut() + fadeOut()
-        ) {
-            selectedStoryUser?.let { user ->
-                com.Kelasor.app.ui.screens.story.StoryViewerScreen(
-                    viewModel = storyViewModel,
-                    storyUser = user,
-                    initialStoryIndex = 0,
-                    onClose = { storyViewModel.closeStoryViewer() },
-                    onStoryViewed = { story ->
-                        storyViewModel.markStoryAsViewed(story.id)
-                    },
-                    onNavigateToProfile = { userId ->
-                        storyViewModel.closeStoryViewer()
-                        onNavigateToUserProfile(userId)
+        // Story Viewer Overlay — REMOVED to prevent duplicate ExoPlayer instances.
+        // The viewer is centralized in ChatListScreen which shares the same StoryViewModel.
+
+        // My Stories - Group Selection Bottom Sheet (navigate to group stories manager)
+        if (showMyStoriesGroupSheet) {
+            androidx.compose.material3.ModalBottomSheet(
+                onDismissRequest = { showMyStoriesGroupSheet = false },
+                sheetState = androidx.compose.material3.rememberModalBottomSheetState()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = "استوری‌های من - انتخاب گروه",
+                        style = MessageAppTypography.chatName,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    LazyColumn {
+                        items(adminGroups) { group ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        showMyStoriesGroupSheet = false
+                                        onNavigateToGroupStories(group.id, group.name)
+                                    }
+                                    .padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                AvatarImage(
+                                    imageUrl = group.avatarUrl,
+                                    name = group.name,
+                                    size = AvatarSize.SMALL
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = group.name,
+                                    style = MessageAppTypography.chatName
+                                )
+                            }
+                        }
                     }
-                )
+                    Spacer(modifier = Modifier.height(32.dp))
+                }
             }
         }
         }

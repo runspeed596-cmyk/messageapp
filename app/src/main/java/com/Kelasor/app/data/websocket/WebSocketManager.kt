@@ -89,7 +89,8 @@ class WebSocketManager @Inject constructor(
         private const val TAG = "WebSocketManager"
         private const val WS_BASE_URL = "ws://192.168.70.113:8080/ws"
         private const val RECONNECT_DELAY_MS = 2000L
-        private const val MAX_RECONNECT_ATTEMPTS = 5
+        private const val MAX_RECONNECT_DELAY_MS = 60000L
+        private const val MAX_RECONNECT_ATTEMPTS = 100
     }
     
     private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
@@ -186,7 +187,7 @@ class WebSocketManager @Inject constructor(
             Log.e(TAG, "🔥 STOMP connection failed: ${e.javaClass.simpleName}: ${e.message}", e)
             _connectionState.value = ConnectionState.ERROR
             
-            if (shouldReconnect && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            if (shouldReconnect) {
                 reconnect()
             }
         }
@@ -264,10 +265,12 @@ class WebSocketManager @Inject constructor(
     
     private fun reconnect() {
         reconnectAttempts++
-        Log.d(TAG, "🔄 Reconnecting... attempt $reconnectAttempts")
-        
+        // Exponential backoff: 2s, 4s, 8s, 16s, 32s, 60s capped
+        val backoffDelay = (RECONNECT_DELAY_MS * (1L shl minOf(reconnectAttempts - 1, 5)))
+            .coerceAtMost(MAX_RECONNECT_DELAY_MS)
+        Log.d(TAG, "🔄 Reconnecting... attempt $reconnectAttempts (delay: ${backoffDelay}ms)")
         scope.launch {
-            delay(RECONNECT_DELAY_MS)
+            delay(backoffDelay)
             accessToken?.let { connectStomp(it) }
         }
     }
@@ -353,6 +356,7 @@ class WebSocketManager @Inject constructor(
                 "CHAT_UPDATE" -> handleChatEvent(json)
                 "GROUP_MEMBER_UPDATE" -> handleGroupMemberUpdate(json)
                 "CHANNEL_SUBSCRIBER_UPDATE" -> handleChannelSubscriberUpdate(json)
+                "REACTION_UPDATE" -> handleReactionUpdate(json)
                 "STORY_CREATED", "STORY_DELETED" -> handleStoryEvent(json)
                 else -> {
                     // Check for event field (CHAT_CREATED, etc)
@@ -1054,6 +1058,89 @@ class WebSocketManager @Inject constructor(
         groupMessageDao.deleteMessageById(messageId)
         Log.d(TAG, "✅ Message deleted from local database")
         _messages.emit(WebSocketMessage.MessageDeleted(chatId, messageId))
+    }
+    
+    private suspend fun handleReactionUpdate(json: com.google.gson.JsonObject) {
+        val data = if (json.has("data")) json.getAsJsonObject("data") else json
+        val messageId = data.get("messageId")?.safeString() ?: return
+        val chatId = data.get("chatId")?.safeString() ?: return
+        val userId = data.get("userId")?.safeString() ?: return
+        val userName = data.get("userName")?.safeString() ?: ""
+        val reaction = data.get("reaction")?.safeString() // null means removed
+        Log.d(TAG, "💬 REACTION_UPDATE received: messageId=$messageId, userId=$userId, reaction=$reaction")
+        val currentUserId = sessionManager.userId.firstOrNull()
+        // Try private message first
+        val privateMessage = messageDao.getMessageById(messageId)
+        if (privateMessage != null) {
+            val updatedReactions = buildUpdatedReactionsJson(privateMessage.reactions, userId, userName, reaction)
+            val myReaction = if (userId == currentUserId) reaction else privateMessage.myReaction
+            messageDao.updateReactions(messageId, updatedReactions, myReaction)
+            Log.d(TAG, "✅ Reaction updated in private messages table")
+            // Re-emit the updated message for UI refresh
+            val updatedMessage = messageDao.getMessageById(messageId)
+            if (updatedMessage != null) {
+                _messages.emit(WebSocketMessage.ChatMessage(updatedMessage))
+            }
+            return
+        }
+        // Try group message
+        val groupMessage = groupMessageDao.getMessageById(messageId)
+        if (groupMessage != null) {
+            val updatedReactions = buildUpdatedReactionsJson(groupMessage.reactions, userId, userName, reaction)
+            val myReaction = if (userId == currentUserId) reaction else groupMessage.myReaction
+            groupMessageDao.updateReactions(messageId, updatedReactions, myReaction)
+            Log.d(TAG, "✅ Reaction updated in group messages table")
+            val updatedMessage = groupMessageDao.getMessageById(messageId)
+            if (updatedMessage != null) {
+                _messages.emit(WebSocketMessage.GroupMessage(updatedMessage))
+            }
+            return
+        }
+        Log.w(TAG, "⚠️ REACTION_UPDATE: Message $messageId not found in local database")
+    }
+    
+    /**
+     * Build updated reactions JSON by adding/removing a user's reaction.
+     * Format: {"👍": [{"userId":"xxx","userName":"yyy"}], "❤️": [...]}
+     */
+    private fun buildUpdatedReactionsJson(
+        currentReactionsJson: String?,
+        userId: String,
+        userName: String,
+        newReaction: String?
+    ): String {
+        val reactionsMap = mutableMapOf<String, MutableList<Map<String, String>>>()
+        // Parse existing reactions
+        if (!currentReactionsJson.isNullOrBlank()) {
+            try {
+                val existing = JsonParser.parseString(currentReactionsJson).asJsonObject
+                existing.entrySet().forEach { (emoji, usersArray) ->
+                    val usersList = mutableListOf<Map<String, String>>()
+                    usersArray.asJsonArray.forEach { userElement ->
+                        val userObj = userElement.asJsonObject
+                        usersList.add(mapOf(
+                            "userId" to (userObj.get("userId")?.safeString() ?: ""),
+                            "userName" to (userObj.get("userName")?.safeString() ?: "")
+                        ))
+                    }
+                    reactionsMap[emoji] = usersList
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error parsing existing reactions JSON", e)
+            }
+        }
+        // Remove this user from all existing reactions
+        reactionsMap.values.forEach { userList ->
+            userList.removeAll { it["userId"] == userId }
+        }
+        // Remove empty reaction entries
+        reactionsMap.entries.removeAll { it.value.isEmpty() }
+        // Add the new reaction (if not null = not removed)
+        if (newReaction != null) {
+            val userList = reactionsMap.getOrPut(newReaction) { mutableListOf() }
+            userList.add(mapOf("userId" to userId, "userName" to userName))
+        }
+        return if (reactionsMap.isEmpty()) "{}" else gson.toJson(reactionsMap)
     }
     
     private suspend fun handleStoryEvent(json: com.google.gson.JsonObject) {

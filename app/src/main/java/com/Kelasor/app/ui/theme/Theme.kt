@@ -17,22 +17,22 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🎨 Premium Light Color Scheme
+//  ☀️ Premium Light Color Scheme — Clean iOS-inspired
 // ═══════════════════════════════════════════════════════════════════════════════
 
 private val LightColorScheme = lightColorScheme(
-    primary = AccentPurple,
+    primary = iOSBlue,
     onPrimary = Color.White,
-    primaryContainer = GradientPink.copy(alpha = 0.2f),
-    onPrimaryContainer = GradientPurple,
-    secondary = AccentPink,
+    primaryContainer = iOSBlue.copy(alpha = 0.12f),
+    onPrimaryContainer = iOSBlueVibrant,
+    secondary = AccentIndigo,
     onSecondary = Color.White,
-    secondaryContainer = AccentPinkLight.copy(alpha = 0.2f),
-    onSecondaryContainer = AccentPink,
-    tertiary = AccentCoral,
+    secondaryContainer = AccentIndigo.copy(alpha = 0.12f),
+    onSecondaryContainer = AccentIndigo,
+    tertiary = AccentTeal,
     onTertiary = Color.White,
-    tertiaryContainer = AccentCoral.copy(alpha = 0.2f),
-    onTertiaryContainer = AccentCoral,
+    tertiaryContainer = AccentTeal.copy(alpha = 0.12f),
+    onTertiaryContainer = AccentTeal,
     background = LightBackground,
     onBackground = LightTextPrimary,
     surface = LightSurface,
@@ -43,27 +43,27 @@ private val LightColorScheme = lightColorScheme(
     outlineVariant = LightDivider,
     error = ErrorRed,
     onError = Color.White,
-    errorContainer = ErrorRedLight.copy(alpha = 0.3f),
+    errorContainer = ErrorRedLight.copy(alpha = 0.2f),
     onErrorContainer = ErrorRed
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🌙 Premium Dark Color Scheme
+//  🌙 Premium Dark Color Scheme — True black OLED
 // ═══════════════════════════════════════════════════════════════════════════════
 
 private val DarkColorScheme = darkColorScheme(
-    primary = AccentPink,
+    primary = iOSBlueDark,
     onPrimary = Color.White,
-    primaryContainer = GradientPurple.copy(alpha = 0.3f),
-    onPrimaryContainer = AccentPinkLight,
-    secondary = AccentPurple,
+    primaryContainer = iOSBlueDark.copy(alpha = 0.2f),
+    onPrimaryContainer = iOSBlueLight,
+    secondary = AccentIndigo,
     onSecondary = Color.White,
-    secondaryContainer = AccentPurple.copy(alpha = 0.2f),
-    onSecondaryContainer = GradientPink,
-    tertiary = AccentCoral,
+    secondaryContainer = AccentIndigo.copy(alpha = 0.15f),
+    onSecondaryContainer = AccentTeal,
+    tertiary = AccentTeal,
     onTertiary = Color.White,
-    tertiaryContainer = AccentCoral.copy(alpha = 0.2f),
-    onTertiaryContainer = AccentCoral,
+    tertiaryContainer = AccentTeal.copy(alpha = 0.15f),
+    onTertiaryContainer = AccentTeal,
     background = PremiumBlack,
     onBackground = TextPrimary,
     surface = PremiumSurface,
@@ -74,12 +74,12 @@ private val DarkColorScheme = darkColorScheme(
     outlineVariant = DividerDark,
     error = ErrorRed,
     onError = Color.White,
-    errorContainer = ErrorRed.copy(alpha = 0.2f),
+    errorContainer = ErrorRed.copy(alpha = 0.15f),
     onErrorContainer = ErrorRedLight
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🎯 Extended Colors for Premium Chat UI
+//  🎯 Extended Colors for Premium Chat UI
 // ═══════════════════════════════════════════════════════════════════════════════
 
 data class ExtendedColors(
@@ -89,211 +89,180 @@ data class ExtendedColors(
     val otherBubble: Color,
     val myBubbleText: Color,
     val otherBubbleText: Color,
-    
     // Status Indicators
     val onlineIndicator: Color,
     val typingIndicator: Color,
-    
     // Badges
     val unreadBadge: Color,
     val unreadBadgeText: Color,
     val unreadBadgeGlow: Color,
-    
     // Message Status
     val messageTime: Color,
     val messageRead: Color,
     val messageSent: Color,
-    
     // Glass Effects
     val glass: Color,
     val glassBorder: Color,
     val glassHighlight: Color,
-    
     // Shimmer Loading
     val shimmer: Color,
     val shimmerHighlight: Color,
-    
     // Gradients
     val gradientStart: Color,
     val gradientMiddle: Color,
     val gradientEnd: Color,
-    
     // Accent & Glow
     val accent: Color,
     val accentSecondary: Color,
     val accentGlow: Color,
-    
     // Navigation
     val navBarBackground: Color,
     val navItemActive: Color,
     val navItemInactive: Color,
-    
     // Input Fields
     val inputBackground: Color,
     val inputBorder: Color,
     val inputBorderFocused: Color,
-    
     // Filter Chips
     val chipBackground: Color,
     val chipBackgroundSelected: Color,
     val chipText: Color,
     val chipTextSelected: Color,
-    
     // Story Ring
     val storyRingStart: Color,
     val storyRingEnd: Color,
-
     // Tab Bar (Glassmorphism)
     val tabBarGlass: Color,
     val tabBarGlassBorder: Color,
     val tabIndicator: Color,
     val tabActiveText: Color,
     val tabInactiveText: Color,
-
     // Text (Fallback)
     val textSecondary: Color
 )
 
+// ═══════════════════════════════════════════════════════════════════════════════
+//  ☀️ Light Extended Colors — Clean, bright iOS Messages
+// ═══════════════════════════════════════════════════════════════════════════════
+
 val LightExtendedColors = ExtendedColors(
-    // Chat Bubbles - Light theme uses softer colors
-    myBubble = GradientPurple.copy(alpha = 0.9f),
-    myBubbleEnd = AccentPink.copy(alpha = 0.85f),
-    otherBubble = LightSurfaceElevated,
+    // Chat Bubbles — Blue sent, light gray received
+    myBubble = iOSBlue,
+    myBubbleEnd = iOSBlueLight,
+    otherBubble = OtherBubbleLight,
     myBubbleText = Color.White,
     otherBubbleText = LightTextPrimary,
-    
     // Status
     onlineIndicator = OnlineGreen,
-    typingIndicator = TypingBlue,
-    
+    typingIndicator = iOSBlue,
     // Badges
-    unreadBadge = UnreadBadgeRed,
+    unreadBadge = iOSBlue,
     unreadBadgeText = Color.White,
-    unreadBadgeGlow = UnreadBadgeGlow,
-    
+    unreadBadgeGlow = GlowBlue,
     // Messages
     messageTime = LightTextTertiary,
-    messageRead = TypingBlue,
+    messageRead = iOSBlue,
     messageSent = LightTextTertiary,
-    
     // Glass
-    glass = Color.White.copy(alpha = 0.8f),
-    glassBorder = Color.White.copy(alpha = 0.3f),
-    glassHighlight = Color.White.copy(alpha = 0.5f),
-    
+    glass = Color.White.copy(alpha = 0.85f),
+    glassBorder = Color.Black.copy(alpha = 0.06f),
+    glassHighlight = Color.White.copy(alpha = 0.6f),
     // Shimmer
     shimmer = LightSurfaceElevated,
     shimmerHighlight = Color.White,
-    
     // Gradients
-    gradientStart = GradientPurple,
-    gradientMiddle = GradientMagenta,
-    gradientEnd = GradientCoral,
-    
+    gradientStart = iOSBlue,
+    gradientMiddle = iOSBlueDark,
+    gradientEnd = iOSBlueSoft,
     // Accent
-    accent = AccentPink,
-    accentSecondary = AccentPurple,
-    accentGlow = GlowPink,
-    
+    accent = iOSBlue,
+    accentSecondary = AccentIndigo,
+    accentGlow = GlowBlue,
     // Navigation
     navBarBackground = LightSurface,
-    navItemActive = AccentPink,
+    navItemActive = iOSBlue,
     navItemInactive = LightTextTertiary,
-    
     // Input
     inputBackground = LightSurfaceElevated,
     inputBorder = LightBorder,
-    inputBorderFocused = AccentPurple,
-    
+    inputBorderFocused = iOSBlue,
     // Chips
     chipBackground = LightSurfaceElevated,
-    chipBackgroundSelected = AccentPink,
+    chipBackgroundSelected = iOSBlue,
     chipText = LightTextSecondary,
     chipTextSelected = Color.White,
-    
     // Story Ring
-    storyRingStart = GradientPurple,
-    storyRingEnd = GradientCoral,
-    
+    storyRingStart = iOSBlue,
+    storyRingEnd = iOSBlueSoft,
     // Tab Bar
-    tabBarGlass = Color.White.copy(alpha = 0.85f),
-    tabBarGlassBorder = Color.Black.copy(alpha = 0.06f),
+    tabBarGlass = Color.White.copy(alpha = 0.92f),
+    tabBarGlassBorder = Color.Black.copy(alpha = 0.04f),
     tabIndicator = Color.White,
-    tabActiveText = AccentPink,
+    tabActiveText = iOSBlue,
     tabInactiveText = LightTextSecondary,
-    
     // Text
     textSecondary = LightTextSecondary
 )
 
+// ═══════════════════════════════════════════════════════════════════════════════
+//  🌙 Dark Extended Colors — OLED-optimized iOS-style
+// ═══════════════════════════════════════════════════════════════════════════════
+
 val DarkExtendedColors = ExtendedColors(
-    // Chat Bubbles - Matching reference design
-    myBubble = MyBubbleDarkStart,
-    myBubbleEnd = MyBubbleDarkEnd,
-    otherBubble = OtherBubbleGlass,
-    myBubbleText = TextPrimary,
+    // Chat Bubbles — Blue sent, dark gray received
+    myBubble = iOSBlueDark,
+    myBubbleEnd = iOSBlue,
+    otherBubble = OtherBubbleDark,
+    myBubbleText = Color.White,
     otherBubbleText = TextPrimary,
-    
     // Status
     onlineIndicator = OnlineGreen,
-    typingIndicator = TypingBlue,
-    
+    typingIndicator = iOSBlueDark,
     // Badges
-    unreadBadge = UnreadBadgeRed,
+    unreadBadge = iOSBlueDark,
     unreadBadgeText = Color.White,
-    unreadBadgeGlow = UnreadBadgeGlow,
-    
+    unreadBadgeGlow = GlowBlue,
     // Messages
     messageTime = TextTertiary,
-    messageRead = TypingBlue,
+    messageRead = iOSBlueDark,
     messageSent = TextMuted,
-    
     // Glass
-    glass = GlassDark,
+    glass = Color(0x501C1C1E),
     glassBorder = GlassBorderMedium,
     glassHighlight = GlassBorderLight,
-    
     // Shimmer
     shimmer = ShimmerBase,
     shimmerHighlight = ShimmerHighlight,
-    
-    // Gradients - Rich purple to pink
-    gradientStart = GradientPurple,
-    gradientMiddle = GradientMagenta,
-    gradientEnd = GradientCoral,
-    
+    // Gradients
+    gradientStart = iOSBlueDark,
+    gradientMiddle = iOSBlue,
+    gradientEnd = iOSBlueSoft,
     // Accent
-    accent = AccentPink,
-    accentSecondary = AccentPurple,
-    accentGlow = GlowPink,
-    
+    accent = iOSBlueDark,
+    accentSecondary = AccentIndigo,
+    accentGlow = GlowBlue,
     // Navigation
     navBarBackground = NavBarBackground,
-    navItemActive = NavItemActive,
+    navItemActive = iOSBlueDark,
     navItemInactive = NavItemInactive,
-    
     // Input
     inputBackground = InputBackground,
     inputBorder = InputBorder,
-    inputBorderFocused = InputBorderFocused,
-    
+    inputBorderFocused = iOSBlueDark,
     // Chips
     chipBackground = ChipBackground,
-    chipBackgroundSelected = ChipBackgroundSelected,
+    chipBackgroundSelected = iOSBlueDark,
     chipText = ChipText,
     chipTextSelected = ChipTextSelected,
-    
     // Story Ring
-    storyRingStart = GradientPurple,
-    storyRingEnd = AccentCoral,
-    
+    storyRingStart = iOSBlueDark,
+    storyRingEnd = iOSBlueSoft,
     // Tab Bar
     tabBarGlass = Color.White.copy(alpha = 0.08f),
-    tabBarGlassBorder = Color.White.copy(alpha = 0.12f),
-    tabIndicator = Color.White.copy(alpha = 0.15f),
+    tabBarGlassBorder = Color.White.copy(alpha = 0.10f),
+    tabIndicator = Color.White.copy(alpha = 0.12f),
     tabActiveText = Color.White,
     tabInactiveText = TextSecondary,
-    
     // Text
     textSecondary = TextSecondary
 )
@@ -301,7 +270,7 @@ val DarkExtendedColors = ExtendedColors(
 val LocalExtendedColors = staticCompositionLocalOf { DarkExtendedColors }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🌈 MessageApp Premium Theme Composable
+//  🌈 MessageApp Premium Theme Composable
 // ═══════════════════════════════════════════════════════════════════════════════
 
 @Composable
@@ -313,56 +282,56 @@ fun MessageAppTheme(
     // If darkTheme is explicitly set, use that value; otherwise follow system
     val effectiveDarkTheme = darkTheme ?: isSystemInDarkTheme()
     val colorScheme = if (effectiveDarkTheme) DarkColorScheme else LightColorScheme
-    
     // Get palette-specific accent colors
     val paletteAccent = when (colorPalette) {
-        "ocean" -> Color(0xFF00BCD4)    // Cyan/Ocean
-        "sunset" -> Color(0xFFFF5722)   // Deep Orange/Sunset
-        "forest" -> Color(0xFF4CAF50)   // Green/Forest
-        "lavender" -> Color(0xFF9C27B0) // Purple/Lavender
-        else -> AccentPink              // Default pink
+        "ocean" -> Color(0xFF00BCD4)
+        "sunset" -> Color(0xFFFF5722)
+        "forest" -> Color(0xFF4CAF50)
+        "lavender" -> Color(0xFF9C27B0)
+        else -> if (effectiveDarkTheme) iOSBlueDark else iOSBlue
     }
     val paletteAccentSecondary = when (colorPalette) {
         "ocean" -> Color(0xFF0097A7)
         "sunset" -> Color(0xFFE64A19)
         "forest" -> Color(0xFF388E3C)
         "lavender" -> Color(0xFF7B1FA2)
-        else -> AccentPurple
+        else -> AccentIndigo
     }
     val paletteGradientStart = when (colorPalette) {
         "ocean" -> Color(0xFF006064)
         "sunset" -> Color(0xFFBF360C)
         "forest" -> Color(0xFF1B5E20)
         "lavender" -> Color(0xFF4A148C)
-        else -> GradientPurple
+        else -> if (effectiveDarkTheme) iOSBlueDark else iOSBlue
     }
     val paletteGradientEnd = when (colorPalette) {
         "ocean" -> Color(0xFF4DD0E1)
         "sunset" -> Color(0xFFFFAB91)
         "forest" -> Color(0xFFA5D6A7)
         "lavender" -> Color(0xFFCE93D8)
-        else -> GradientCoral
+        else -> iOSBlueSoft
     }
-    
     // Create palette-adjusted extended colors
     val baseExtendedColors = if (effectiveDarkTheme) DarkExtendedColors else LightExtendedColors
-    val extendedColors = baseExtendedColors.copy(
-        accent = paletteAccent,
-        accentSecondary = paletteAccentSecondary,
-        gradientStart = paletteGradientStart,
-        gradientEnd = paletteGradientEnd,
-        myBubble = paletteGradientStart.copy(alpha = 0.9f),
-        myBubbleEnd = paletteAccent.copy(alpha = 0.85f),
-        storyRingStart = paletteGradientStart,
-        storyRingEnd = paletteGradientEnd,
-        navItemActive = paletteAccent,
-        unreadBadge = paletteAccent,
-        chipBackgroundSelected = paletteAccent,
-        inputBorderFocused = paletteAccentSecondary
-    )
-    
+    val extendedColors = if (colorPalette == "default") {
+        baseExtendedColors
+    } else {
+        baseExtendedColors.copy(
+            accent = paletteAccent,
+            accentSecondary = paletteAccentSecondary,
+            gradientStart = paletteGradientStart,
+            gradientEnd = paletteGradientEnd,
+            myBubble = paletteGradientStart.copy(alpha = 0.95f),
+            myBubbleEnd = paletteAccent.copy(alpha = 0.9f),
+            storyRingStart = paletteGradientStart,
+            storyRingEnd = paletteGradientEnd,
+            navItemActive = paletteAccent,
+            unreadBadge = paletteAccent,
+            chipBackgroundSelected = paletteAccent,
+            inputBorderFocused = paletteAccentSecondary
+        )
+    }
     val view = LocalView.current
-    
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
@@ -374,7 +343,6 @@ fun MessageAppTheme(
             }
         }
     }
-    
     CompositionLocalProvider(
         LocalExtendedColors provides extendedColors,
         LocalLayoutDirection provides LayoutDirection.Rtl
@@ -389,7 +357,7 @@ fun MessageAppTheme(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🔧 Theme Extensions
+//  🔧 Theme Extensions
 // ═══════════════════════════════════════════════════════════════════════════════
 
 object MessageAppTheme {

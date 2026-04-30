@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -152,10 +153,19 @@ fun GroupConversationScreen(
     var pendingMediaIsVideo by remember { mutableStateOf(false) }
     // Video note recording state
     var showVideoNoteRecorder by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
+    // BackHandler: clear selection on back press instead of navigating away
+    BackHandler(enabled = state.selectedMessageIds.isNotEmpty()) {
+        viewModel.clearSelection()
+    }
+    // BackHandler: dismiss attachment menu on back press instead of leaving chat
+    BackHandler(enabled = showAttachmentMenu) {
+        showAttachmentMenu = false
+    }
 
     // File picker launcher
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -697,11 +707,7 @@ fun GroupConversationScreen(
                             Toast.makeText(context, "کپی شد", Toast.LENGTH_SHORT).show()
                         },
                         onDeleteClick = {
-                            state.selectedMessageIds.forEach { msgId ->
-                                viewModel.deleteMessage(msgId, true)
-                            }
-                            viewModel.clearSelection()
-                            Toast.makeText(context, "پیام‌ها حذف شد", Toast.LENGTH_SHORT).show()
+                            showDeleteConfirmDialog = true
                         },
                         onPinClick = if (state.selectedMessageIds.size == 1) {{
                             val messageId = state.selectedMessageIds.first()
@@ -736,6 +742,21 @@ fun GroupConversationScreen(
                         onVideoNoteClick = {
                             showVideoNoteRecorder = true
                         }
+                    )
+                }
+                // Delete Confirmation Dialog
+                if (showDeleteConfirmDialog) {
+                    com.Kelasor.app.ui.components.DeleteConfirmationDialog(
+                        messageCount = state.selectedMessageIds.size,
+                        onConfirm = { deleteForEveryone ->
+                            state.selectedMessageIds.forEach { msgId ->
+                                viewModel.deleteMessage(msgId, deleteForEveryone)
+                            }
+                            viewModel.clearSelection()
+                            showDeleteConfirmDialog = false
+                            Toast.makeText(context, "پیام‌ها حذف شد", Toast.LENGTH_SHORT).show()
+                        },
+                        onDismiss = { showDeleteConfirmDialog = false }
                     )
                 }
             } else {
@@ -908,6 +929,7 @@ private fun ChatBubbleWrapper(
         }
 
         Box {
+            Column {
             when {
                 message.poll != null -> {
                     com.Kelasor.app.ui.components.PollBubble(
@@ -918,13 +940,11 @@ private fun ChatBubbleWrapper(
                         isFromMe = isFromMe
                     )
                 }
-
                 message.type == MessageType.VOICE && message.mediaUrl != null -> {
                     val durationSeconds = try {
                         val regex = """\((\d+)s\)""".toRegex()
                         regex.find(message.content)?.groupValues?.get(1)?.toLongOrNull() ?: 0L
                     } catch (e: Exception) { 0L }
-
                     com.Kelasor.app.ui.components.VoiceMessageBubble(
                         mediaUrl = message.mediaUrl!!,
                         durationMs = durationSeconds * 1000L,
@@ -932,10 +952,12 @@ private fun ChatBubbleWrapper(
                         audioPlayerManager = viewModel.audioPlayerManager,
                         amplitudes = message.amplitudes,
                         time = time,
-                        status = message.status
+                        status = message.status,
+                        reactions = message.reactions,
+                        myReaction = message.myReaction,
+                        onReactionClick = { emoji -> viewModel.reactToMessage(message.id, emoji) }
                     )
                 }
-
                 message.type == MessageType.IMAGE && message.mediaUrl != null -> {
                     val imageCaption = message.content
                         .removePrefix("🖼️ ")
@@ -948,10 +970,12 @@ private fun ChatBubbleWrapper(
                         time = time,
                         onPreviewClick = { url, type -> onPreviewMedia(url, type) },
                         caption = imageCaption,
-                        status = message.status
+                        status = message.status,
+                        reactions = message.reactions,
+                        myReaction = message.myReaction,
+                        onReactionClick = { emoji -> viewModel.reactToMessage(message.id, emoji) }
                     )
                 }
-
                 message.type == MessageType.VIDEO && message.mediaUrl != null -> {
                     val videoCaption = message.content
                         .removePrefix("🎬 ")
@@ -964,11 +988,12 @@ private fun ChatBubbleWrapper(
                         time = time,
                         onPreviewClick = { url, type -> onPreviewMedia(url, type) },
                         caption = videoCaption,
-                        status = message.status
+                        status = message.status,
+                        reactions = message.reactions,
+                        myReaction = message.myReaction,
+                        onReactionClick = { emoji -> viewModel.reactToMessage(message.id, emoji) }
                     )
                 }
-
-                // Video note (circular video)
                 message.type == MessageType.VIDEO_NOTE && message.mediaUrl != null -> {
                     val durationText = message.content
                         .substringAfter("(", "")
@@ -980,10 +1005,12 @@ private fun ChatBubbleWrapper(
                         time = time,
                         durationText = durationText,
                         status = message.status,
-                        modifier = Modifier.padding(horizontal = 8.dp)
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        reactions = message.reactions,
+                        myReaction = message.myReaction,
+                        onReactionClick = { emoji -> viewModel.reactToMessage(message.id, emoji) }
                     )
                 }
-
                 message.type == MessageType.AUDIO && message.mediaUrl != null -> {
                     val fileName = message.content.removePrefix("🎵 ").trim()
                     com.Kelasor.app.ui.components.AudioFileBubble(
@@ -996,7 +1023,6 @@ private fun ChatBubbleWrapper(
                         status = message.status
                     )
                 }
-
                 message.type == MessageType.LOCATION && message.mediaUrl != null -> {
                     val parts = message.mediaUrl!!.split(",")
                     if (parts.size == 2) {
@@ -1007,11 +1033,13 @@ private fun ChatBubbleWrapper(
                             longitude = lng,
                             isMyMessage = isFromMe,
                             time = time,
-                            status = message.status
+                            status = message.status,
+                            reactions = message.reactions,
+                            myReaction = message.myReaction,
+                            onReactionClick = { emoji -> viewModel.reactToMessage(message.id, emoji) }
                         )
                     }
                 }
-
                 message.type == MessageType.FILE && message.mediaUrl != null -> {
                     val fileName = message.content
                         .removePrefix("📎 ")
@@ -1023,10 +1051,12 @@ private fun ChatBubbleWrapper(
                         fileName = fileName,
                         isMyMessage = isFromMe,
                         time = time,
-                        status = message.status
+                        status = message.status,
+                        reactions = message.reactions,
+                        myReaction = message.myReaction,
+                        onReactionClick = { emoji -> viewModel.reactToMessage(message.id, emoji) }
                     )
                 }
-
                 else -> {
                     ChatBubble(
                         message = message.content,
@@ -1044,6 +1074,7 @@ private fun ChatBubbleWrapper(
                         forwardedFrom = message.forwardedFrom
                     )
                 }
+            }
             }
         }
         }

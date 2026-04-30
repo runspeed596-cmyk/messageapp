@@ -34,7 +34,7 @@ class ElmEvent(
     var link: String? = null,
     
     // Admin approval workflow
-    @Column(name = "is_approved", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Column(name = "is_approved", nullable = false)
     var isApproved: Boolean = false,
     var submittedByUserId: UUID? = null,
     

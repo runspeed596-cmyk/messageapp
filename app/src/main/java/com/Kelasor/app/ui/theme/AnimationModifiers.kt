@@ -26,11 +26,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 
 /**
- * Reusable animation modifier extensions for premium UI effects.
+ * Reusable animation modifier extensions for premium iOS-inspired UI effects.
+ * All animations are designed to feel buttery-smooth, organic, and fluid.
  */
 
 /**
  * Staggered fade + slide-up entrance for list items.
+ * Uses fluid easing for a more organic, natural feel.
  * [index] controls the delay offset.
  */
 fun Modifier.staggeredFadeIn(index: Int, visible: Boolean = true): Modifier = composed {
@@ -42,7 +44,7 @@ fun Modifier.staggeredFadeIn(index: Int, visible: Boolean = true): Modifier = co
         label = "stagger_alpha_$index"
     )
     val slideY by animateFloatAsState(
-        targetValue = if (started) 0f else 30f,
+        targetValue = if (started) 0f else 24f,
         animationSpec = AppAnimations.staggerTween(index),
         label = "stagger_slide_$index"
     )
@@ -53,13 +55,37 @@ fun Modifier.staggeredFadeIn(index: Int, visible: Boolean = true): Modifier = co
 }
 
 /**
+ * Smooth slide-in from bottom — for screen entrance transitions.
+ * Mimics iOS view controller push animation.
+ */
+fun Modifier.smoothSlideIn(): Modifier = composed {
+    var started by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { started = true }
+    val alpha by animateFloatAsState(
+        targetValue = if (started) 1f else 0f,
+        animationSpec = AppAnimations.mediumTween(),
+        label = "slide_alpha"
+    )
+    val slideY by animateFloatAsState(
+        targetValue = if (started) 0f else 40f,
+        animationSpec = AppAnimations.fluidSpring(),
+        label = "slide_y"
+    )
+    this.graphicsLayer {
+        this.alpha = alpha
+        translationY = slideY
+    }
+}
+
+/**
  * Subtle depth press effect — scales down slightly when pressed.
+ * iOS-style haptic-feel press with smooth spring recovery.
  */
 fun Modifier.pressDepth(onClick: () -> Unit): Modifier = composed {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.97f else 1f,
+        targetValue = if (isPressed) 0.96f else 1f,
         animationSpec = AppAnimations.quickSpring(),
         label = "press_scale"
     )
@@ -76,15 +102,39 @@ fun Modifier.pressDepth(onClick: () -> Unit): Modifier = composed {
 }
 
 /**
+ * Elastic scale on press — bouncier than pressDepth, for buttons and FABs.
+ */
+fun Modifier.elasticPress(onClick: () -> Unit): Modifier = composed {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.92f else 1f,
+        animationSpec = AppAnimations.elasticSpring(),
+        label = "elastic_scale"
+    )
+    this
+        .graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+        }
+        .clickable(
+            interactionSource = interactionSource,
+            indication = null,
+            onClick = onClick
+        )
+}
+
+/**
  * Breathing glow — gentle infinite pulse for FABs and highlights.
+ * Slower, subtler than before for a premium iOS feel.
  */
 fun Modifier.breathingGlow(color: Color): Modifier = composed {
     val infiniteTransition = rememberInfiniteTransition(label = "breathing")
     val glowAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.15f,
-        targetValue = 0.4f,
+        initialValue = 0.10f,
+        targetValue = 0.30f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1400, easing = LinearEasing),
+            animation = tween(2000, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "glow_alpha"
@@ -93,7 +143,7 @@ fun Modifier.breathingGlow(color: Color): Modifier = composed {
         drawContent()
         drawCircle(
             color = color.copy(alpha = glowAlpha),
-            radius = size.maxDimension * 0.7f,
+            radius = size.maxDimension * 0.6f,
             center = Offset(size.width / 2, size.height / 2),
             blendMode = BlendMode.SrcOver
         )
@@ -102,6 +152,7 @@ fun Modifier.breathingGlow(color: Color): Modifier = composed {
 
 /**
  * Subtle shimmer sweep effect — horizontal light sweep across a surface.
+ * Slower speed for a premium, less distracting effect.
  */
 fun Modifier.shimmerSweep(): Modifier = composed {
     val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
@@ -109,7 +160,7 @@ fun Modifier.shimmerSweep(): Modifier = composed {
         initialValue = -1f,
         targetValue = 2f,
         animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = LinearEasing),
+            animation = tween(2500, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "shimmer_offset"
@@ -119,7 +170,7 @@ fun Modifier.shimmerSweep(): Modifier = composed {
         val shimmerBrush = Brush.linearGradient(
             colors = listOf(
                 Color.White.copy(alpha = 0f),
-                Color.White.copy(alpha = 0.08f),
+                Color.White.copy(alpha = 0.06f),
                 Color.White.copy(alpha = 0f)
             ),
             start = Offset(size.width * offset, 0f),
@@ -131,15 +182,16 @@ fun Modifier.shimmerSweep(): Modifier = composed {
 
 /**
  * Gentle pulse scale — for online indicators, notification dots.
+ * Subtle and organic breathing motion.
  */
 fun Modifier.pulseScale(enabled: Boolean = true): Modifier = composed {
     if (!enabled) return@composed this
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val scale by infiniteTransition.animateFloat(
-        initialValue = 0.92f,
-        targetValue = 1.08f,
+        initialValue = 0.95f,
+        targetValue = 1.05f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = LinearEasing),
+            animation = tween(1400, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "pulse_scale"
@@ -152,13 +204,14 @@ fun Modifier.pulseScale(enabled: Boolean = true): Modifier = composed {
 
 /**
  * Scale-in entrance animation — for badges, buttons appearing.
+ * Uses elastic spring for a playful, premium pop effect.
  */
 fun Modifier.popIn(): Modifier = composed {
     var started by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { started = true }
     val scale by animateFloatAsState(
         targetValue = if (started) 1f else 0f,
-        animationSpec = AppAnimations.bouncySpring(),
+        animationSpec = AppAnimations.elasticSpring(),
         label = "pop_scale"
     )
     val alpha by animateFloatAsState(
@@ -171,4 +224,18 @@ fun Modifier.popIn(): Modifier = composed {
         scaleY = scale
         this.alpha = alpha
     }
+}
+
+/**
+ * Fade-in entrance — simple, clean appearance animation.
+ */
+fun Modifier.fadeInEntrance(): Modifier = composed {
+    var started by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { started = true }
+    val alpha by animateFloatAsState(
+        targetValue = if (started) 1f else 0f,
+        animationSpec = AppAnimations.mediumTween(),
+        label = "fade_alpha"
+    )
+    this.graphicsLayer { this.alpha = alpha }
 }

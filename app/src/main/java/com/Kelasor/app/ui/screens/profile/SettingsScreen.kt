@@ -1,13 +1,21 @@
 package com.Kelasor.app.ui.screens.profile
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -17,29 +25,30 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.*
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.Kelasor.app.R
 import com.Kelasor.app.data.repository.SettingsRepository
 import com.Kelasor.app.ui.components.AvatarImage
 import com.Kelasor.app.ui.components.AvatarSize
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.MessageAppTypography
 import com.Kelasor.app.ui.theme.VazirFontFamily
 import com.Kelasor.app.ui.viewmodel.AuthViewModel
 import com.Kelasor.app.ui.viewmodel.ProfileViewModel
 import com.Kelasor.app.ui.viewmodel.SettingsViewModel
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ⚙️ Settings Screen (Replaces Profile Tab)
+// ⚙️ Ultra-Premium Settings Screen
 // ═══════════════════════════════════════════════════════════════════════════════
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,48 +56,47 @@ import com.Kelasor.app.ui.viewmodel.SettingsViewModel
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onEditProfileClick: () -> Unit,
-    onSavedMessagesClick: (String) -> Unit,
-    onArchivedChatsClick: () -> Unit,
+    onEditAcademyProfileClick: () -> Unit,
+    onAcademyProfileClick: (String) -> Unit,
+    onAccountClick: () -> Unit,
+    onAppearanceClick: () -> Unit,
+    onPrivacyClick: () -> Unit,
+    onNotificationsClick: () -> Unit,
+    onDataStorageClick: () -> Unit,
+    onFoldersClick: () -> Unit,
+    onDevicesClick: () -> Unit,
+    onLanguageClick: () -> Unit,
+    onWalletClick: () -> Unit,
+
     onLogoutClick: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
     profileViewModel: ProfileViewModel = hiltViewModel(),
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
     val extendedColors = MessageAppTheme.extendedColors
-    val settingsState by viewModel.state.collectAsState()
     val profileState by profileViewModel.state.collectAsState()
     val user = profileState.user
     val context = LocalContext.current
-    var showPinSetupDialog by remember { mutableStateOf(false) }
-    var pinInput by remember { mutableStateOf("") }
-    // Expandable section states
-    var isAccountExpanded by remember { mutableStateOf(false) }
-    var isAppearanceExpanded by remember { mutableStateOf(false) }
-    var isPrivacyExpanded by remember { mutableStateOf(false) }
-    val currentLayoutDirection = LocalLayoutDirection.current
-    val fontFamily = VazirFontFamily
 
+    val currentLayoutDirection = LocalLayoutDirection.current
     CompositionLocalProvider(LocalLayoutDirection provides currentLayoutDirection) {
         Scaffold(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
+            modifier = Modifier.fillMaxSize(),
+            containerColor = MaterialTheme.colorScheme.background,
             topBar = {
                 TopAppBar(
-                    title = {
-                        Text(
-                            text = stringResource(R.string.settings_title),
-                            fontFamily = fontFamily,
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
+                    title = { },
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.back)
+                                contentDescription = "Back",
+                                tint = MaterialTheme.colorScheme.onBackground
                             )
                         }
+                    },
+                    actions = {
+                        // Removed Search and More menu as requested
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent,
@@ -100,422 +108,721 @@ fun SettingsScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
+                    .padding(paddingValues),
+                contentPadding = PaddingValues(bottom = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 1. User Profile Header
+                // ── 1. Dual Profile Header ──────────────────────────────
                 item {
-                    if (user != null) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable(onClick = onEditProfileClick)
-                                .padding(16.dp),
+                            modifier = Modifier.padding(bottom = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(24.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            AvatarImage(
-                                imageUrl = user.avatarUrl,
-                                name = user.displayName,
-                                size = AvatarSize.LARGE
-                            )
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = user.displayName,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    fontFamily = fontFamily
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = if (user.username.isNotEmpty()) "@${user.username}" else user.phoneNumber,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontFamily = fontFamily
-                                )
-                            }
-                            Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "Edit",
-                                tint = extendedColors.accent
-                            )
-                        }
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    } else {
-                        // Loading placeholder
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(56.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                            )
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth(0.5f)
-                                        .height(16.dp)
-                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
-                                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth(0.3f)
-                                        .height(12.dp)
-                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
-                                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                                )
-                            }
-                        }
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    }
-                }
-
-                // ══════════════════════════════════════════════════════
-                // 2. حساب کاربری (Account) — Expandable
-                // ══════════════════════════════════════════════════════
-                item {
-                    ExpandableSectionHeader(
-                        icon = Icons.Default.Person,
-                        title = "حساب کاربری",
-                        isExpanded = isAccountExpanded,
-                        onClick = { isAccountExpanded = !isAccountExpanded },
-                        fontFamily = fontFamily,
-                        accentColor = extendedColors.accent
-                    )
-                    AnimatedVisibility(
-                        visible = isAccountExpanded,
-                        enter = expandVertically(),
-                        exit = shrinkVertically()
-                    ) {
-                        Column(modifier = Modifier.padding(start = 24.dp)) {
-                            if (user != null) {
-                                SettingsItem(
-                                    icon = Icons.Default.Bookmark,
-                                    title = "پیام‌های ذخیره شده",
-                                    subtitle = "باز کردن چت شخصی",
-                                    onClick = { onSavedMessagesClick(user.id) },
-                                    fontFamily = fontFamily
-                                )
-                            }
-                            SettingsItem(
-                                icon = Icons.Default.Archive,
-                                title = "چت‌های آرشیو شده",
-                                subtitle = "مشاهده آرشیو",
-                                onClick = onArchivedChatsClick,
-                                fontFamily = fontFamily
-                            )
-                        }
-                    }
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                }
-
-                // ══════════════════════════════════════════════════════
-                // 3. ظاهر (Appearance) — Expandable with inline theme + palette
-                // ══════════════════════════════════════════════════════
-                item {
-                    ExpandableSectionHeader(
-                        icon = Icons.Default.Palette,
-                        title = "ظاهر",
-                        isExpanded = isAppearanceExpanded,
-                        onClick = { isAppearanceExpanded = !isAppearanceExpanded },
-                        fontFamily = fontFamily,
-                        accentColor = extendedColors.accent
-                    )
-                    AnimatedVisibility(
-                        visible = isAppearanceExpanded,
-                        enter = expandVertically(),
-                        exit = shrinkVertically()
-                    ) {
-                        Column(modifier = Modifier.padding(start = 24.dp)) {
-                            // Theme selection — inline radio buttons
-                            Text(
-                                text = "تم",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontFamily = fontFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                            )
-                            val themeOptions = listOf(
-                                SettingsRepository.THEME_MODE_SYSTEM to "سیستم",
-                                SettingsRepository.THEME_MODE_LIGHT to "روشن",
-                                SettingsRepository.THEME_MODE_DARK to "تاریک"
-                            )
-                            themeOptions.forEach { (key, label) ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { viewModel.setThemeMode(key) }
-                                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    RadioButton(
-                                        selected = settingsState.themeMode == key,
-                                        onClick = { viewModel.setThemeMode(key) },
-                                        colors = RadioButtonDefaults.colors(selectedColor = extendedColors.accent)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = label,
-                                        fontFamily = fontFamily,
-                                        style = MaterialTheme.typography.bodyLarge
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                            Spacer(modifier = Modifier.height(8.dp))
-                            // Color palette selection — inline radio buttons
-                            Text(
-                                text = "پالت رنگی",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontFamily = fontFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                            )
-                            val paletteOptions = listOf(
-                                SettingsRepository.PALETTE_DEFAULT to "پیش‌فرض",
-                                SettingsRepository.PALETTE_OCEAN to "اقیانوس",
-                                SettingsRepository.PALETTE_SUNSET to "غروب",
-                                SettingsRepository.PALETTE_FOREST to "جنگل",
-                                SettingsRepository.PALETTE_LAVENDER to "اسطوخودوس"
-                            )
-                            paletteOptions.forEach { (key, label) ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { viewModel.setColorPalette(key) }
-                                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    RadioButton(
-                                        selected = settingsState.colorPalette == key,
-                                        onClick = { viewModel.setColorPalette(key) },
-                                        colors = RadioButtonDefaults.colors(selectedColor = extendedColors.accent)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = label,
-                                        fontFamily = fontFamily,
-                                        style = MaterialTheme.typography.bodyLarge
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
-                    }
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                }
-
-                // ══════════════════════════════════════════════════════
-                // 4. حریم خصوصی و امنیت (Privacy & Security) — Expandable
-                // ══════════════════════════════════════════════════════
-                item {
-                    ExpandableSectionHeader(
-                        icon = Icons.Default.Lock,
-                        title = "حریم خصوصی و امنیت",
-                        isExpanded = isPrivacyExpanded,
-                        onClick = { isPrivacyExpanded = !isPrivacyExpanded },
-                        fontFamily = fontFamily,
-                        accentColor = extendedColors.accent
-                    )
-                    AnimatedVisibility(
-                        visible = isPrivacyExpanded,
-                        enter = expandVertically(),
-                        exit = shrinkVertically()
-                    ) {
-                        Column(modifier = Modifier.padding(start = 24.dp)) {
-                            // Profile Visibility
-                            PrivacyOptionRow(
-                                title = stringResource(R.string.profile_visibility),
-                                selectedOption = settingsState.profileVisibility,
-                                options = listOf(
-                                    "everyone" to stringResource(R.string.everyone),
-                                    "contacts" to stringResource(R.string.my_contacts),
-                                    "nobody" to stringResource(R.string.nobody)
-                                ),
-                                onOptionSelected = { viewModel.setProfileVisibility(it) },
-                                fontFamily = fontFamily,
+                            // Messenger Profile
+                            ProfileCircleWithEdit(
+                                imageUrl = user?.avatarUrl,
+                                name = user?.displayName ?: "",
+                                label = "پیام‌رسان",
+                                onClick = onEditProfileClick,
                                 accentColor = extendedColors.accent
                             )
-                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                            // Online Visibility
-                            PrivacyOptionRow(
-                                title = stringResource(R.string.online_visibility),
-                                selectedOption = settingsState.onlineVisibility,
-                                options = listOf(
-                                    "everyone" to stringResource(R.string.everyone),
-                                    "contacts" to stringResource(R.string.my_contacts),
-                                    "nobody" to stringResource(R.string.nobody)
-                                ),
-                                onOptionSelected = { viewModel.setOnlineVisibility(it) },
-                                fontFamily = fontFamily,
-                                accentColor = extendedColors.accent
-                            )
-                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                            // Phone Visibility
-                            PrivacyOptionRow(
-                                title = stringResource(R.string.phone_visibility),
-                                selectedOption = settingsState.phoneVisibility,
-                                options = listOf(
-                                    "everyone" to stringResource(R.string.everyone),
-                                    "contacts" to stringResource(R.string.my_contacts)
-                                ),
-                                onOptionSelected = { viewModel.setPhoneVisibility(it) },
-                                fontFamily = fontFamily,
-                                accentColor = extendedColors.accent
-                            )
-                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                            // PIN Lock Toggle
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.Lock,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(16.dp))
-                                    Column {
-                                        Text(
-                                            text = "قفل امنیتی (PIN)",
-                                            fontFamily = fontFamily,
-                                            style = MaterialTheme.typography.bodyLarge
-                                        )
-                                        Text(
-                                            text = if (settingsState.isPinLockEnabled) "فعال" else "غیرفعال",
-                                            fontFamily = fontFamily,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                                Switch(
-                                    checked = settingsState.isPinLockEnabled,
-                                    onCheckedChange = { enabled ->
-                                        if (enabled) {
-                                            showPinSetupDialog = true
-                                        } else {
-                                            viewModel.setPinLockEnabled(false)
-                                        }
-                                    }
+
+                             // Mosbat Elm Profile
+                            if (user?.institutionId != null) {
+                                ProfileCircleWithEdit(
+                                    imageUrl = user.institutionLogoUrl,
+                                    name = user.institutionName ?: "آکادمی",
+                                    label = "مثبت علم",
+                                    onClick = onEditAcademyProfileClick,
+                                    onAvatarClick = { onAcademyProfileClick(user.institutionId) },
+                                    accentColor = Color(0xFF2196F3)
+                                )
+                            } else if (user?.isTeacher == true) {
+                                ProfileCircleWithEdit(
+                                    imageUrl = user.avatarUrl,
+                                    name = user.displayName,
+                                    label = "مثبت علم",
+                                    onClick = onEditAcademyProfileClick,
+                                    onAvatarClick = { /* Maybe go to teacher personal profile? */ },
+                                    accentColor = Color(0xFF2196F3)
+                                )
+                            } else {
+                                AddAcademyProfileCircle(
+                                    onClick = onEditAcademyProfileClick,
+                                    label = "مثبت علم",
+                                    accentColor = Color(0xFF4CAF50)
                                 )
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
                         }
+
+                        Text(
+                            text = user?.displayName ?: "نام کاربری",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontFamily = VazirFontFamily
+                        )
+                        
+                        Text(
+                            text = if (user != null) "${user.phoneNumber} • @${user.username}" else "",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontFamily = VazirFontFamily
+                        )
                     }
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 }
 
-                // ══════════════════════════════════════════════════════
-                // 5. Logout
-                // ══════════════════════════════════════════════════════
+                // ── 2. Wallet Card ──────────────────────────────────────
+                item {
+                    WalletCard(
+                        onClick = onWalletClick,
+                        accentColor = extendedColors.accent
+                    )
+                }
+
+                item { Spacer(modifier = Modifier.height(8.dp)) }
+
+                // ── 3. Settings Sections ────────────────────────────────
+                item {
+                    SettingsSection(
+                        items = listOf(
+                            SettingsItemData(
+                                icon = Icons.Default.Person,
+                                title = "حساب کاربری",
+                                subtitle = "شماره، نام کاربری، بیوگرافی",
+                                iconColor = Color(0xFF2196F3),
+                                onClick = onAccountClick
+                            ),
+                            SettingsItemData(
+                                icon = Icons.Default.Chat,
+                                title = "تنظیمات گفتگو",
+                                subtitle = "تصویر زمینه، حالت شب، انیمیشن‌ها",
+                                iconColor = Color(0xFFFFA000),
+                                onClick = onAppearanceClick
+                            ),
+                            SettingsItemData(
+                                icon = Icons.Default.Lock,
+                                title = "حریم خصوصی و امنیت",
+                                subtitle = "آخرین بازدید، دستگاه‌ها، گذرواژه‌ها",
+                                iconColor = Color(0xFF4CAF50),
+                                onClick = onPrivacyClick
+                            ),
+                            SettingsItemData(
+                                icon = Icons.Default.Notifications,
+                                title = "اعلان‌ها",
+                                subtitle = "صداها، تماس‌ها، نشان‌ها",
+                                iconColor = Color(0xFFF44336),
+                                onClick = onNotificationsClick
+                            ),
+                            SettingsItemData(
+                                icon = Icons.Default.PieChart,
+                                title = "داده‌ها و ذخیره‌سازی",
+                                subtitle = "تنظیمات دانلود خودکار رسانه‌ها",
+                                iconColor = Color(0xFF00BCD4),
+                                onClick = onDataStorageClick
+                            ),
+                            SettingsItemData(
+                                icon = Icons.Default.Folder,
+                                title = "پوشه‌های گفتگو",
+                                subtitle = "مرتب‌سازی گفتگوها در پوشه‌ها",
+                                iconColor = Color(0xFF2196F3),
+                                onClick = onFoldersClick
+                            ),
+                            SettingsItemData(
+                                icon = Icons.Default.Devices,
+                                title = "دستگاه‌ها",
+                                subtitle = "مدیریت دستگاه‌های متصل",
+                                iconColor = Color(0xFF009688),
+                                onClick = onDevicesClick
+                            ),
+                            SettingsItemData(
+                                icon = Icons.Default.BatteryChargingFull,
+                                title = "صرفه‌جویی در باتری",
+                                subtitle = "کاهش مصرف انرژی",
+                                iconColor = Color(0xFFFF9800),
+                                onClick = { /* Power Saving */ }
+                            )
+                        )
+                    )
+                }
+
+                item { Spacer(modifier = Modifier.height(16.dp)) }
+
+
+                // ── 5. Logout ───────────────────────────────────────────
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
-                    SettingsItem(
-                        icon = Icons.AutoMirrored.Filled.Logout,
-                        title = "خروج از حساب کاربری",
-                        subtitle = "",
+                    TextButton(
                         onClick = {
                             authViewModel.logout()
                             onLogoutClick()
                         },
-                        fontFamily = fontFamily,
-                        iconColor = MaterialTheme.colorScheme.error,
-                        textColor = MaterialTheme.colorScheme.error
-                    )
-                    Spacer(modifier = Modifier.height(32.dp))
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                    ) {
+                        Text(
+                            text = "خروج از حساب",
+                            color = Color.Red,
+                            fontFamily = VazirFontFamily,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
-        }
-        }
-    }
 
-    // PIN Setup Dialog
-    if (showPinSetupDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                showPinSetupDialog = false
-                pinInput = ""
-            },
-            title = {
-                Text(
-                    text = "تنظیم رمز ۴ رقمی",
-                    fontFamily = fontFamily,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column {
-                    Text(
-                        text = "یک رمز ۴ رقمی وارد کنید:",
-                        fontFamily = fontFamily,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-                    OutlinedTextField(
-                        value = pinInput,
-                        onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) pinInput = it },
-                        label = { Text("رمز PIN", fontFamily = fontFamily) },
-                        singleLine = true,
-                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                            keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword
-                        ),
-                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (pinInput.length == 4) {
-                            viewModel.setPinLockEnabled(true, pinInput)
-                            showPinSetupDialog = false
-                            pinInput = ""
-                        }
-                    },
-                    enabled = pinInput.length == 4
-                ) {
-                    Text("تایید", fontFamily = fontFamily)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showPinSetupDialog = false
-                    pinInput = ""
-                }) {
-                    Text("انصراف", fontFamily = fontFamily)
+                // ── 6. App Version ──────────────────────────────────────
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "کلاسور برای اندروید نسخه ۱.۰.۰",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontFamily = VazirFontFamily
+                        )
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ProfileCircleWithEdit(
+    imageUrl: String?,
+    name: String,
+    label: String,
+    onClick: () -> Unit,
+    onAvatarClick: (() -> Unit)? = null,
+    accentColor: Color
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier.size(110.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            // Main Avatar
+            Box(
+                modifier = Modifier
+                    .size(110.dp)
+                    .clickable(onClick = onAvatarClick ?: onClick)
+            ) {
+                AvatarImage(
+                    imageUrl = imageUrl,
+                    name = name,
+                    size = AvatarSize.XLARGE,
+                    modifier = Modifier.size(110.dp)
+                )
+            }
+            
+            // Frosted glass "مشاهده" overlay for Mosbat Elm circle - CENTERED & BLURRED
+            if (onAvatarClick != null) {
+                Box(
+                    modifier = Modifier
+                        .size(110.dp)
+                        .clip(CircleShape)
+                        .clickable(onClick = onAvatarClick),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(70.dp, 30.dp)
+                            .clip(RoundedCornerShape(15.dp))
+                            .background(Color.White.copy(alpha = 0.15f))
+                            .blur(20.dp) // Glass effect
+                    )
+                    
+                    Surface(
+                        shape = RoundedCornerShape(15.dp),
+                        color = Color.Black.copy(alpha = 0.35f),
+                        border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.4f)),
+                        modifier = Modifier.size(70.dp, 30.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = "مشاهده",
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = VazirFontFamily
+                            )
+                        }
+                    }
+                }
+            }
+            
+            // Clean camera edit badge — single layer, no stacked shadows
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .offset(x = (-4).dp, y = (-4).dp)
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), CircleShape)
+                    .clickable(onClick = onClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CameraAlt,
+                    contentDescription = "Edit",
+                    tint = accentColor,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(10.dp))
+        
+        Text(
+            text = label,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelMedium,
+            fontFamily = VazirFontFamily
+        )
+        
+        Surface(
+            onClick = onClick,
+            shape = RoundedCornerShape(12.dp),
+            color = accentColor.copy(alpha = 0.1f),
+            modifier = Modifier.padding(top = 4.dp)
+        ) {
+            Text(
+                text = "ویرایش",
+                color = accentColor,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                fontFamily = VazirFontFamily,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun AddAcademyProfileCircle(
+    onClick: () -> Unit,
+    label: String,
+    accentColor: Color
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(110.dp)
+                .clip(CircleShape)
+                .background(accentColor.copy(alpha = 0.1f))
+                .border(2.dp, accentColor.copy(alpha = 0.3f), CircleShape)
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "Add",
+                tint = accentColor,
+                modifier = Modifier.size(48.dp)
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(10.dp))
+        
+        Text(
+            text = label,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelMedium,
+            fontFamily = VazirFontFamily
+        )
+        
+        Surface(
+            onClick = onClick,
+            shape = RoundedCornerShape(12.dp),
+            color = accentColor.copy(alpha = 0.1f),
+            modifier = Modifier.padding(top = 4.dp)
+        ) {
+            Text(
+                text = "برگزارکننده شو",
+                color = accentColor,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                fontFamily = VazirFontFamily,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun WalletCard(
+    onClick: () -> Unit,
+    accentColor: Color
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFF8E24AA).copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AccountBalanceWallet,
+                    contentDescription = "Wallet",
+                    tint = Color(0xFFAB47BC),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "کیف پول من",
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontFamily = VazirFontFamily,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "مدیریت دارایی و تراکنش‌ها",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = VazirFontFamily
+                )
+            }
+            
+            Text(
+                text = "۰ تومان",
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Bold,
+                fontFamily = VazirFontFamily
+            )
+        }
+    }
+}
+
+data class SettingsItemData(
+    val icon: ImageVector,
+    val title: String,
+    val subtitle: String = "",
+    val iconColor: Color,
+    val onClick: () -> Unit
+)
+
+@Composable
+private fun SettingsSection(
+    title: String? = null,
+    items: List<SettingsItemData>
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+            .padding(vertical = 8.dp)
+    ) {
+        if (title != null) {
+            Text(
+                text = title,
+                color = Color(0xFF2196F3),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                fontFamily = VazirFontFamily,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        }
+        
+        items.forEachIndexed { index, item ->
+            TelegramSettingsRow(
+                icon = item.icon,
+                title = item.title,
+                subtitle = item.subtitle,
+                iconColor = item.iconColor,
+                onClick = item.onClick
+            )
+            
+            if (index < items.size - 1) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = 56.dp, end = 16.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                    thickness = 0.5.dp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TelegramSettingsRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String = "",
+    iconColor: Color,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(iconColor),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontFamily = VazirFontFamily
+            )
+            if (subtitle.isNotEmpty()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray,
+                    fontFamily = VazirFontFamily
+                )
+            }
+        }
+        
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+            contentDescription = null,
+            tint = Color.Gray,
+            modifier = Modifier.size(20.dp)
         )
     }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Expandable Section Header
+// 🎴 Premium Profile Card — Hero header with gradient accent
 // ═══════════════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun ExpandableSectionHeader(
+private fun PremiumProfileCard(
+    user: com.Kelasor.app.domain.model.User?,
+    onEditClick: () -> Unit,
+    extendedColors: com.Kelasor.app.ui.theme.ExtendedColors
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(20.dp),
+                ambientColor = extendedColors.accent.copy(alpha = 0.15f),
+                spotColor = extendedColors.accent.copy(alpha = 0.15f)
+            ),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        if (user != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onEditClick)
+                    .padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AvatarImage(
+                    imageUrl = user.avatarUrl,
+                    name = user.displayName,
+                    size = AvatarSize.LARGE,
+                    hasBorder = true
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = user.displayName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontFamily = VazirFontFamily
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = if (user.username.isNotEmpty()) "@${user.username}" else user.phoneNumber,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontFamily = VazirFontFamily
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(extendedColors.accent.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit",
+                        tint = extendedColors.accent,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        } else {
+            // Shimmer placeholder
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(68.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.5f)
+                            .height(16.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.3f)
+                            .height(12.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🃏 Elevated Settings Card Container
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun PremiumSettingsCard(
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(content = content)
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📋 Premium Section Header — Gradient icon badge + animated chevron
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun PremiumSectionHeader(
     icon: ImageVector,
     title: String,
     isExpanded: Boolean,
     onClick: () -> Unit,
-    fontFamily: androidx.compose.ui.text.font.FontFamily?,
-    accentColor: Color
+    gradientColors: List<Color>
+) {
+    val chevronRotation by animateFloatAsState(
+        targetValue = if (isExpanded) 180f else 0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "chevron"
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(brush = Brush.linearGradient(gradientColors)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(14.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.SemiBold,
+            fontFamily = VazirFontFamily,
+            modifier = Modifier.weight(1f)
+        )
+        Icon(
+            imageVector = Icons.Default.KeyboardArrowDown,
+            contentDescription = if (isExpanded) "Collapse" else "Expand",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .size(24.dp)
+                .rotate(chevronRotation)
+        )
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📄 Premium Settings Row — Icon badge + title/subtitle + chevron
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun PremiumSettingsRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String = "",
+    iconColor: Color = MaterialTheme.colorScheme.primary,
+    textColor: Color = MaterialTheme.colorScheme.onSurface,
+    onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -526,37 +833,88 @@ private fun ExpandableSectionHeader(
     ) {
         Box(
             modifier = Modifier
-                .size(44.dp)
-                .clip(CircleShape)
-                .background(accentColor.copy(alpha = 0.1f)),
+                .size(36.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(iconColor.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = accentColor,
-                modifier = Modifier.size(22.dp)
+                tint = iconColor,
+                modifier = Modifier.size(18.dp)
             )
         }
-        Spacer(modifier = Modifier.width(16.dp))
-        Text(
-            text = title,
-            style = MessageAppTypography.chatName.copy(fontFamily = fontFamily),
-            color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(1f)
-        )
+        Spacer(modifier = Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                fontFamily = VazirFontFamily,
+                color = textColor
+            )
+            if (subtitle.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = VazirFontFamily,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
         Icon(
-            imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-            contentDescription = if (isExpanded) "Collapse" else "Expand",
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(24.dp)
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            modifier = Modifier.size(20.dp)
         )
     }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Privacy Option Row — inline radio buttons with title
+// 🔘 Premium Radio Row
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun PremiumRadioRow(
+    label: String,
+    isSelected: Boolean,
+    accentColor: Color,
+    onClick: () -> Unit
+) {
+    val scale by animateFloatAsState(
+        targetValue = if (isSelected) 1.02f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessMedium),
+        label = "radioScale"
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer(scaleX = scale, scaleY = scale)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(
+            selected = isSelected,
+            onClick = onClick,
+            colors = RadioButtonDefaults.colors(selectedColor = accentColor)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = label,
+            fontFamily = VazirFontFamily,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
+            color = if (isSelected) accentColor else MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🔒 Privacy Option Row
 // ═══════════════════════════════════════════════════════════════════════════════
 
 @Composable
@@ -565,98 +923,24 @@ private fun PrivacyOptionRow(
     selectedOption: String,
     options: List<Pair<String, String>>,
     onOptionSelected: (String) -> Unit,
-    fontFamily: androidx.compose.ui.text.font.FontFamily?,
     accentColor: Color
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleSmall,
-            fontFamily = fontFamily,
+            style = MaterialTheme.typography.labelLarge,
+            fontFamily = VazirFontFamily,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface
         )
         Spacer(modifier = Modifier.height(4.dp))
         options.forEach { (key, label) ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onOptionSelected(key) }
-                    .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                RadioButton(
-                    selected = selectedOption == key,
-                    onClick = { onOptionSelected(key) },
-                    colors = RadioButtonDefaults.colors(selectedColor = accentColor)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = label,
-                    fontFamily = fontFamily,
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            }
-        }
-    }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Settings Item (reused for sub-items)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-@Composable
-private fun SettingsItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit,
-    fontFamily: androidx.compose.ui.text.font.FontFamily?,
-    iconColor: Color = MaterialTheme.colorScheme.primary,
-    textColor: Color = MaterialTheme.colorScheme.onSurface
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        androidx.compose.foundation.layout.Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(CircleShape)
-                .background(iconColor.copy(alpha = 0.1f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = iconColor,
-                modifier = Modifier.size(22.dp)
+            PremiumRadioRow(
+                label = label,
+                isSelected = selectedOption == key,
+                accentColor = accentColor,
+                onClick = { onOptionSelected(key) }
             )
         }
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MessageAppTypography.chatName.copy(fontFamily = fontFamily),
-                color = textColor
-            )
-            if (subtitle.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = subtitle,
-                    style = MessageAppTypography.chatTime.copy(fontFamily = fontFamily),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(24.dp)
-        )
     }
 }

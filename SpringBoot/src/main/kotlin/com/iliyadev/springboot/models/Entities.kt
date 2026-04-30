@@ -119,7 +119,7 @@ enum class SubscriptionTier {
 }
 
 enum class CourseStatus {
-    DRAFT, PUBLISHED, ACTIVE, COMPLETED, CANCELLED
+    DRAFT, PENDING, APPROVED, REJECTED, ACTIVE, COMPLETED, CANCELLED
 }
 
 enum class ExamStatus {
@@ -155,6 +155,12 @@ enum class UserRole {
     NORMAL, TEACHER, INSTITUTION, ADMIN, SUPER_ADMIN
 }
 
+enum class InstitutionType {
+    CLUB, SCIENTIFIC_ASSOCIATION, INSTITUTE, STUDENT_ORG, RESEARCH_CENTER, INDEPENDENT, ASSOCIATION, ACADEMY, COMMUNITY
+}
+
+// Dynamic educational role system - values are managed via Admin Panel
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // 👤 User Entity
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -168,13 +174,23 @@ class User(
     @Column(unique = true)
     var username: String = "",
     var displayName: String = "",
+    var firstName: String? = null,
+    var lastName: String? = null,
+    @Column(unique = true)
+    var nationalCode: String? = null,
+    @Column(length = 50)
+    var educationalRole: String? = null,
+    var gradeLevel: String? = null,
+    var major: String? = null,
+    var faculty: String? = null,
+    var birthDate: java.time.LocalDate? = null,
     @Column(unique = true)
     var phoneNumber: String = "",
     var avatarUrl: String? = null,
     @Column(length = 500)
     var bio: String? = null,
     var isOnline: Boolean = false,
-    @Column(nullable = false, columnDefinition = "BIGINT DEFAULT 0")
+    @Column(nullable = false)
     var points: Long = 0, // Added for rewards
     var lastSeen: Instant? = null,
     var createdAt: Instant = Instant.now(),
@@ -186,7 +202,7 @@ class User(
     var isPremium: Boolean = false,
     // Mosbat Elm: Role system
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'NORMAL'")
+    @Column(nullable = false, length = 20)
     var role: UserRole = UserRole.NORMAL,
     // Privacy settings
     @Enumerated(EnumType.STRING)
@@ -196,7 +212,16 @@ class User(
     @Enumerated(EnumType.STRING)
     var phoneVisibility: VisibilityOption = VisibilityOption.CONTACTS,
     @OneToOne(mappedBy = "user", cascade = [CascadeType.ALL], fetch = FetchType.LAZY)
-    var profileDetails: UserProfileDetails? = null
+    var profileDetails: UserProfileDetails? = null,
+    // Favorite courses
+    @ElementCollection
+    @CollectionTable(name = "user_favorite_courses", joinColumns = [JoinColumn(name = "user_id")])
+    @Column(name = "course_id")
+    var favoriteCourseIds: MutableSet<UUID> = mutableSetOf(),
+    // Link to Institution (Academy)
+    var institutionId: UUID? = null,
+    var institutionLogoUrl: String? = null,
+    var institutionName: String? = null
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -267,7 +292,7 @@ class Message(
     @BatchSize(size = 50)
     var amplitudes: MutableList<Int> = mutableListOf(),
     // Pin support
-    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Column(nullable = false)
     var isPinned: Boolean = false,
     var pinnedAt: Instant? = null,
     var pinnedById: UUID? = null,
@@ -303,14 +328,14 @@ class Group(
     @JoinColumn(name = "created_by")
     var createdBy: User? = null,
     // Special Folder (Official) fields
-    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Column(nullable = false)
     var isOfficial: Boolean = false,
     @Enumerated(EnumType.STRING)
     var officialCategory: OfficialGroupCategory? = null,
-    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Column(nullable = false)
     var hideMembers: Boolean = false,
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'SPECIAL'")
+    @Column(nullable = false, length = 20)
     var displayMode: OfficialDisplayMode = OfficialDisplayMode.SPECIAL,
     // Audience targeting fields (all null = عمومی/public)
     var targetFieldOfStudy: String? = null,
@@ -346,7 +371,9 @@ class GroupMember(
     var canEditInfo: Boolean = false,
     var canPostStory: Boolean = false,
     var canAddMembers: Boolean = false,
-    var canRemoveMembers: Boolean = false
+    var canRemoveMembers: Boolean = false,
+    // Mandatory channel support
+    var isMandatory: Boolean = false
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -387,7 +414,7 @@ class GroupMessage(
     @BatchSize(size = 50)
     var amplitudes: MutableList<Int> = mutableListOf(),
     // Pin support
-    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Column(nullable = false)
     var isPinned: Boolean = false,
     var pinnedAt: Instant? = null,
     var pinnedById: UUID? = null,
@@ -422,12 +449,12 @@ class Channel(
     @OneToMany(mappedBy = "channel", cascade = [CascadeType.ALL], orphanRemoval = true)
     var posts: MutableList<ChannelPost> = mutableListOf(),
     // Special Folder (Official) fields
-    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Column(nullable = false)
     var isOfficial: Boolean = false,
     @Enumerated(EnumType.STRING)
     var officialCategory: OfficialChannelCategory? = null,
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'SPECIAL'")
+    @Column(nullable = false, length = 20)
     var displayMode: OfficialDisplayMode = OfficialDisplayMode.SPECIAL,
     // Audience targeting fields (all null = عمومی/public)
     var targetFieldOfStudy: String? = null,
@@ -437,9 +464,9 @@ class Channel(
     var targetUniversity: String? = null,
     // Mosbat Elm: Channel classification & DRM
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "VARCHAR(30) DEFAULT 'GENERAL'")
+    @Column(nullable = false, length = 30)
     var classification: ChannelClassification = ChannelClassification.GENERAL,
-    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Column(nullable = false)
     var isVerifiedTeacher: Boolean = false,
     var institutionId: UUID? = null
 )
@@ -469,7 +496,10 @@ class ChannelSubscriber(
     var canEditInfo: Boolean = false,
     var canPostStory: Boolean = false,
     var canAddMembers: Boolean = false,
-    var canRemoveMembers: Boolean = false
+    var canRemoveMembers: Boolean = false,
+    // Mandatory channel support
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    var isMandatory: Boolean = false
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -507,14 +537,14 @@ class ChannelPost(
     @BatchSize(size = 50)
     var amplitudes: MutableList<Int> = mutableListOf(),
     // Pin support
-    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Column(nullable = false)
     var isPinned: Boolean = false,
     var pinnedAt: Instant? = null,
     var pinnedById: UUID? = null,
     // Scheduled messages
     var scheduledAt: Instant? = null,
     // Advertisement support
-    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Column(nullable = false)
     var isAd: Boolean = false,
     var adLabel: String? = null,
     var adSourceChannelId: UUID? = null
@@ -748,6 +778,7 @@ class UserProfileDetails(
     var university: String? = null,
     var fieldOfStudy: String? = null,
     var education: String? = null,
+    var faculty: String? = null,
     @Column(length = 2000)
     var interests: String? = null,
     @Column(length = 2000)
@@ -763,6 +794,12 @@ class UserProfileDetails(
     // Location for targeting
     var province: String? = null,
     var city: String? = null,
+    
+    // Academy Profile (Mosbat Elm Organizer)
+    var academyName: String? = null,
+    @Column(length = 1000)
+    var academyHashtags: String? = null,
+    
     var updatedAt: Instant = Instant.now()
 )
 
@@ -840,9 +877,9 @@ class Notification(
     var isRead: Boolean = false,
     var createdAt: Instant = Instant.now(),
     // Mosbat Elm: Subscription notification tier
-    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Column(nullable = false)
     var isSubscriptionNotification: Boolean = false,
-    @Column(nullable = false, columnDefinition = "VARCHAR(10) DEFAULT 'NORMAL'")
+    @Column(nullable = false, length = 10)
     var notificationTier: String = "NORMAL"  // NORMAL (red) or GOLDEN (subscription)
 )
 
@@ -864,7 +901,28 @@ class HomeBanner(
     var colorEnd: Long = 0xFFEC407A,
     var displayOrder: Int = 0,
     var isActive: Boolean = true,
+    var section: String = "HOME", // "HOME", "MOSBAT_ELM"
     var createdAt: Instant = Instant.now()
+)
+
+@Entity
+@Table(name = "clubs")
+class Club(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: java.util.UUID? = null,
+    var name: String = "",
+    var displayOrder: Int = 0
+)
+
+@Entity
+@Table(name = "student_orgs")
+class StudentOrg(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: java.util.UUID? = null,
+    var name: String = "",
+    var displayOrder: Int = 0
 )
 
 @Entity
@@ -883,15 +941,15 @@ class University(
     var type: String? = null, // Public, Private, Azad, etc.
     var establishedYear: Int? = null,
     var studentCount: Int = 0,
-    @Column(name = "iran_rank", nullable = false, columnDefinition = "INT DEFAULT 0")
+    @Column(name = "iran_rank", nullable = false)
     var iranRank: Int = 0,
-    @Column(name = "world_rank", nullable = false, columnDefinition = "INT DEFAULT 0")
+    @Column(name = "world_rank", nullable = false)
     var worldRank: Int = 0,
-    @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
+    @Column(nullable = false)
     var articleCount: Int = 0,
-    @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
+    @Column(nullable = false)
     var journalCount: Int = 0,
-    @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
+    @Column(nullable = false)
     var paperCount: Int = 0,
     @Column(length = 2000)
     var facilities: String? = null,
@@ -910,11 +968,11 @@ class University(
     // Extended fields
     @Column(length = 5000)
     var honors: String? = null, // افتخارات
-    @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
+    @Column(nullable = false)
     var professorCount: Int = 0, // تعداد اساتید
     @Column(length = 5000)
     var professorNames: String? = null, // نام اساتید هر رشته
-    @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
+    @Column(nullable = false)
     var publicationCount: Int = 0, // تعداد مجلات و نشریات
     @Column(length = 5000)
     var studentOrgs: String? = null, // انجمن‌ها، کانون‌ها و مجموعه‌های دانشجویی
@@ -1082,7 +1140,7 @@ class FieldOfStudy(
     var id: UUID? = null,
     @Column(nullable = false)
     var name: String = "",
-    @Column(nullable = false, columnDefinition = "VARCHAR(255) DEFAULT ''")
+    @Column(nullable = false)
     var educationLevel: String = "", // e.g. کارشناسی, کارشناسی ارشد, دکتری
     var displayOrder: Int = 0,
     var createdAt: Instant = Instant.now()
@@ -1100,6 +1158,30 @@ class EducationLevel(
     var id: UUID? = null,
     @Column(nullable = false)
     var name: String = "", // e.g. کاردانی, کارشناسی, کارشناسی ارشد, دکتری
+    var roleValueEn: String? = null, // Linked to EducationalRoleOption.valueEn
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    var hasFieldOfStudy: Boolean = false,
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    var hasFaculty: Boolean = false,
+    var displayOrder: Int = 0,
+    var createdAt: Instant = Instant.now()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🎭 Educational Role Option Entity (Admin-managed)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "educational_role_options")
+class EducationalRoleOption(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @Column(nullable = false)
+    var labelFa: String = "", // e.g. دانش‌آموز, دانشجو, استاد/معلم, آزاد
+    @Column(nullable = false)
+    var valueEn: String = "", // e.g. SCHOOL_STUDENT, UNI_STUDENT, TEACHER, FREELANCER
+    var emoji: String = "📚", // e.g. 🎒, 🎓, 📚, 💼
     var displayOrder: Int = 0,
     var createdAt: Instant = Instant.now()
 )
@@ -1116,6 +1198,7 @@ class Faculty(
     var id: UUID? = null,
     @Column(nullable = false, unique = true)
     var name: String = "",
+    var educationLevel: String? = null, // Linked to EducationLevel.name
     var displayOrder: Int = 0,
     var createdAt: Instant = Instant.now()
 )
@@ -1163,7 +1246,8 @@ class Institution(
     @GeneratedValue(strategy = GenerationType.UUID)
     var id: UUID? = null,
     var name: String = "",
-    var type: String = "",  // ASSOCIATION, ACADEMY, INSTITUTE, COMMUNITY
+    @Enumerated(EnumType.STRING)
+    var type: InstitutionType = InstitutionType.INDEPENDENT,
     var registrationNumber: String? = null,
     var contactPhone: String? = null,
     var contactEmail: String? = null,
@@ -1172,6 +1256,52 @@ class Institution(
     @Column(length = 1000)
     var address: String? = null,
     var logoUrl: String? = null,
+    @Column(length = 2000)
+    var description: String? = null,
+    
+    @ElementCollection
+    @CollectionTable(name = "institution_universities", joinColumns = [JoinColumn(name = "institution_id")])
+    @Column(name = "university_name")
+    var universities: MutableList<String> = mutableListOf(),
+
+    @ElementCollection
+    @CollectionTable(name = "institution_faculties", joinColumns = [JoinColumn(name = "institution_id")])
+    @Column(name = "faculty_name")
+    var faculties: MutableList<String> = mutableListOf(),
+
+    @ElementCollection
+    @CollectionTable(name = "institution_specialties", joinColumns = [JoinColumn(name = "institution_id")])
+    @Column(name = "specialty")
+    var specialties: MutableList<String> = mutableListOf(),
+
+    @ElementCollection
+    @CollectionTable(name = "institution_clubs", joinColumns = [JoinColumn(name = "institution_id")])
+    @Column(name = "club_id")
+    var associatedClubIds: MutableList<String> = mutableListOf(),
+
+    @ElementCollection
+    @CollectionTable(name = "institution_fields", joinColumns = [JoinColumn(name = "institution_id")])
+    @Column(name = "field_id")
+    var associatedFieldOfStudyIds: MutableList<String> = mutableListOf(),
+
+    @ElementCollection
+    @CollectionTable(name = "institution_student_orgs", joinColumns = [JoinColumn(name = "institution_id")])
+    @Column(name = "org_id")
+    var associatedStudentOrgIds: MutableList<String> = mutableListOf(),
+
+    @ElementCollection
+    @CollectionTable(name = "institution_instructors", joinColumns = [JoinColumn(name = "institution_id")])
+    @Column(name = "instructor_id")
+    var instructorIds: MutableList<UUID> = mutableListOf(),
+
+    @ElementCollection
+    @CollectionTable(name = "institution_admins", joinColumns = [JoinColumn(name = "institution_id")])
+    @Column(name = "admin_id")
+    var adminIds: MutableList<UUID> = mutableListOf(),
+
+    @OneToMany(mappedBy = "institution", cascade = [CascadeType.ALL], orphanRemoval = true)
+    var honors: MutableList<InstitutionHonor> = mutableListOf(),
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_user_id")
     var owner: User? = null,
@@ -1187,6 +1317,23 @@ class Institution(
     var isActive: Boolean = true,
     var createdAt: Instant = Instant.now(),
     var updatedAt: Instant = Instant.now()
+)
+
+@Entity
+@Table(name = "institution_honors")
+class InstitutionHonor(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "institution_id")
+    var institution: Institution? = null,
+    var title: String = "",
+    @Column(length = 1000)
+    var description: String? = null,
+    var imageUrl: String? = null,
+    var date: java.time.LocalDate? = null,
+    var createdAt: Instant = Instant.now()
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1205,7 +1352,7 @@ class SubscriptionPlan(
     var priceRials: Long = 0,
     var durationDays: Int = 30,
     var maxPromotions: Int = 1,
-    @Column(columnDefinition = "TEXT DEFAULT '{}'")
+    @Column(columnDefinition = "TEXT")
     var features: String = "{}",  // JSON
     var isActive: Boolean = true,
     var createdAt: Instant = Instant.now()
@@ -1283,6 +1430,12 @@ class WalletTransaction(
 // 📚 Course Entity (Mosbat Elm)
 // ═══════════════════════════════════════════════════════════════════════════════
 
+@Embeddable
+class CourseChapter(
+    var title: String = "",
+    var durationText: String = ""
+)
+
 @Entity
 @Table(name = "courses")
 class Course(
@@ -1291,8 +1444,25 @@ class Course(
     var id: UUID? = null,
     @Column(length = 500)
     var title: String = "",
+    @Column(length = 300)
+    var slogan: String? = null,
     @Column(columnDefinition = "TEXT")
     var description: String? = null,
+    var favoritesCount: Int = 0,
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "course_teachers",
+        joinColumns = [JoinColumn(name = "course_id")],
+        inverseJoinColumns = [JoinColumn(name = "user_id")]
+    )
+    var teachers: MutableList<User> = mutableListOf(),
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "course_admins",
+        joinColumns = [JoinColumn(name = "course_id")],
+        inverseJoinColumns = [JoinColumn(name = "user_id")]
+    )
+    var admins: MutableList<User> = mutableListOf(),
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organizer_id")
     var organizer: User? = null,
@@ -1312,11 +1482,33 @@ class Course(
     var isPublic: Boolean = true,
     @Enumerated(EnumType.STRING)
     var status: CourseStatus = CourseStatus.DRAFT,
+    @Column(columnDefinition = "TEXT")
+    var adminNote: String? = null,
     var priceRials: Long = 0,
+    var discountPercentage: Int = 0,
+    var syllabusDuration: String? = null,
+    var capacity: Int? = null,
+    var averageRating: Double = 0.0,
+    var reviewCount: Int = 0,
+    @ElementCollection
+    @CollectionTable(name = "course_collaborators", joinColumns = [JoinColumn(name = "course_id")])
+    @Column(name = "collaborator_id")
+    var collaborators: MutableList<String> = mutableListOf(),
     @ElementCollection
     @CollectionTable(name = "course_tags", joinColumns = [JoinColumn(name = "course_id")])
     @Column(name = "tag")
     var tags: MutableList<String> = mutableListOf(),
+    @ElementCollection
+    @CollectionTable(name = "course_chapters", joinColumns = [JoinColumn(name = "course_id")])
+    var chapters: MutableList<CourseChapter> = mutableListOf(),
+    @ElementCollection
+    @CollectionTable(name = "course_suitable_for", joinColumns = [JoinColumn(name = "course_id")])
+    @Column(name = "audience")
+    var suitableFor: MutableList<String> = mutableListOf(),
+    @Column(columnDefinition = "TEXT")
+    var organizerDescription: String? = null,
+    var scientificAssociationName: String? = null,
+    var isVerticalPoster: Boolean = false,
     var createdAt: Instant = Instant.now(),
     var updatedAt: Instant = Instant.now()
 )
@@ -1368,6 +1560,29 @@ class CourseMaterial(
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// 💬 Course Comment Entity (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "course_comments")
+class CourseComment(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "course_id")
+    var course: Course? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    var user: User? = null,
+    @Column(columnDefinition = "TEXT")
+    var content: String = "",
+    var rating: Int = 0, // 1-5 stars
+    var replyToCommentId: UUID? = null,
+    var createdAt: Instant = Instant.now()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // 📝 Exam Entity (Mosbat Elm)
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1400,6 +1615,28 @@ class Exam(
     var shuffleOptions: Boolean = false,
     var showResultsAfter: Boolean = true,
     var maxAttempts: Int = 1,
+    var createdAt: Instant = Instant.now(),
+    var updatedAt: Instant = Instant.now()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🤝 Course Collaboration Request Entity (Mosbat Elm)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "course_collaboration_requests")
+class CourseCollaborationRequest(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "course_id")
+    var course: Course? = null,
+    var senderInstitutionId: UUID? = null,
+    var targetInstitutionId: UUID? = null,
+    @Enumerated(EnumType.STRING)
+    var status: CollaborationStatus = CollaborationStatus.PENDING,
+    var message: String? = null,
     var createdAt: Instant = Instant.now(),
     var updatedAt: Instant = Instant.now()
 )
@@ -1701,9 +1938,49 @@ class AdRequest(
     @Enumerated(EnumType.STRING)
     var messageType: MessageType = MessageType.TEXT,
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'PENDING'")
+    @Column(nullable = false, length = 20)
     var status: AdRequestStatus = AdRequestStatus.PENDING,
     var createdAt: Instant = Instant.now(),
     var reviewedAt: Instant? = null,
     var reviewedBy: UUID? = null
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ⚙️ Role to Channel Mapping Entity
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "role_channel_mappings")
+class RoleChannelMapping(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @Column(nullable = false, length = 50)
+    var educationalRole: String = "",
+    var gradeLevel: String? = null,
+    var major: String? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "channel_id", nullable = false)
+    var channel: Channel? = null,
+    var createdAt: Instant = Instant.now()
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🛡️ Admin Panel User Entity (for admin panel authentication & management)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Entity
+@Table(name = "panel_admins")
+class PanelAdmin(
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    var id: UUID? = null,
+    @Column(unique = true, nullable = false)
+    var username: String = "",
+    @Column(nullable = false)
+    var passwordHash: String = "",
+    var displayName: String = "",
+    @Column(nullable = false)
+    var isSuperAdmin: Boolean = false,
+    var createdAt: Instant = Instant.now()
 )

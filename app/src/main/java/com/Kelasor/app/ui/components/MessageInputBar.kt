@@ -15,21 +15,29 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
@@ -69,6 +77,7 @@ import com.Kelasor.app.data.voice.RecordingState
 import com.Kelasor.app.data.voice.VoiceRecorderManager
 import com.Kelasor.app.ui.theme.CardShapes
 import com.Kelasor.app.ui.theme.MessageAppTheme
+import com.Kelasor.app.util.DateUtils
 import com.Kelasor.app.ui.theme.MessageAppTypography
 import kotlinx.coroutines.delay
 import java.io.File
@@ -108,7 +117,8 @@ fun MessageInputBar(
     val isRecording = recordingInfo?.value?.state == RecordingState.RECORDING
     var recordingDuration by remember { mutableLongStateOf(0L) }
     var amplitude by remember { mutableStateOf(0) }
-    val amplitudes = remember { mutableStateListOf<Int>() }
+    var amplitudes = remember { mutableStateListOf<Int>() }
+    var showEmojiPicker: Boolean by remember { mutableStateOf(false) }
 
     // Permission state
     val audioPermission = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
@@ -166,34 +176,43 @@ fun MessageInputBar(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 6.dp)
-                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(28.dp))
+                    .padding(horizontal = 10.dp, vertical = 8.dp)
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(32.dp))
                     .border(
-                        width = 1.dp,
+                        width = 0.8.dp,
                         color = extendedColors.glassBorder,
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp)
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(32.dp)
                     )
                     .background(extendedColors.glass)
-                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Emoji button (start/right in RTL)
+                // Emoji toggle button
                 IconButton(
-                    onClick = { /* TODO: Emoji picker */ },
-                    modifier = Modifier.size(40.dp)
+                    onClick = { showEmojiPicker = !showEmojiPicker },
+                    modifier = Modifier.size(42.dp)
                 ) {
-                    Text("😊", style = MessageAppTypography.chatName)
+                    if (showEmojiPicker) {
+                        Icon(
+                            imageVector = Icons.Default.Keyboard,
+                            contentDescription = "صفحه‌کلید",
+                            tint = extendedColors.accent,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    } else {
+                        Text("\uD83D\uDE0A", style = MaterialTheme.typography.titleMedium)
+                    }
                 }
-
-                // Text field — fills the center
+                // Text field
                 BasicTextField(
                     value = text,
                     onValueChange = onTextChange,
                     modifier = Modifier
                         .weight(1f)
                         .padding(vertical = 8.dp),
-                    textStyle = MessageAppTypography.messageText.copy(
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(
                         color = MaterialTheme.colorScheme.onSurface,
+                        fontFamily = com.Kelasor.app.ui.theme.VazirFontFamily,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Start,
                         textDirection = androidx.compose.ui.text.style.TextDirection.Content
                     ),
@@ -203,8 +222,10 @@ fun MessageInputBar(
                             if (text.isEmpty()) {
                                 Text(
                                     text = stringResource(R.string.message_hint),
-                                    style = MessageAppTypography.inputHint,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontFamily = com.Kelasor.app.ui.theme.VazirFontFamily
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                                 )
                             }
                             innerTextField()
@@ -360,6 +381,19 @@ fun MessageInputBar(
             }
         }
     }
+
+    // Emoji Picker Grid (shown below input bar)
+    AnimatedVisibility(
+        visible = showEmojiPicker && !isRecording,
+        enter = fadeIn() + slideInVertically { it },
+        exit = fadeOut() + slideOutVertically { it }
+    ) {
+        EmojiPickerGrid(
+            onEmojiClick = { emoji ->
+                onTextChange(text + emoji)
+            }
+        )
+    }
 }
 
 // Keep old signature for backward compatibility
@@ -380,111 +414,6 @@ fun MessageInputBar(
     )
 }
 
-/**
- * Gregorian to Jalali (Shamsi) date conversion.
- * Returns Triple(jYear, jMonth, jDay) where jMonth is 1-based (1=فروردین, 12=اسفند).
- */
-private fun gregorianToJalali(gYear: Int, gMonth: Int, gDay: Int): Triple<Int, Int, Int> {
-    val gDaysInMonth = intArrayOf(0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334)
-    var gy = gYear - 1600
-    var gm = gMonth - 1
-    var gd = gDay - 1
-    var gDayNo = 365 * gy + (gy + 3) / 4 - (gy + 99) / 100 + (gy + 399) / 400
-    for (i in 0 until gm) {
-        gDayNo += gDaysInMonth[i + 1] - gDaysInMonth[i]
-    }
-    if (gm > 1 && ((gy % 4 == 0 && gy % 100 != 0) || (gy % 400 == 0))) {
-        gDayNo++
-    }
-    gDayNo += gd
-    var jDayNo = gDayNo - 79
-    val jNp = jDayNo / 12053
-    jDayNo %= 12053
-    var jy = 979 + 33 * jNp + 4 * (jDayNo / 1461)
-    jDayNo %= 1461
-    if (jDayNo >= 366) {
-        jy += (jDayNo - 1) / 365
-        jDayNo = (jDayNo - 1) % 365
-    }
-    val jm: Int
-    val jd: Int
-    if (jDayNo < 186) {
-        jm = 1 + jDayNo / 31
-        jd = 1 + jDayNo % 31
-    } else {
-        jm = 7 + (jDayNo - 186) / 30
-        jd = 1 + (jDayNo - 186) % 30
-    }
-    return Triple(jy, jm, jd)
-}
-
-/**
- * Jalali (Shamsi) to Gregorian date conversion.
- * jMonth is 1-based (1=فروردین, 12=اسفند).
- * Returns Triple(gYear, gMonth, gDay) where gMonth is 1-based.
- */
-private fun jalaliToGregorian(jYear: Int, jMonth: Int, jDay: Int): Triple<Int, Int, Int> {
-    var jy = jYear - 979
-    var jm = jMonth - 1
-    var jd = jDay - 1
-    var jDayNo = 365 * jy + (jy / 33) * 8 + (jy % 33 + 3) / 4
-    for (i in 0 until jm) {
-        jDayNo += if (i < 6) 31 else 30
-    }
-    jDayNo += jd
-    var gDayNo = jDayNo + 79
-    var gy = 1600 + 400 * (gDayNo / 146097)
-    gDayNo %= 146097
-    var leap = true
-    if (gDayNo >= 36525) {
-        gDayNo--
-        gy += 100 * (gDayNo / 36524)
-        gDayNo %= 36524
-        if (gDayNo >= 365) {
-            gDayNo++
-        } else {
-            leap = false
-        }
-    }
-    gy += 4 * (gDayNo / 1461)
-    gDayNo %= 1461
-    if (gDayNo >= 366) {
-        leap = false
-        gDayNo--
-        gy += gDayNo / 365
-        gDayNo %= 365
-    }
-    val gDaysInMonth = intArrayOf(31, if (leap) 29 else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
-    var gm = 0
-    while (gm < 12 && gDayNo >= gDaysInMonth[gm]) {
-        gDayNo -= gDaysInMonth[gm]
-        gm++
-    }
-    return Triple(gy, gm + 1, gDayNo + 1)
-}
-
-/**
- * Check if a Jalali year is a leap year.
- */
-private fun isJalaliLeapYear(jYear: Int): Boolean {
-    val breaks = intArrayOf(
-        1, 5, 9, 13, 17, 22, 26, 30
-    )
-    val rem = jYear % 33
-    return rem in breaks
-}
-
-/**
- * Get the number of days in a Jalali month (1-based month).
- */
-private fun jalaliMonthDays(jYear: Int, jMonth: Int): Int {
-    return when {
-        jMonth in 1..6 -> 31
-        jMonth in 7..11 -> 30
-        jMonth == 12 -> if (isJalaliLeapYear(jYear)) 30 else 29
-        else -> 30
-    }
-}
 
 /**
  * Enhanced Schedule Picker Dialog with Shamsi (Jalali) calendar date picker + time picker.
@@ -501,7 +430,7 @@ fun SchedulePickerDialog(
     // Convert today to Jalali
     val todayCal = remember { java.util.Calendar.getInstance() }
     val todayJalali = remember {
-        gregorianToJalali(
+        DateUtils.gregorianToJalali(
             todayCal.get(java.util.Calendar.YEAR),
             todayCal.get(java.util.Calendar.MONTH) + 1,
             todayCal.get(java.util.Calendar.DAY_OF_MONTH)
@@ -563,7 +492,7 @@ fun SchedulePickerDialog(
     // Build result timestamp from selected Jalali date + time
     // Convert Jalali back to Gregorian, then build Calendar timestamp
     fun buildTimestamp(): Long {
-        val (gYear, gMonth, gDay) = jalaliToGregorian(selectedYear, selectedMonth, selectedDay)
+        val (gYear, gMonth, gDay) = DateUtils.jalaliToGregorian(selectedYear, selectedMonth, selectedDay)
         val cal = java.util.Calendar.getInstance()
         cal.set(gYear, gMonth - 1, gDay, selectedHour, selectedMinute, 0)
         cal.set(java.util.Calendar.MILLISECOND, 0)
@@ -572,9 +501,9 @@ fun SchedulePickerDialog(
     // Calculate days for the Jalali calendar grid
     // Returns list of nullable Ints (null = empty cell, Int = day number)
     fun getCalendarDays(jYear: Int, jMonth: Int): List<Int?> {
-        val daysInMonth = jalaliMonthDays(jYear, jMonth)
+        val daysInMonth = DateUtils.jalaliMonthDays(jYear, jMonth)
         // Find the day of week for the 1st of this Jalali month
-        val (gY, gM, gD) = jalaliToGregorian(jYear, jMonth, 1)
+        val (gY, gM, gD) = DateUtils.jalaliToGregorian(jYear, jMonth, 1)
         val cal = java.util.Calendar.getInstance()
         cal.set(gY, gM - 1, gD)
         // Java Calendar: SATURDAY=7, SUNDAY=1, MONDAY=2, ...
@@ -599,7 +528,7 @@ fun SchedulePickerDialog(
     }
     // Is Jalali date in the past?
     fun isDayInPast(jYear: Int, jMonth: Int, jDay: Int): Boolean {
-        val (gY, gM, gD) = jalaliToGregorian(jYear, jMonth, jDay)
+        val (gY, gM, gD) = DateUtils.jalaliToGregorian(jYear, jMonth, jDay)
         val cal = java.util.Calendar.getInstance()
         cal.set(gY, gM - 1, gD, 23, 59, 59)
         return cal.timeInMillis < now
@@ -661,7 +590,7 @@ fun SchedulePickerDialog(
                         )
                     }
                     Text(
-                        text = "${shamsiMonthNames[viewMonth - 1]} ${toPersianDigits(viewYear)}",
+                        text = "${shamsiMonthNames[viewMonth - 1]} ${DateUtils.toPersianDigits(viewYear)}",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -732,7 +661,7 @@ fun SchedulePickerDialog(
                                     if (day != null) {
                                         val isPast = isDayInPast(viewYear, viewMonth, day)
                                         Text(
-                                            text = toPersianDigits(day),
+                                            text = DateUtils.toPersianDigits(day),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = when {
                                                 isSelected -> Color.White
@@ -770,7 +699,7 @@ fun SchedulePickerDialog(
                                 Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(18.dp))
                             }
                             Text(
-                                text = toPersianDigits(selectedHour).padStart(2, '۰'),
+                                text = DateUtils.toPersianDigits(selectedHour).padStart(2, '۰'),
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                                 color = extendedColors.accent
@@ -798,7 +727,7 @@ fun SchedulePickerDialog(
                                 Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(18.dp))
                             }
                             Text(
-                                text = toPersianDigits(selectedMinute).padStart(2, '۰'),
+                                text = DateUtils.toPersianDigits(selectedMinute).padStart(2, '۰'),
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                                 color = extendedColors.accent
@@ -834,4 +763,152 @@ fun SchedulePickerDialog(
         }
     )
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 😊 Emoji Picker Grid
+// ═══════════════════════════════════════════════════════════════════════════════
+
+private val EMOJI_CATEGORIES: List<Pair<String, List<String>>> = listOf(
+    "😊" to listOf(
+        "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂",
+        "🙂", "😊", "😇", "🥰", "😍", "🤩", "😘", "😗",
+        "😋", "😛", "😜", "🤪", "😎", "🤗", "🤔", "🤫",
+        "😏", "😒", "😞", "😔", "😟", "😢", "😭", "😤",
+        "😡", "🤬", "😱", "😨", "😰", "😥", "😳", "🤯",
+        "🤢", "🤮", "🤧", "😷", "🤕", "🤒", "😴", "🥱",
+        "😪", "🤤", "😵", "🫠", "🥴", "🥸", "🫡", "🫣",
+        "🫢", "🤭", "🫥", "🤐", "🫤", "😶", "😑", "😐",
+        "🙄", "😬", "😮", "😯", "😲", "🥹", "😧", "😦",
+        "😈", "👿", "💀", "☠️", "👻", "👽", "🤖", "🎃",
+        "😺", "😸", "😹", "😻", "😼", "😽", "🙀", "😿"
+    ),
+    "👍" to listOf(
+        "👍", "👎", "👏", "🙌", "🤲", "🤝", "🙏", "✌️",
+        "🤞", "🤟", "🤘", "👌", "🤌", "👈", "👉", "👆",
+        "👇", "☝️", "✋", "🤚", "🖐️", "🖖", "👋", "💪",
+        "🦾", "🦿", "🖕", "✊", "👊", "🤛", "🤜", "🫰",
+        "🫵", "🫱", "🫲", "🫳", "🫴", "👐", "🤲", "🫶",
+        "🙏", "✍️", "💅", "🤳", "🦵", "🦶", "👂", "🦻",
+        "👃", "👀", "👁️", "🫀", "🫁", "🧠", "🦷", "🦴"
+    ),
+    "❤️" to listOf(
+        "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍",
+        "🤎", "💔", "❣️", "💕", "💞", "💓", "💗", "💖",
+        "💘", "💝", "💟", "🫶", "🥹", "❤️‍🔥", "❤️‍🩹",
+        "💋", "💌", "💐", "🌹", "🥀", "🌺", "🌻", "🌼",
+        "🌷", "🌸", "💮", "🏵️", "🪻", "🪷", "🪹", "🪺"
+    ),
+    "🎉" to listOf(
+        "⭐", "🌟", "✨", "⚡", "🔥", "💯", "🎉", "🎊",
+        "🎈", "🎁", "🏆", "🥇", "🥈", "🥉", "🏅", "🎖️",
+        "🎯", "🚀", "💎", "🌈", "☀️", "🌙", "⏰", "📌",
+        "🎵", "🎶", "🎤", "🎧", "🎼", "🎹", "🥁", "🎷",
+        "🎺", "🎸", "🪗", "🎻", "🎲", "🎮", "🎰", "🧩"
+    ),
+    "🐶" to listOf(
+        "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼",
+        "🐻‍❄️", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵",
+        "🙈", "🙉", "🙊", "🐔", "🐧", "🐦", "🦅", "🦆",
+        "🦇", "🐺", "🐗", "🐴", "🦄", "🐝", "🪱", "🐛",
+        "🦋", "🐌", "🐞", "🐜", "🪳", "🦂", "🐢", "🐍",
+        "🦎", "🐙", "🦑", "🦐", "🦀", "🐡", "🐠", "🐟",
+        "🐬", "🐳", "🐋", "🦈", "🐊", "🐅", "🐆", "🦓"
+    ),
+    "🍎" to listOf(
+        "🍎", "🍐", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓",
+        "🫐", "🍈", "🍒", "🍑", "🥭", "🍍", "🥥", "🥝",
+        "🍅", "🍆", "🥑", "🥦", "🥬", "🌽", "🌶️", "🫑",
+        "🥕", "🧄", "🧅", "🥔", "🍠", "🥐", "🍞", "🥖",
+        "🥨", "🧀", "🥚", "🍳", "🧇", "🥞", "🧈", "🍕",
+        "🍔", "🍟", "🌭", "🥪", "🌮", "🌯", "🫔", "🥙",
+        "🍝", "🍜", "🍲", "🍛", "🍣", "🍱", "🥟", "🍩",
+        "🍰", "🎂", "🧁", "🍫", "🍬", "🍭", "🍮", "🍦"
+    ),
+    "🚗" to listOf(
+        "🚗", "🚕", "🚙", "🏎️", "🚓", "🚑", "🚒", "🚐",
+        "🛻", "🚚", "🚛", "🚜", "🏍️", "🛵", "🚲", "🛴",
+        "✈️", "🛩️", "🚀", "🛸", "🚁", "🛥️", "🚢", "⛵",
+        "🏠", "🏡", "🏢", "🏣", "🏤", "🏥", "🏦", "🏨",
+        "🏩", "🏪", "🏫", "🏬", "🏰", "🏯", "🗼", "🗽",
+        "⛪", "🕌", "🕍", "🛕", "⛩️", "🗿", "🌍", "🌎"
+    ),
+    "💡" to listOf(
+        "💡", "🔦", "🕯️", "📱", "💻", "⌨️", "🖥️", "🖨️",
+        "📷", "📸", "📹", "🎥", "📺", "📻", "🎙️", "🎚️",
+        "⌚", "📡", "🔋", "🔌", "💰", "💵", "💴", "💶",
+        "💷", "💳", "🪙", "⚽", "🏀", "🏈", "⚾", "🎾",
+        "🏐", "🎳", "🏓", "🏸", "🥊", "🥋", "⛳", "⛸️",
+        "🎿", "🛷", "🏂", "🏋️", "🤸", "🤺", "🧘", "🏊",
+        "📝", "📖", "📚", "🔒", "🔑", "🛡️", "⚔️", "🏹"
+    )
+)
+
+@Composable
+private fun EmojiPickerGrid(
+    onEmojiClick: (String) -> Unit
+) {
+    val extendedColors: com.Kelasor.app.ui.theme.ExtendedColors = MessageAppTheme.extendedColors
+    var selectedCategory: Int by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(260.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        // Category tabs
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            EMOJI_CATEGORIES.forEachIndexed { index: Int, (icon: String, _) ->
+                val isSelected: Boolean = index == selectedCategory
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isSelected) extendedColors.accent.copy(alpha = 0.2f)
+                            else Color.Transparent
+                        )
+                        .clickable { selectedCategory = index },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = icon,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+            }
+        }
+        // Emoji grid
+        val emojis: List<String> = EMOJI_CATEGORIES[selectedCategory].second
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(8),
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+            contentPadding = PaddingValues(4.dp)
+        ) {
+            items(emojis) { emoji: String ->
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onEmojiClick(emoji) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = emoji,
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                }
+            }
+        }
+    }
+}
+
 

@@ -15,9 +15,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.alpha
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.viewinterop.AndroidView
@@ -37,7 +35,6 @@ import com.mapbox.maps.extension.style.projection.generated.projection
 import com.mapbox.maps.extension.style.atmosphere.generated.setAtmosphere
 import com.mapbox.maps.extension.style.atmosphere.generated.Atmosphere
 import com.mapbox.maps.extension.style.layers.properties.generated.ProjectionName
-
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import com.mapbox.maps.extension.style.layers.generated.LineLayer
@@ -51,7 +48,6 @@ import com.mapbox.maps.extension.style.layers.addLayer
 import com.mapbox.maps.extension.style.sources.addSource
 import com.mapbox.maps.extension.style.layers.getLayer
 import com.mapbox.maps.extension.style.sources.getSource
-
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -73,20 +69,13 @@ fun MapboxGlobe(
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    
-    // Explicitly set access token before creating MapView
     val accessToken = context.getString(com.Kelasor.app.R.string.mapbox_access_token)
     com.mapbox.maps.ResourceOptionsManager.getDefault(context, accessToken)
-    
     var isMapReady by remember { mutableStateOf(false) }
     var showPlaceholder by remember { mutableStateOf(false) }
-
-    // Proper MapView lifecycle management
     val mapView = remember {
         MapView(context).apply {
             val map = this.getMapboxMap()
-            
-            // Disable gestures to allow page scrolling
             this.gestures.updateSettings {
                  scrollEnabled = false
                  pinchToZoomEnabled = false
@@ -95,15 +84,11 @@ fun MapboxGlobe(
                  quickZoomEnabled = false
                  pitchEnabled = false
             }
-            
-            // Hide UI Elements
             this.attribution.updateSettings { enabled = false }
             this.logo.updateSettings { enabled = false }
             this.compass.updateSettings { enabled = false }
             this.scalebar.updateSettings { enabled = false }
-            
-            // Use Dark Style for Cyber feel
-            map.loadStyleUri(Style.DARK) { style ->
+            map.loadStyleUri(Style.MAPBOX_STREETS) { style ->
                 isMapReady = true
                 try {
                     style.setProjection(projection(ProjectionName.GLOBE))
@@ -111,28 +96,84 @@ fun MapboxGlobe(
                             color(android.graphics.Color.parseColor("#001021"))
                             highColor(android.graphics.Color.parseColor("#00E5FF"))
                             horizonBlend(0.4)
-                            starIntensity(0.9) 
+                            starIntensity(0.9)
                         }
                     )
-                    
+                    // Set Persian (Farsi) labels on all symbol layers
+                    try {
+                        val faExpr = com.mapbox.bindgen.Value(listOf(
+                            com.mapbox.bindgen.Value("coalesce"),
+                            com.mapbox.bindgen.Value(listOf(
+                                com.mapbox.bindgen.Value("get"),
+                                com.mapbox.bindgen.Value("name:fa")
+                            )),
+                            com.mapbox.bindgen.Value(listOf(
+                                com.mapbox.bindgen.Value("get"),
+                                com.mapbox.bindgen.Value("name:ar")
+                            )),
+                            com.mapbox.bindgen.Value(listOf(
+                                com.mapbox.bindgen.Value("get"),
+                                com.mapbox.bindgen.Value("name")
+                            ))
+                        ))
+                        style.styleLayers.forEach { layerInfo ->
+                            if (layerInfo.type == "symbol") {
+                                style.setStyleLayerProperty(layerInfo.id, "text-field", faExpr)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.w("MapboxGlobe", "Could not set Persian locale: ${e.message}")
+                    }
                     val highlightSourceId = "highlight-source"
                     if (style.getSource(highlightSourceId) == null) {
                         style.addSource(geoJsonSource(highlightSourceId) { lineMetrics(true) })
                     }
-                    if (style.getLayer("highlight-glow-layer") == null) {
-                        style.addLayer(lineLayer("highlight-glow-layer", highlightSourceId) {
-                            lineColor("#00B0FF"); lineWidth(8.0); lineBlur(5.0); lineOpacity(0.6)
+                    // Layer 1: Wide outer glow (neon aura)
+                    if (style.getLayer("highlight-outer-glow") == null) {
+                        style.addLayer(lineLayer("highlight-outer-glow", highlightSourceId) {
+                            lineColor("#7C4DFF")
+                            lineWidth(14.0)
+                            lineBlur(12.0)
+                            lineOpacity(0.35)
+                            lineCap(LineCap.ROUND)
+                            lineJoin(LineJoin.ROUND)
                         })
                     }
+                    // Layer 2: Mid glow (cyan)
+                    if (style.getLayer("highlight-glow-layer") == null) {
+                        style.addLayer(lineLayer("highlight-glow-layer", highlightSourceId) {
+                            lineColor("#00E5FF")
+                            lineWidth(8.0)
+                            lineBlur(6.0)
+                            lineOpacity(0.55)
+                            lineCap(LineCap.ROUND)
+                            lineJoin(LineJoin.ROUND)
+                        })
+                    }
+                    // Layer 3: Bright core line
                     if (style.getLayer("highlight-line-layer") == null) {
                         style.addLayer(lineLayer("highlight-line-layer", highlightSourceId) {
-                            lineColor("#00E5FF"); lineWidth(2.5)
+                            lineColor("#18FFFF")
+                            lineWidth(2.5)
+                            lineOpacity(0.95)
+                            lineCap(LineCap.ROUND)
+                            lineJoin(LineJoin.ROUND)
+                        })
+                    }
+                    // Layer 4: Inner white-hot core
+                    if (style.getLayer("highlight-inner-core") == null) {
+                        style.addLayer(lineLayer("highlight-inner-core", highlightSourceId) {
+                            lineColor("#FFFFFF")
+                            lineWidth(1.0)
+                            lineBlur(1.0)
+                            lineOpacity(0.6)
+                            lineCap(LineCap.ROUND)
+                            lineJoin(LineJoin.ROUND)
                         })
                     }
                 } catch (e: Exception) {
                     android.util.Log.e("MapboxGlobe", "Error configuring style: ${e.message}")
                 }
-                
                 map.setCamera(
                     CameraOptions.Builder()
                         .center(Point.fromLngLat(53.6880, 32.4279))
@@ -143,14 +184,12 @@ fun MapboxGlobe(
             }
         }
     }
-
     LaunchedEffect(Unit) {
         kotlinx.coroutines.delay(6000)
         if (!isMapReady) {
             showPlaceholder = true
         }
     }
-
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
@@ -166,8 +205,7 @@ fun MapboxGlobe(
             try { mapView.onDestroy() } catch(e: Exception) {}
         }
     }
-
-    // Aesthetic Container for the Globe
+    // Clean globe container — no ring animations
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -178,7 +216,7 @@ fun MapboxGlobe(
                 .background(
                     Brush.radialGradient(
                         colors = listOf(
-                            Color(0xFF00E5FF).copy(alpha = 0.3f), 
+                            Color(0xFF00E5FF).copy(alpha = 0.3f),
                             Color(0xFF0D47A1).copy(alpha = 0.1f),
                             Color.Transparent
                         )
@@ -186,8 +224,6 @@ fun MapboxGlobe(
                     CircleShape
                 )
         )
-
-        // The Mapbox Map itself, clipped to a circle
         AndroidView(
             modifier = Modifier
                 .size(310.dp)
@@ -196,16 +232,12 @@ fun MapboxGlobe(
             factory = { mapView },
             update = { _ -> }
         )
-
-        // Loading Indicator
         if (!isMapReady && !showPlaceholder) {
             CircularProgressIndicator(
                 color = Color(0xFF00E5FF),
                 modifier = Modifier.size(40.dp)
             )
         }
-
-        // Professional Placeholder for Failure
         if (showPlaceholder) {
             Column(
                 modifier = Modifier
@@ -240,39 +272,6 @@ fun MapboxGlobe(
                     fontSize = 12.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 8.dp)
-                )
-            }
-        }
-        
-        // Animated Holographic Ring
-        val infiniteTransition = rememberInfiniteTransition(label = "RingAnimation")
-        val rotation by infiniteTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = 360f,
-            animationSpec = infiniteRepeatable(
-                animation = tween<Float>(10000, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart
-            ),
-            label = "GlobeRotation"
-        )
-
-        Box(
-            modifier = Modifier
-                .size(312.dp)
-                .scale(1.02f)
-                .padding(1.dp)
-        ) {
-            androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-                drawCircle(
-                    brush = Brush.sweepGradient(
-                        colors = listOf(
-                            Color(0xFF00E5FF).copy(alpha = 0.1f),
-                            Color(0xFF00E5FF),
-                            Color(0xFF00E5FF).copy(alpha = 0.1f)
-                        ),
-                        center = center
-                    ),
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
                 )
             }
         }

@@ -79,7 +79,10 @@ fun FileMessageBubble(
     isMyMessage: Boolean,
     time: String = "",
     status: MessageStatus = MessageStatus.SENT,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    reactions: Map<String, Int> = emptyMap(),
+    myReaction: String? = null,
+    onReactionClick: ((String) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -111,10 +114,15 @@ fun FileMessageBubble(
     
     val accentColor = if (isMyMessage) extendedColors.accent else MaterialTheme.colorScheme.primary
     
-    Row(
+    Column(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
             .background(backgroundColor)
+            .width(250.dp)
+    ) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
             .clickable {
                 when (downloadState) {
                     FileDownloadState.NOT_DOWNLOADED -> {
@@ -144,8 +152,7 @@ fun FileMessageBubble(
                     }
                 }
             }
-            .padding(12.dp)
-            .width(250.dp),
+            .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // File icon with state indicator
@@ -265,6 +272,17 @@ fun FileMessageBubble(
                 )
             }
         }
+    }
+    // Reactions inside card
+    if (reactions.isNotEmpty()) {
+        ReactionRow(
+            reactions = reactions,
+            myReaction = myReaction,
+            isMyMessage = isMyMessage,
+            onReactionClick = onReactionClick,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+        )
+    }
     }
 }
 

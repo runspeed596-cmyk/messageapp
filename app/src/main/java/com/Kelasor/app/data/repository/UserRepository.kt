@@ -67,6 +67,12 @@ class UserRepository @Inject constructor(
     suspend fun updateProfile(
         username: String?,
         displayName: String?,
+        firstName: String? = null,
+        lastName: String? = null,
+        nationalCode: String? = null,
+        educationalRole: String? = null,
+        gradeLevel: String? = null,
+        major: String? = null,
         bio: String?,
         university: String? = null,
         fieldOfStudy: String? = null,
@@ -81,17 +87,39 @@ class UserRepository @Inject constructor(
         teachingField: String? = null,
         teachingUniversity: String? = null,
         province: String? = null,
-        city: String? = null
+        city: String? = null,
+        faculty: String? = null,
+        birthDate: String? = null
     ): Flow<UserResult<User>> = flow {
         emit(UserResult.Loading)
         try {
             val response = apiService.updateUser(UpdateUserRequest(
-                username, displayName, bio,
-                university, fieldOfStudy, education, skills, interests, workExperience, achievements,
-                null, // avatarUrl
-                bioChannelId1, bioChannelId2,
-                isTeacher, teachingField, teachingUniversity,
-                province, city
+                username = username,
+                displayName = displayName,
+                firstName = firstName,
+                lastName = lastName,
+                nationalCode = nationalCode,
+                educationalRole = educationalRole,
+                gradeLevel = gradeLevel,
+                major = major,
+                faculty = faculty,
+                bio = bio,
+                university = university,
+                fieldOfStudy = fieldOfStudy,
+                education = education,
+                skills = skills,
+                interests = interests,
+                workExperience = workExperience,
+                achievements = achievements,
+                avatarUrl = null,
+                bioChannelId1 = bioChannelId1,
+                bioChannelId2 = bioChannelId2,
+                isTeacher = isTeacher,
+                teachingField = teachingField,
+                teachingUniversity = teachingUniversity,
+                province = province,
+                city = city,
+                birthDate = birthDate
             ))
             if (response.isSuccessful && response.body()?.success == true) {
                 val userDto = response.body()?.data
@@ -100,10 +128,10 @@ class UserRepository @Inject constructor(
                     userDao.insertUser(userEntity)
                     emit(UserResult.Success(userDto.toDomain()))
                 } else {
-                    emit(UserResult.Error("خطا در بروزرسانی پروفایل"))
+                    emit(UserResult.Error("خطا در پردازش پاسخ سرور"))
                 }
             } else {
-                emit(UserResult.Error(response.body()?.message ?: "خطا در بروزرسانی پروفایل"))
+                emit(UserResult.Error(getErrorMessage(response)))
             }
         } catch (e: Exception) {
             emit(UserResult.Error("خطا در اتصال به سرور: ${e.message}"))
@@ -242,6 +270,77 @@ class UserRepository @Inject constructor(
             emit(UserResult.Success(filteredUsers))
         } catch (e: Exception) {
             emit(UserResult.Error("خطا در دریافت مخاطبین: ${e.message}"))
+        }
+    }
+
+    suspend fun getUsersByIds(ids: List<String>): Flow<UserResult<List<User>>> = flow {
+        emit(UserResult.Loading)
+        try {
+            val response = apiService.getUsersByIds(ids)
+            if (response.isSuccessful && response.body()?.success == true) {
+                val users = response.body()?.data?.map { it.toDomain() } ?: emptyList()
+                emit(UserResult.Success(users))
+            } else {
+                emit(UserResult.Error(response.body()?.message ?: "خطا در دریافت کاربران"))
+            }
+        } catch (e: Exception) {
+            emit(UserResult.Error("خطا در اتصال به سرور: ${e.message}"))
+        }
+    }
+
+    suspend fun followUser(userId: String): Flow<UserResult<Boolean>> = flow {
+        emit(UserResult.Loading)
+        try {
+            val response = apiService.followUser(userId)
+            if (response.isSuccessful && response.body()?.success == true) {
+                emit(UserResult.Success(true))
+            } else {
+                emit(UserResult.Error(response.body()?.message ?: "خطا در عملیات فالو"))
+            }
+        } catch (e: Exception) {
+            emit(UserResult.Error("خطا در اتصال به سرور: ${e.message}"))
+        }
+    }
+
+    suspend fun unfollowUser(userId: String): Flow<UserResult<Boolean>> = flow {
+        emit(UserResult.Loading)
+        try {
+            val response = apiService.unfollowUser(userId)
+            if (response.isSuccessful && response.body()?.success == true) {
+                emit(UserResult.Success(true))
+            } else {
+                emit(UserResult.Error(response.body()?.message ?: "خطا در عملیات آنفالو"))
+            }
+        } catch (e: Exception) {
+            emit(UserResult.Error("خطا در اتصال به سرور: ${e.message}"))
+        }
+    }
+
+    suspend fun isFollowing(userId: String): Flow<UserResult<Boolean>> = flow {
+        emit(UserResult.Loading)
+        try {
+            val response = apiService.isFollowing(userId)
+            if (response.isSuccessful && response.body()?.success == true) {
+                emit(UserResult.Success(response.body()?.data ?: false))
+            } else {
+                emit(UserResult.Error(response.body()?.message ?: "خطا در بررسی وضعیت فالو"))
+            }
+        } catch (e: Exception) {
+            emit(UserResult.Error("خطا در اتصال به سرور: ${e.message}"))
+        }
+    }
+
+    private fun <T> getErrorMessage(response: retrofit2.Response<T>): String {
+        return try {
+            val errorBody = response.errorBody()?.string()
+            if (!errorBody.isNullOrBlank()) {
+                val jsonObject = org.json.JSONObject(errorBody)
+                jsonObject.optString("message", "خطا در بروزرسانی پروفایل")
+            } else {
+                "خطا در بروزرسانی پروفایل"
+            }
+        } catch (e: Exception) {
+            "خطا در بروزرسانی پروفایل"
         }
     }
 }

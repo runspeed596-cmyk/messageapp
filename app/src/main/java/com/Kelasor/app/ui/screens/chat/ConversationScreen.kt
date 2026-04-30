@@ -5,6 +5,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import com.Kelasor.app.ui.components.ReactionRow
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -14,6 +15,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -37,6 +39,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.filled.MoreVert
@@ -113,6 +116,7 @@ import com.Kelasor.app.ui.components.MediaEditScreen
 import com.Kelasor.app.ui.components.VideoNoteBubble
 import com.Kelasor.app.ui.components.CircularVideoRecorder
 import com.Kelasor.app.data.video.VideoNoteRecordingState
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.material.icons.filled.Search
@@ -139,7 +143,8 @@ fun ConversationScreen(
     onNavigateBack: () -> Unit,
     onNavigateToProfile: (String) -> Unit,
     onNavigateToForward: (messageIds: String, sourceType: String, sourceId: String) -> Unit = { _, _, _ -> },
-    viewModel: ConversationViewModel = hiltViewModel()
+    viewModel: ConversationViewModel = hiltViewModel(),
+    storyViewModel: com.Kelasor.app.ui.viewmodel.StoryViewModel = hiltViewModel()
 ) {
     val extendedColors = MessageAppTheme.extendedColors
     val state by viewModel.state.collectAsState()
@@ -160,6 +165,7 @@ fun ConversationScreen(
     var pendingMediaIsVideo by remember { mutableStateOf(false) }
     // Video note recording state
     var showVideoNoteRecorder by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     // Schedule edit dialog state for rescheduling a scheduled message
     var showScheduleEditDialog by remember { mutableStateOf(false) }
     var messageToReschedule by remember { mutableStateOf<com.Kelasor.app.domain.model.Message?>(null) }
@@ -195,6 +201,14 @@ fun ConversationScreen(
     }
     
     // Message Highlighting
+    // BackHandler: clear selection on back press instead of navigating away
+    BackHandler(enabled = state.selectedMessageIds.isNotEmpty()) {
+        viewModel.clearSelection()
+    }
+    // BackHandler: dismiss attachment menu on back press instead of leaving chat
+    BackHandler(enabled = showAttachmentMenu) {
+        showAttachmentMenu = false
+    }
     var highlightedMessageId by remember { mutableStateOf(initialMessageId) }
     LaunchedEffect(highlightedMessageId) {
         if (highlightedMessageId != null) {
@@ -285,13 +299,21 @@ fun ConversationScreen(
     }
     // Get chat info from state
     val chat = state.chat
-    val chatName = chat?.title ?: "چت"
+    // Detect self-chat: private chat with no other participant (chatting with yourself)
+    // Fallback: if all participant IDs are the same, it's also a self-chat (handles race condition before currentUserId loads)
+    val hasAllSameParticipants = chat?.participants?.isNotEmpty() == true && chat.participants.map { it.id }.distinct().size == 1
+    val isSelfChat = chat?.type == com.Kelasor.app.domain.model.ChatType.PRIVATE &&
+        chat.participants.size >= 2 &&
+        (hasAllSameParticipants || chat.participants.all { it.id == state.currentUserId })
+    val chatName = if (isSelfChat) "پیام\u200Cهای ذخیره شده" else (chat?.title ?: "چت")
     // FIX: Filter out current user to get OTHER participant
     val otherParticipant = chat?.participants?.find { it.id != state.currentUserId }
     // Use actual online status (not privacy-filtered displayOnlineStatus)
-    val isOnline = otherParticipant?.isOnline ?: false
+    val isOnline = if (isSelfChat) false else (otherParticipant?.isOnline ?: false)
     // For private chats, ALWAYS use participant's privacy-sanitized avatar (ignore cached chat?.avatarUrl)
-    val avatarUrl = if (chat?.type == com.Kelasor.app.domain.model.ChatType.PRIVATE) {
+    val avatarUrl = if (isSelfChat) {
+        null // Will use bookmark icon for saved messages
+    } else if (chat?.type == com.Kelasor.app.domain.model.ChatType.PRIVATE) {
         otherParticipant?.displayAvatarUrl
     } else {
         chat?.avatarUrl
@@ -572,24 +594,50 @@ fun ConversationScreen(
                     title = {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.clickable { 
+                            modifier = Modifier.clickable {
                                 if (chat?.type == com.Kelasor.app.domain.model.ChatType.PRIVATE) {
                                     otherParticipant?.id?.let { onNavigateToProfile(it) }
                                 }
                             }
                         ) {
-                            AvatarImage(
-                                imageUrl = avatarUrl,
-                                name = chatName,
-                                size = AvatarSize.SMALL,
-                                isOnline = isOnline
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
+                            if (isSelfChat) {
+                                // Bookmark icon for saved messages
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            brush = Brush.linearGradient(
+                                                colors = listOf(Color(0xFF7C4DFF), Color(0xFF536DFE))
+                                            )
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Bookmark,
+                                        contentDescription = "Saved Messages",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            } else {
+                                AvatarImage(
+                                    imageUrl = avatarUrl,
+                                    name = chatName,
+                                    size = AvatarSize.SMALL,
+                                    isOnline = isOnline
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
                             Column {
                                 Text(
                                     text = chatName,
-                                    style = MessageAppTypography.chatName,
-                                    fontWeight = FontWeight.Bold
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = VazirFontFamily,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                 )
                                 AnimatedVisibility(
                                     visible = isTyping,
@@ -598,8 +646,10 @@ fun ConversationScreen(
                                 ) {
                                     Text(
                                         text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.typing),
-                                        style = MessageAppTypography.chatTime,
-                                        color = extendedColors.accent
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontFamily = VazirFontFamily,
+                                        color = extendedColors.accent,
+                                        fontWeight = FontWeight.Medium
                                     )
                                 }
                                 AnimatedVisibility(
@@ -609,8 +659,10 @@ fun ConversationScreen(
                                 ) {
                                     Text(
                                         text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.online),
-                                        style = MessageAppTypography.chatTime,
-                                        color = extendedColors.onlineIndicator
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontFamily = VazirFontFamily,
+                                        color = extendedColors.onlineIndicator,
+                                        fontWeight = FontWeight.Medium
                                     )
                                 }
                             }
@@ -625,33 +677,29 @@ fun ConversationScreen(
                         }
                     },
                     actions = {
-                        // Search Action
                         IconButton(onClick = { isSearchActive = true }) {
                             Icon(Icons.Default.Search, "Search")
                         }
-                        
-                        // Mute/Unmute bell icon
                         IconButton(
-                            onClick = { 
+                            onClick = {
                                 val currentMute = chat?.isMuted ?: false
                                 viewModel.toggleMute()
                                 Toast.makeText(
-                                    context, 
-                                    if (currentMute) "صدای چت فعال شد" else "چت بی‌صدا شد", 
+                                    context,
+                                    if (currentMute) "صدای چت فعال شد" else "چت بی‌صدا شد",
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
                         ) {
                             Icon(
-                                imageVector = if (chat?.isMuted == true) 
-                                    Icons.Default.NotificationsOff 
-                                else 
+                                imageVector = if (chat?.isMuted == true)
+                                    Icons.Default.NotificationsOff
+                                else
                                     Icons.Default.Notifications,
                                 contentDescription = "Mute",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        
                         Box {
                             IconButton(onClick = { isMenuExpanded = true }) {
                                 Icon(
@@ -663,7 +711,6 @@ fun ConversationScreen(
                                 expanded = isMenuExpanded,
                                 onDismissRequest = { isMenuExpanded = false }
                             ) {
-                                // View profile option
                                 androidx.compose.material3.DropdownMenuItem(
                                     text = { Text(androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.view_profile)) },
                                     onClick = {
@@ -679,7 +726,6 @@ fun ConversationScreen(
                                         )
                                     }
                                 )
-                                // Delete chat option
                                 androidx.compose.material3.DropdownMenuItem(
                                     text = { Text(androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.delete_chat_title), color = MaterialTheme.colorScheme.error) },
                                     onClick = {
@@ -865,6 +911,7 @@ fun ConversationScreen(
                                 contentAlignment = if (isFromMe) AbsoluteAlignment.CenterRight else AbsoluteAlignment.CenterLeft
                             ) {
                             // Render based on message type
+                            Column {
                             when {
                                 // Poll message
                                 message.poll != null -> {
@@ -877,14 +924,12 @@ fun ConversationScreen(
                                         modifier = Modifier.padding(horizontal = 8.dp)
                                     )
                                 }
-                                
                                 // Voice message (recorded in-app)
                                 message.type == MessageType.VOICE && message.mediaUrl != null -> {
                                     val durationSeconds = try {
                                         val regex = """\((\d+)s\)""".toRegex()
                                         regex.find(message.content)?.groupValues?.get(1)?.toLongOrNull() ?: 0L
                                     } catch (e: Exception) { 0L }
-                                    
                                 VoiceMessageBubble(
                                         mediaUrl = message.mediaUrl!!,
                                         durationMs = durationSeconds * 1000L,
@@ -893,10 +938,12 @@ fun ConversationScreen(
                                         amplitudes = message.amplitudes,
                                         time = message.createdAt.atZone(ZoneId.systemDefault()).format(MESSAGE_TIME_FORMATTER),
                                         status = message.status,
-                                        modifier = Modifier.padding(horizontal = 8.dp)
+                                        modifier = Modifier.padding(horizontal = 8.dp),
+                                        reactions = message.reactions,
+                                        myReaction = message.myReaction,
+                                        onReactionClick = { emoji -> viewModel.reactToMessage(message.id, emoji) }
                                     )
                                 }
-                                
                                 // Image message
                                 message.type == MessageType.IMAGE && message.mediaUrl != null -> {
                                     val imageCaption = message.content
@@ -914,10 +961,12 @@ fun ConversationScreen(
                                         },
                                         caption = imageCaption,
                                         status = message.status,
-                                        modifier = Modifier.padding(horizontal = 8.dp)
+                                        modifier = Modifier.padding(horizontal = 8.dp),
+                                        reactions = message.reactions,
+                                        myReaction = message.myReaction,
+                                        onReactionClick = { emoji -> viewModel.reactToMessage(message.id, emoji) }
                                     )
                                 }
-                                
                                 // Video message
                                 message.type == MessageType.VIDEO && message.mediaUrl != null -> {
                                     val videoCaption = message.content
@@ -935,10 +984,12 @@ fun ConversationScreen(
                                         },
                                         caption = videoCaption,
                                         status = message.status,
-                                        modifier = Modifier.padding(horizontal = 8.dp)
+                                        modifier = Modifier.padding(horizontal = 8.dp),
+                                        reactions = message.reactions,
+                                        myReaction = message.myReaction,
+                                        onReactionClick = { emoji -> viewModel.reactToMessage(message.id, emoji) }
                                     )
                                 }
-                                
                                 // Video note (circular video)
                                 message.type == MessageType.VIDEO_NOTE && message.mediaUrl != null -> {
                                     val durationText = message.content
@@ -951,18 +1002,19 @@ fun ConversationScreen(
                                         time = message.createdAt.atZone(ZoneId.systemDefault()).format(MESSAGE_TIME_FORMATTER),
                                         durationText = durationText,
                                         status = message.status,
-                                        modifier = Modifier.padding(horizontal = 8.dp)
+                                        modifier = Modifier.padding(horizontal = 8.dp),
+                                        reactions = message.reactions,
+                                        myReaction = message.myReaction,
+                                        onReactionClick = { emoji -> viewModel.reactToMessage(message.id, emoji) }
                                     )
                                 }
-                                
                                 // Audio file (from file picker)
                                 message.type == MessageType.AUDIO && message.mediaUrl != null -> {
-                                    // Extract file name from content (format: "🎵 filename.mp3")
                                     val fileName = message.content.removePrefix("🎵 ").trim()
                                     AudioFileBubble(
                                         mediaUrl = message.mediaUrl!!,
                                         fileName = fileName,
-                                        durationMs = 0L, // Duration will be fetched from player
+                                        durationMs = 0L,
                                         isMyMessage = isFromMe,
                                         audioPlayerManager = viewModel.audioPlayerManager,
                                         time = message.createdAt.atZone(ZoneId.systemDefault()).format(MESSAGE_TIME_FORMATTER),
@@ -970,10 +1022,8 @@ fun ConversationScreen(
                                         modifier = Modifier.padding(horizontal = 8.dp)
                                     )
                                 }
-                                
                                 // Location message
                                 message.type == MessageType.LOCATION && message.mediaUrl != null -> {
-                                    // Parse location from mediaUrl (format: "lat,lng")
                                     val parts = message.mediaUrl!!.split(",")
                                     if (parts.size == 2) {
                                         val lat = parts[0].toDoubleOrNull() ?: 0.0
@@ -984,14 +1034,15 @@ fun ConversationScreen(
                                             isMyMessage = isFromMe,
                                             time = message.createdAt.atZone(ZoneId.systemDefault()).format(MESSAGE_TIME_FORMATTER),
                                             status = message.status,
-                                            modifier = Modifier.padding(horizontal = 8.dp)
+                                            modifier = Modifier.padding(horizontal = 8.dp),
+                                            reactions = message.reactions,
+                                            myReaction = message.myReaction,
+                                            onReactionClick = { emoji -> viewModel.reactToMessage(message.id, emoji) }
                                         )
                                     }
                                 }
-                                
                                 // File message (from file picker)
                                 message.type == MessageType.FILE && message.mediaUrl != null -> {
-                                    // Extract file name from content (format: "📎 filename.ext" or just the file content)
                                     val fileName = message.content
                                         .removePrefix("📎 ")
                                         .removePrefix("📄 ")
@@ -1003,10 +1054,12 @@ fun ConversationScreen(
                                         isMyMessage = isFromMe,
                                         time = message.createdAt.atZone(ZoneId.systemDefault()).format(MESSAGE_TIME_FORMATTER),
                                         status = message.status,
-                                        modifier = Modifier.padding(horizontal = 8.dp)
+                                        modifier = Modifier.padding(horizontal = 8.dp),
+                                        reactions = message.reactions,
+                                        myReaction = message.myReaction,
+                                        onReactionClick = { emoji -> viewModel.reactToMessage(message.id, emoji) }
                                     )
                                 }
-                                
                                 // Text or other message types
                                 else -> {
                                     ChatBubble(
@@ -1039,9 +1092,13 @@ fun ConversationScreen(
                                         },
                                         onLongClick = { 
                                             viewModel.toggleMessageSelection(message.id)
+                                        },
+                                        onStoryReplyClick = { storyId ->
+                                            storyViewModel.openStoryById(storyId)
                                         }
                                     )
                                 }
+                            }
                             }
                         }
                         }
@@ -1185,8 +1242,7 @@ fun ConversationScreen(
                         Toast.makeText(context, "کپی شد", Toast.LENGTH_SHORT).show()
                     },
                     onDeleteClick = {
-                        viewModel.deleteSelectedMessages(true)
-                        Toast.makeText(context, "پیام حذف شد", Toast.LENGTH_SHORT).show()
+                        showDeleteConfirmDialog = true
                     },
                     onPinClick = if (state.selectedMessageIds.size == 1) {{
                         val messageId = state.selectedMessageIds.first()
@@ -1233,6 +1289,18 @@ fun ConversationScreen(
                     }
                 )
             }
+        }
+        // Delete Confirmation Dialog
+        if (showDeleteConfirmDialog) {
+            com.Kelasor.app.ui.components.DeleteConfirmationDialog(
+                messageCount = state.selectedMessageIds.size,
+                onConfirm = { deleteForEveryone ->
+                    viewModel.deleteSelectedMessages(deleteForEveryone)
+                    showDeleteConfirmDialog = false
+                    Toast.makeText(context, "پیام حذف شد", Toast.LENGTH_SHORT).show()
+                },
+                onDismiss = { showDeleteConfirmDialog = false }
+            )
         }
         
         // Attachment Menu overlay
@@ -1318,6 +1386,26 @@ fun ConversationScreen(
             },
             onDismiss = { pendingMediaUri = null }
         )
+    }
+    // Story viewer overlay — triggered by story reply click
+    val selectedStoryUser by storyViewModel.selectedStoryUser.collectAsState()
+    val selectedStoryIndex by storyViewModel.selectedStoryIndex.collectAsState()
+    selectedStoryUser?.let { user ->
+        if (user.stories.isNotEmpty()) {
+            androidx.compose.ui.window.Dialog(
+                onDismissRequest = { storyViewModel.closeStoryViewer() },
+                properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+            ) {
+                com.Kelasor.app.ui.screens.story.StoryViewerScreen(
+                    viewModel = storyViewModel,
+                    storyUser = user,
+                    initialStoryIndex = selectedStoryIndex,
+                    onClose = { storyViewModel.closeStoryViewer() },
+                    onStoryViewed = { story -> storyViewModel.markStoryAsViewed(story.id) },
+                    onNavigateToProfile = { userId -> storyViewModel.closeStoryViewer(); onNavigateToProfile(userId) }
+                )
+            }
+        }
     }
     } // end Box
 

@@ -125,6 +125,12 @@ class ProfileViewModel @Inject constructor(
     fun updateProfile(
         username: String?,
         displayName: String?,
+        firstName: String? = null,
+        lastName: String? = null,
+        nationalCode: String? = null,
+        educationalRole: String? = null,
+        gradeLevel: String? = null,
+        major: String? = null,
         bio: String?,
         university: String? = null,
         fieldOfStudy: String? = null,
@@ -139,15 +145,37 @@ class ProfileViewModel @Inject constructor(
         teachingField: String? = null,
         teachingUniversity: String? = null,
         province: String? = null,
-        city: String? = null
+        city: String? = null,
+        faculty: String? = null,
+        birthDate: String? = null
     ) {
         viewModelScope.launch {
             userRepository.updateProfile(
-                username, displayName, bio,
-                university, fieldOfStudy, education, skills, interests, workExperience, achievements,
-                bioChannelId1, bioChannelId2,
-                isTeacher, teachingField, teachingUniversity,
-                province, city
+                username = username,
+                displayName = displayName,
+                firstName = firstName,
+                lastName = lastName,
+                nationalCode = nationalCode,
+                educationalRole = educationalRole,
+                gradeLevel = gradeLevel,
+                major = major,
+                bio = bio,
+                university = university, 
+                fieldOfStudy = fieldOfStudy, 
+                education = education, 
+                skills = skills, 
+                interests = interests, 
+                workExperience = workExperience, 
+                achievements = achievements,
+                bioChannelId1 = bioChannelId1, 
+                bioChannelId2 = bioChannelId2,
+                isTeacher = isTeacher, 
+                teachingField = teachingField, 
+                teachingUniversity = teachingUniversity,
+                province = province, 
+                city = city,
+                faculty = faculty,
+                birthDate = birthDate
             ).collect { result ->
                 when (result) {
                     is UserResult.Loading -> {

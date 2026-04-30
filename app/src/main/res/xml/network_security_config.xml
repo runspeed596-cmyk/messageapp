@@ -1,9 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
+    <!-- Production domain -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">kelasorapp.ir</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
+    
     <!-- Allow cleartext (HTTP) traffic for local development -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">192.168.70.113</domain>
-        <domain includeSubdomains="true">192.168.70.113</domain>
+        <domain includeSubdomains="true">10.200.87.98</domain>
         <domain includeSubdomains="true">10.0.2.2</domain>
         <domain includeSubdomains="true">10.30.218.98</domain>
         <domain includeSubdomains="true">localhost</domain>

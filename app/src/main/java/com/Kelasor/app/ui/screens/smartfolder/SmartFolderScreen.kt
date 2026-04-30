@@ -35,6 +35,7 @@ import com.Kelasor.app.ui.viewmodel.SmartFolderViewModel
 // Reusable for Teachers, Elm Club, and Courses tabs
 // ═══════════════════════════════════════════════════════════════════════════════
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun SmartFolderTabContent(
     folderType: String,
@@ -43,9 +44,13 @@ fun SmartFolderTabContent(
     emptyMessage: String,
     accentColor: Color,
     onChannelClick: (String) -> Unit,
-    viewModel: SmartFolderViewModel = hiltViewModel()
+    onMyStoriesClick: () -> Unit = {},
+    onNavigateToChannelStories: (String, String) -> Unit = { _, _ -> },
+    viewModel: SmartFolderViewModel = hiltViewModel(),
+    storyViewModel: com.Kelasor.app.ui.viewmodel.StoryViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
     val channels: List<SmartFolderChannelDto> = when (folderType) {
         "TEACHERS" -> state.teacherChannels
         "ELM_CLUB" -> state.elmClubChannels
@@ -54,7 +59,34 @@ fun SmartFolderTabContent(
     }
     val isLoading: Boolean = state.isLoading
     val error: String? = state.error
-
+    // Story state
+    val storyUiState by storyViewModel.channelUiState.collectAsState()
+    var showChannelSelectionSheet by remember { mutableStateOf(false) }
+    var showMyStoriesChannelSheet by remember { mutableStateOf(false) }
+    var selectedChannelIdForStory by remember { mutableStateOf<String?>(null) }
+    val subscribedChannels = remember(channels) { channels.filter { it.isSubscribed } }
+    var showPremiumDialog by remember { mutableStateOf(false) }
+    // Handle Story Error Events
+    LaunchedEffect(Unit) {
+        storyViewModel.errorEvent.collect { event ->
+            when (event) {
+                is com.Kelasor.app.ui.viewmodel.StoryErrorEvent.PremiumRequired -> { showPremiumDialog = true }
+                is com.Kelasor.app.ui.viewmodel.StoryErrorEvent.GenericError -> {
+                    android.widget.Toast.makeText(context, event.message, android.widget.Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+    // Load Channel Stories on Enter
+    LaunchedEffect(Unit) { storyViewModel.loadChannelStories() }
+    val storyPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null && selectedChannelIdForStory != null) {
+            storyViewModel.uploadChannelStory(selectedChannelIdForStory!!, uri, "AUTO")
+            selectedChannelIdForStory = null
+        }
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -123,6 +155,32 @@ fun SmartFolderTabContent(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
+                    // Story Row at top
+                    item(key = "${folderType}_stories_row", contentType = "stories") {
+                        val storyUsers = when (val uiState = storyUiState) {
+                            is com.Kelasor.app.ui.viewmodel.StoriesUiState.Success -> uiState.storyUsers
+                            else -> emptyList()
+                        }
+                        val currentUser = storyUsers.firstOrNull { it.isCurrentUser }
+                        com.Kelasor.app.ui.components.story.StoriesList(
+                            currentUser = currentUser,
+                            storyUsers = storyUsers,
+                            onStoryClick = { su ->
+                                if (su.isCurrentUser) {
+                                    if (subscribedChannels.size == 1) {
+                                        onNavigateToChannelStories(subscribedChannels.first().id, subscribedChannels.first().name)
+                                    } else if (subscribedChannels.isNotEmpty()) {
+                                        showMyStoriesChannelSheet = true
+                                    } else {
+                                        onMyStoriesClick()
+                                    }
+                                } else {
+                                    storyViewModel.openStoryViewer(su)
+                                }
+                            },
+                            onAddStoryClick = { showChannelSelectionSheet = true }
+                        )
+                    }
                     items(channels, key = { it.id }) { channel ->
                         SmartFolderChannelCard(
                             channel = channel,
@@ -132,6 +190,163 @@ fun SmartFolderTabContent(
                     }
                 }
             }
+        }
+        // Channel Selection Bottom Sheet for Story Upload
+        if (showChannelSelectionSheet) {
+            androidx.compose.material3.ModalBottomSheet(
+                onDismissRequest = { showChannelSelectionSheet = false },
+                sheetState = androidx.compose.material3.rememberModalBottomSheetState()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = "ارسال استوری به عنوان...",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = VazirFontFamily,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    if (channels.isEmpty()) {
+                        Text(
+                            text = "هیچ کانالی یافت نشد",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontFamily = VazirFontFamily
+                        )
+                    } else {
+                        LazyColumn {
+                            items(channels.filter { it.isSubscribed }) { channel ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            selectedChannelIdForStory = channel.id
+                                            showChannelSelectionSheet = false
+                                            storyPickerLauncher.launch(
+                                                androidx.activity.result.PickVisualMediaRequest(
+                                                    androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageAndVideo
+                                                )
+                                            )
+                                        }
+                                        .padding(vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(CircleShape)
+                                            .background(accentColor.copy(alpha = 0.2f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (channel.avatarUrl != null) {
+                                            coil3.compose.AsyncImage(
+                                                model = channel.avatarUrl,
+                                                contentDescription = channel.name,
+                                                modifier = Modifier.size(40.dp).clip(CircleShape),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        } else {
+                                            Text(
+                                                text = channel.name.take(1),
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = accentColor,
+                                                fontFamily = VazirFontFamily
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = channel.name,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Medium,
+                                        fontFamily = VazirFontFamily
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(32.dp))
+                }
+            }
+        }
+        // My Stories - Channel Selection Sheet (navigate to channel stories manager)
+        if (showMyStoriesChannelSheet) {
+            androidx.compose.material3.ModalBottomSheet(
+                onDismissRequest = { showMyStoriesChannelSheet = false },
+                sheetState = androidx.compose.material3.rememberModalBottomSheetState()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = "استوری‌های من - انتخاب کانال",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontFamily = VazirFontFamily,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    LazyColumn {
+                        items(subscribedChannels) { channel ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        showMyStoriesChannelSheet = false
+                                        onNavigateToChannelStories(channel.id, channel.name)
+                                    }
+                                    .padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(accentColor.copy(alpha = 0.2f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (channel.avatarUrl != null) {
+                                        coil3.compose.AsyncImage(
+                                            model = channel.avatarUrl,
+                                            contentDescription = channel.name,
+                                            modifier = Modifier.size(40.dp).clip(CircleShape),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    } else {
+                                        Text(
+                                            text = channel.name.take(1),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = accentColor,
+                                            fontFamily = VazirFontFamily
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = channel.name,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontFamily = VazirFontFamily
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(32.dp))
+                }
+            }
+        }
+        if (showPremiumDialog) {
+            com.Kelasor.app.ui.components.PremiumUpgradeDialog(
+                onDismiss = { showPremiumDialog = false },
+                onUpgrade = {
+                    showPremiumDialog = false
+                    android.widget.Toast.makeText(context, "Navigate to Premium Purchase", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            )
         }
     }
 }

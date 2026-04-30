@@ -89,6 +89,16 @@ fun MyStoriesScreen(
                     titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showAddOptionsSheet = true },
+                containerColor = com.Kelasor.app.ui.theme.MessageAppTheme.extendedColors.accent,
+                contentColor = Color.White,
+                shape = CircleShape
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "افزودن استوری")
+            }
         }
     ) { padding ->
         Box(

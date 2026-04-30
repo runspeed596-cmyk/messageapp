@@ -17,6 +17,16 @@ data class User(
     val lastSeen: Instant?,
     val contactName: String? = null,
     
+    // New Mosbat Elm Fields
+    val firstName: String? = null,
+    val lastName: String? = null,
+    val nationalCode: String? = null,
+    val educationalRole: String? = null,
+    val gradeLevel: String? = null,
+    val major: String? = null,
+    val faculty: String? = null,
+    val birthDate: String? = null,
+    
     // Profile Enhancements
     val university: String? = null,
     val fieldOfStudy: String? = null,
@@ -47,7 +57,10 @@ data class User(
     // These will be null/hidden when the user has restricted visibility
     val displayAvatarUrl: String? = avatarUrl, // Avatar for display (may be hidden)
     val displayOnlineStatus: Boolean = isOnline, // Online status for display (may be hidden)
-    val displayPhoneNumber: String = phoneNumber // Phone for display (may be "مخفی")
+    val displayPhoneNumber: String = phoneNumber, // Phone for display (may be "مخفی")
+    val institutionId: String? = null,
+    val institutionLogoUrl: String? = null,
+    val institutionName: String? = null
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -268,4 +281,96 @@ data class PollOption(
     val text: String,
     val voteCount: Int,
     val votePercentage: Float
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🏛️ Institution Domain Model
+// ═══════════════════════════════════════════════════════════════════════════════
+
+data class Institution(
+    val id: String,
+    val name: String,
+    val type: String,
+    val logoUrl: String?,
+    val description: String?,
+    val province: String?,
+    val city: String?,
+    val verificationStatus: String,
+    val channelId: String?,
+    val ownerId: String,
+    val isActive: Boolean,
+    val universities: List<String> = emptyList(),
+    val faculties: List<String> = emptyList(),
+    val specialties: List<String> = emptyList(),
+    val achievements: String?,
+    val associatedClubIds: List<String> = emptyList(),
+    val associatedFieldOfStudyIds: List<String> = emptyList(),
+    val associatedStudentOrgIds: List<String> = emptyList(),
+    val instructorIds: List<String> = emptyList(),
+    val adminIds: List<String> = emptyList(),
+    val followerCount: Int = 0,
+    val followingCount: Int = 0,
+    val courseCount: Int = 0,
+    val studentCount: Int = 0,
+    val totalTrainingHours: Int = 0,
+    val rating: Double = 0.0,
+    val honors: List<InstitutionHonor> = emptyList()
+)
+
+data class InstitutionHonor(
+    val id: String?,
+    val title: String,
+    val description: String?,
+    val imageUrl: String?,
+    val date: String?
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📚 Course Domain Model
+// ═══════════════════════════════════════════════════════════════════════════════
+
+data class CourseChapter(
+    val title: String,
+    val durationText: String
+)
+
+data class Course(
+    val id: String,
+    val title: String,
+    val slogan: String? = null,
+    val description: String?,
+    val posterUrl: String?,
+    val channelId: String?,
+    val groupId: String?,
+    val creatorId: String,
+    val organizerName: String?,
+    val organizerAvatarUrl: String?,
+    val organizerDescription: String? = null,
+    val scientificAssociationName: String?,
+    val institutionId: String? = null,
+    val fieldOfStudy: String? = null,
+    val educationLevel: String? = null,
+    val isFree: Boolean = true,
+    val priceRials: Long = 0,
+    val instructors: List<User> = emptyList(),
+    val admins: List<User> = emptyList(),
+    val durationMinutes: Int = 0,
+    val studentCount: Int = 0,
+    val enrolledCount: Int = 0,
+    val capacity: Int? = null,
+    val enrollmentLimit: Int? = null,
+    val rating: Double = 0.0,
+    val favoritesCount: Int = 0,
+    val status: String = "DRAFT",
+    val adminNote: String? = null,
+    val tags: List<String> = emptyList(),
+    val suitableFor: List<String> = emptyList(),
+    val collaborators: List<String> = emptyList(),
+    val discountPercentage: Int = 0,
+    val syllabusDuration: String? = null,
+    val chapters: List<CourseChapter> = emptyList(),
+    val startsAt: Instant,
+    val endsAt: Instant,
+    val isVerticalPoster: Boolean = false,
+    val createdAt: Instant
 )

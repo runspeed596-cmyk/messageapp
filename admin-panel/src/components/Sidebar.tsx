@@ -16,7 +16,8 @@ import {
     Megaphone,
     FolderOpen,
     Settings,
-    Building2
+    Building2,
+    ShieldPlus
 } from 'lucide-react';
 
 interface SidebarItemProps {
@@ -45,7 +46,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ to, icon, label }) => (
     </NavLink>
 );
 
-const CONTENT_ROUTES: string[] = ['/banners', '/universities', '/world-of-science-settings', '/entertainment', '/discounts', '/competitions'];
+const CONTENT_ROUTES: string[] = ['/banners', '/universities', '/world-of-science-settings', '/course-moderation', '/entertainment', '/discounts', '/competitions'];
 
 const Sidebar = () => {
     const { logout } = useAuth();
@@ -101,6 +102,7 @@ const Sidebar = () => {
                         <SidebarItem to="/banners" icon={<Image size={18} />} label="بنر تبلیغاتی" />
                         <SidebarItem to="/universities" icon={<Building2 size={18} />} label="جهان علم — بخش اصلی" />
                         <SidebarItem to="/world-of-science-settings" icon={<Settings size={18} />} label="جهان علم — تنظیمات" />
+                        <SidebarItem to="/course-moderation" icon={<BookOpen size={18} />} label="مدیریت دوره‌ها" />
                         <SidebarItem to="/entertainment" icon={<Film size={18} />} label="سرگرمی" />
                         <SidebarItem to="/discounts" icon={<Percent size={18} />} label="دنیای تخفیف" />
                         <SidebarItem to="/competitions" icon={<Trophy size={18} />} label="قله علم" />
@@ -113,6 +115,7 @@ const Sidebar = () => {
                 <SidebarItem to="/user-profiles" icon={<BookOpen size={20} />} label="پروفایل کاربران" />
                 <SidebarItem to="/official-channels-groups" icon={<Megaphone size={20} />} label="کانال‌ها و گروه‌ها" />
                 <SidebarItem to="/advertisements" icon={<Megaphone size={20} />} label="تبلیغات" />
+                <SidebarItem to="/admin-management" icon={<ShieldPlus size={20} />} label="مدیریت ادمین‌ها" />
             </nav>
 
             <div className="p-6 border-t border-white/5">

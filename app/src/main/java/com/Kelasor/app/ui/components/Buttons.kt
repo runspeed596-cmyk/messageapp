@@ -1,6 +1,7 @@
 package com.Kelasor.app.ui.components
 
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -38,6 +39,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -46,6 +48,7 @@ import com.Kelasor.app.ui.theme.GlassBorderLight
 import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.theme.MessageAppTypography
 import com.Kelasor.app.ui.theme.VazirFontFamily
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🔘 Premium Primary Button - Gradient Background with Glow
@@ -482,22 +485,39 @@ fun GlowingIconButton(
     val extendedColors = MessageAppTheme.extendedColors
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    
+    // Premium scale: deeper press + overshoot bounce back
     val scale by animateFloatAsState(
-        targetValue = if (isPressed && enabled) 0.9f else 1f,
+        targetValue = if (isPressed && enabled) 0.82f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMedium
         ),
         label = "glowingButtonScale"
     )
-    
+    // Icon rotation on press for dynamic feel
+    val rotation by animateFloatAsState(
+        targetValue = if (isPressed && enabled) -15f else 0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "glowingButtonRotation"
+    )
+    // Glow elevation pulse on press
+    val glowElevation by animateDpAsState(
+        targetValue = if (isPressed && enabled) 16.dp else if (enabled) 10.dp else 0.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "glowElevation"
+    )
     Box(
         modifier = modifier
             .size(48.dp)
             .scale(scale)
             .shadow(
-                elevation = if (enabled) 10.dp else 0.dp,
+                elevation = glowElevation,
                 shape = CardShapes.sendButton,
                 ambientColor = extendedColors.accentGlow,
                 spotColor = extendedColors.accentGlow
@@ -532,7 +552,9 @@ fun GlowingIconButton(
             imageVector = icon,
             contentDescription = contentDescription,
             tint = if (enabled) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-            modifier = Modifier.size(22.dp)
+            modifier = Modifier
+                .size(22.dp)
+                .graphicsLayer { rotationZ = rotation }
         )
     }
 }

@@ -1,0 +1,25 @@
+# IDE and project files
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Logs and databases
+*.log
+*.txt
+uploads/
+
+# Large media files (to avoid GitHub size limits)
+*.mp4
+*.mp3
+*.wav
+*.zip
+*.tar.gz
+*.exe
+*.msi

@@ -631,6 +631,11 @@ class ChannelService(
             totalCount = filteredChannels.size
         )
     }
+
+    fun getChannelsByUser(userId: UUID): List<ChannelDto> {
+        val channels = channelRepository.findByOwnerId(userId)
+        return channels.map { channelToDto(it, userId) }
+    }
     @Transactional
     fun createChannel(userId: UUID, request: CreateChannelRequest): ChannelDto? {
         val owner = userRepository.findById(userId).orElse(null) ?: return null
@@ -744,7 +749,11 @@ class ChannelService(
     fun unsubscribe(channelId: UUID, userId: UUID): Boolean {
         val channel = channelRepository.findById(channelId).orElse(null) ?: return false
         if (channel.owner?.id == userId) return false
-        channelSubscriberRepository.deleteByChannelIdAndUserId(channelId, userId)
+        val subscription = channelSubscriberRepository.findByChannelIdAndUserId(channelId, userId) ?: return false
+        if (subscription.isMandatory) {
+            throw IllegalStateException("امکان خروج از این کانال (اجباری) وجود ندارد")
+        }
+        channelSubscriberRepository.delete(subscription)
         return true
     }
     @Transactional(readOnly = true)

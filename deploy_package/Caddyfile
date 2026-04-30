@@ -1,0 +1,19 @@
+kelasorapp.ir {
+    # Serve React Admin Panel Static Files
+    root * /srv
+    encode gzip
+    file_server
+
+    # Fallback to index.html for React Router (Single Page Application)
+    try_files {path} /index.html
+
+    # Reverse Proxy for Spring Boot Backend API
+    handle /api/* {
+        reverse_proxy backend:8080
+    }
+    
+    # Reverse Proxy for WebSocket
+    handle /ws/* {
+        reverse_proxy backend:8080
+    }
+}

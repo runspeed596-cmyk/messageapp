@@ -1,13 +1,18 @@
 package com.Kelasor.app.ui.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.Kelasor.app.data.remote.api.ApiService
+import com.Kelasor.app.data.remote.dto.CreateChatRequest
 import com.Kelasor.app.data.remote.dto.UpdatePrivacyRequest
 import com.Kelasor.app.data.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -38,6 +43,31 @@ class SettingsViewModel @Inject constructor(
 ) : ViewModel() {
     private val _state = MutableStateFlow(SettingsState())
     val state: StateFlow<SettingsState> = _state.asStateFlow()
+    // Saved Messages navigation: emits the real chatId after resolving userId → self-chat
+    private val _savedMessagesChatId = MutableSharedFlow<String>()
+    val savedMessagesChatId: SharedFlow<String> = _savedMessagesChatId.asSharedFlow()
+    /**
+     * Resolve the saved messages (self-chat) real chatId by calling POST /api/chats.
+     * This finds or creates the self-chat and emits the actual chatId for navigation.
+     */
+    fun resolveSavedMessagesChatId(userId: String) {
+        viewModelScope.launch {
+            try {
+                val response = apiService.createChat(CreateChatRequest(participantId = userId))
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val realChatId: String = response.body()?.data?.id ?: userId
+                    Log.d("SettingsVM", "Resolved self-chat: userId=$userId → chatId=$realChatId")
+                    _savedMessagesChatId.emit(realChatId)
+                } else {
+                    Log.w("SettingsVM", "Failed to resolve self-chat, falling back to userId")
+                    _savedMessagesChatId.emit(userId)
+                }
+            } catch (e: Exception) {
+                Log.e("SettingsVM", "Error resolving self-chat", e)
+                _savedMessagesChatId.emit(userId)
+            }
+        }
+    }
     
     init {
         loadSettings()

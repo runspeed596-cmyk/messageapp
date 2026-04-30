@@ -1,9 +1,11 @@
 package com.Kelasor.app.ui.screens.auth
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +23,9 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -32,7 +38,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -49,24 +54,25 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.Kelasor.app.ui.components.PrimaryButton
 import com.Kelasor.app.ui.components.TextButton
+import com.Kelasor.app.ui.theme.AppAnimations
 import com.Kelasor.app.ui.theme.CardShapes
 import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.theme.VazirFontFamily
 import com.Kelasor.app.ui.viewmodel.AuthEvent
 import com.Kelasor.app.ui.viewmodel.AuthViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🔐 OTP Verification Screen
+//  🔐 Premium OTP Verification Screen — iOS-inspired staggered entrance
 // ═══════════════════════════════════════════════════════════════════════════════
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,13 +90,45 @@ fun OtpScreen(
     var resendTimer by remember { mutableIntStateOf(60) }
     var canResend by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
-    val isOtpComplete = otpValue.length == 6
+    val isOtpComplete: Boolean = otpValue.length == 6
+    // ── Staggered entrance animations ───────────────────────────────────────
+    val headerAlpha = remember { Animatable(0f) }
+    val headerSlideY = remember { Animatable(20f) }
+    val subtitleAlpha = remember { Animatable(0f) }
+    val subtitleSlideY = remember { Animatable(15f) }
+    val otpAlpha = remember { Animatable(0f) }
+    val otpSlideY = remember { Animatable(20f) }
+    val buttonAlpha = remember { Animatable(0f) }
+    val buttonSlideY = remember { Animatable(15f) }
+    val resendAlpha = remember { Animatable(0f) }
+    // ── Orchestrated entrance sequence ──────────────────────────────────────
+    LaunchedEffect(Unit) {
+        delay(100)
+        // Step 1: Header
+        launch { headerAlpha.animateTo(1f, tween(400, easing = AppAnimations.FluidEasing)) }
+        launch { headerSlideY.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 200f)) }
+        delay(150)
+        // Step 2: Subtitle
+        launch { subtitleAlpha.animateTo(1f, tween(400, easing = AppAnimations.FluidEasing)) }
+        launch { subtitleSlideY.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 200f)) }
+        delay(150)
+        // Step 3: OTP boxes
+        launch { otpAlpha.animateTo(1f, tween(400, easing = AppAnimations.FluidEasing)) }
+        launch { otpSlideY.animateTo(0f, spring(dampingRatio = 0.85f, stiffness = 180f)) }
+        delay(120)
+        // Step 4: Button
+        launch { buttonAlpha.animateTo(1f, tween(350, easing = AppAnimations.FluidEasing)) }
+        launch { buttonSlideY.animateTo(0f, spring(dampingRatio = 0.85f, stiffness = 180f)) }
+        delay(150)
+        // Step 5: Resend
+        resendAlpha.animateTo(1f, tween(500, easing = AppAnimations.FluidEasing))
+    }
     // Handle events
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
                 is AuthEvent.LoginSuccess -> {
-                    onNavigateToMain()
+                    if (event.isNewUser) onNavigateToUserInfo() else onNavigateToMain()
                 }
                 is AuthEvent.Error -> { /* Error already in state */ }
                 else -> {}
@@ -108,73 +146,82 @@ fun OtpScreen(
     }
     // Auto focus
     LaunchedEffect(Unit) {
+        delay(500)
         focusRequester.requestFocus()
     }
-    // Removing hardcoded RTL provider
-    // CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.background,
-                            extendedColors.gradientStart.copy(alpha = 0.05f),
-                            MaterialTheme.colorScheme.background
-                        )
-                    )
-                )
-                .imePadding()
-        ) {
-            // Top App Bar
-            TopAppBar(
-                title = {
-                    Text(
-                        text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.verify_number),
-                        fontFamily = VazirFontFamily,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.back)
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                )
-            )
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Spacer(modifier = Modifier.height(48.dp))
-                // Instructions
+    // ── UI Layout ───────────────────────────────────────────────────────────
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .imePadding()
+    ) {
+        // Top App Bar
+        TopAppBar(
+            title = {
                 Text(
-                    text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.verification_code_sent),
-                    style = MaterialTheme.typography.headlineSmall,
+                    text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.verify_number),
                     fontFamily = VazirFontFamily,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.enter_verification_code, phoneNumber),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontFamily = VazirFontFamily,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(48.dp))
-                // OTP Input
+            },
+            navigationIcon = {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.back),
+                        tint = extendedColors.accent
+                    )
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent
+            )
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 28.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(40.dp))
+            // ── Instructions ────────────────────────────────────────────────
+            Text(
+                text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.verification_code_sent),
+                style = MaterialTheme.typography.headlineSmall,
+                fontFamily = VazirFontFamily,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.graphicsLayer {
+                    alpha = headerAlpha.value
+                    translationY = headerSlideY.value
+                }
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.enter_verification_code, phoneNumber),
+                style = MaterialTheme.typography.bodyMedium,
+                fontFamily = VazirFontFamily,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.graphicsLayer {
+                    alpha = subtitleAlpha.value
+                    translationY = subtitleSlideY.value
+                }
+            )
+            Spacer(modifier = Modifier.height(48.dp))
+            // ── OTP Input ───────────────────────────────────────────────────
+            Box(
+                modifier = Modifier.graphicsLayer {
+                    alpha = otpAlpha.value
+                    translationY = otpSlideY.value
+                }
+            ) {
                 BasicTextField(
                     value = otpValue,
-                    onValueChange = { 
+                    onValueChange = {
                         if (it.length <= 6 && it.all { char -> char.isDigit() }) {
                             otpValue = it
                             viewModel.clearError()
@@ -188,35 +235,44 @@ fun OtpScreen(
                     cursorBrush = SolidColor(Color.Transparent),
                     decorationBox = {
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             repeat(6) { index ->
                                 OtpDigitBox(
                                     digit = otpValue.getOrNull(5 - index)?.toString() ?: "",
                                     isFocused = index == 5 - otpValue.length,
-                                    hasError = state.error != null
+                                    hasError = state.error != null,
+                                    index = index
                                 )
                             }
                         }
                     }
                 )
-                // Error message
-                AnimatedVisibility(
-                    visible = state.error != null,
-                    enter = fadeIn(),
-                    exit = fadeOut()
-                ) {
-                    Text(
-                        text = state.error ?: "",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontFamily = VazirFontFamily,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(top = 16.dp)
-                    )
+            }
+            // Error message
+            AnimatedVisibility(
+                visible = state.error != null,
+                enter = fadeIn(animationSpec = tween(200)),
+                exit = fadeOut(animationSpec = tween(150))
+            ) {
+                Text(
+                    text = state.error ?: "",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = VazirFontFamily,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(32.dp))
+            // ── Verify Button ───────────────────────────────────────────────
+            Box(
+                modifier = Modifier.graphicsLayer {
+                    alpha = buttonAlpha.value
+                    translationY = buttonSlideY.value
                 }
-                Spacer(modifier = Modifier.height(32.dp))
-                // Verify Button
+            ) {
                 PrimaryButton(
                     text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.verify),
                     onClick = {
@@ -228,8 +284,12 @@ fun OtpScreen(
                     isLoading = state.isLoading,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(24.dp))
-                // Resend section
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+            // ── Resend section ──────────────────────────────────────────────
+            Box(
+                modifier = Modifier.graphicsLayer { alpha = resendAlpha.value }
+            ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
@@ -248,50 +308,58 @@ fun OtpScreen(
                             text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.resend_code_timer, resendTimer),
                             style = MaterialTheme.typography.bodyMedium,
                             fontFamily = VazirFontFamily,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f)
                         )
                     }
                 }
             }
         }
-    // }
+    }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+//  🔢 Premium OTP Digit Box — Bouncy spring with accent glow
+// ═══════════════════════════════════════════════════════════════════════════════
+
 @Composable
-private fun OtpDigitBox(
+private fun RowScope.OtpDigitBox(
     digit: String,
     isFocused: Boolean,
-    hasError: Boolean
+    hasError: Boolean,
+    index: Int
 ) {
     val extendedColors = MessageAppTheme.extendedColors
+    // Bouncy scale when digit is entered
     val scale by animateFloatAsState(
-        targetValue = if (digit.isNotEmpty()) 1.1f else 1f,
+        targetValue = if (digit.isNotEmpty()) 1.08f else 1f,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
+            dampingRatio = 0.5f,
             stiffness = Spring.StiffnessMedium
         ),
-        label = "digitScale"
+        label = "digitScale_$index"
     )
-    val borderColor = when {
+    // Animated border color
+    val borderColor: Color = when {
         hasError -> MaterialTheme.colorScheme.error
         isFocused -> extendedColors.accent
-        digit.isNotEmpty() -> extendedColors.gradientStart
-        else -> MaterialTheme.colorScheme.outline
+        digit.isNotEmpty() -> extendedColors.accent.copy(alpha = 0.6f)
+        else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+    }
+    // Background color
+    val backgroundColor: Color = when {
+        digit.isNotEmpty() -> extendedColors.accent.copy(alpha = 0.08f)
+        isFocused -> extendedColors.accent.copy(alpha = 0.04f)
+        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     }
     Box(
         modifier = Modifier
-            .size(45.dp)
+            .weight(1f)
+            .aspectRatio(1f)
             .scale(scale)
             .clip(CardShapes.button)
-            .background(
-                if (digit.isNotEmpty()) {
-                    extendedColors.gradientStart.copy(alpha = 0.1f)
-                } else {
-                    MaterialTheme.colorScheme.surface
-                }
-            )
+            .background(backgroundColor)
             .border(
-                width = if (isFocused) 2.dp else 1.dp,
+                width = if (isFocused || digit.isNotEmpty()) 2.dp else 1.dp,
                 color = borderColor,
                 shape = CardShapes.button
             ),
@@ -305,8 +373,16 @@ private fun OtpDigitBox(
             color = if (hasError) {
                 MaterialTheme.colorScheme.error
             } else {
-                extendedColors.gradientStart
+                extendedColors.accent
             }
         )
+        // Cursor-like blinking indicator when focused and empty
+        if (isFocused && digit.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .size(width = 2.dp, height = 24.dp)
+                    .background(extendedColors.accent.copy(alpha = 0.6f))
+            )
+        }
     }
 }

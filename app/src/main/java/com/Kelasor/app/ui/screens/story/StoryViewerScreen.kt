@@ -34,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -118,6 +119,25 @@ fun StoryViewerScreen(
     val replyFocusRequester = remember { FocusRequester() }
     val context = LocalContext.current
 
+    // ── Single shared ExoPlayer for ALL video stories ──
+    // Created once, reused across story transitions, released only when viewer closes.
+    val sharedExoPlayer = remember {
+        ExoPlayer.Builder(context).build().apply {
+            repeatMode = androidx.media3.common.Player.REPEAT_MODE_OFF
+            playWhenReady = false
+            volume = 0f
+        }
+    }
+    // Release the single player when the entire viewer leaves composition
+    DisposableEffect(Unit) {
+        onDispose {
+            sharedExoPlayer.stop()
+            sharedExoPlayer.clearMediaItems()
+            sharedExoPlayer.release()
+            android.util.Log.d("StoryViewer", "🛑 Released shared ExoPlayer on viewer close")
+        }
+    }
+
     // Listen for reply sent events
     LaunchedEffect(Unit) {
         viewModel.replySentEvent.collect { success ->
@@ -144,16 +164,13 @@ fun StoryViewerScreen(
     
     LaunchedEffect(currentStory.id, isPaused, showViewersSheet, isReplyFocused) {
         if (isPaused || showViewersSheet || isReplyFocused) return@LaunchedEffect
-        
         val durationMs = currentStory.durationSeconds * 1000L
         val updateInterval = 50L
         val step = updateInterval.toFloat() / durationMs
-        
         while (progress < 1f) {
             delay(updateInterval)
             progress += step
         }
-        
         // Auto-advance
         if (currentStoryIndex < storyUser.stories.lastIndex) {
             currentStoryIndex++
@@ -192,13 +209,8 @@ fun StoryViewerScreen(
                     },
                     onTap = { offset ->
                         val screenWidth = size.width
-                        // REVERSED LOGIC FOR RTL:
-                        // Left side (start) -> Next
-                        // Right side (end) -> Previous
-                        // (Usually Right is Next in LTR, so we swap)
-                        
                         if (offset.x > screenWidth * 2 / 3) {
-                             // Right side -> Previous
+                            // Right side -> Previous (RTL)
                             if (currentStoryIndex > 0) {
                                 currentStoryIndex--
                             }
@@ -214,10 +226,11 @@ fun StoryViewerScreen(
                 )
             }
     ) {
-        // CONTENT
+        // CONTENT — pass the shared player
         StoryContent(
             story = currentStory,
-            isPaused = isPaused
+            isPaused = isPaused,
+            sharedExoPlayer = sharedExoPlayer
         )
         
         // Dark gradient overlay at top so icons/progress bars are visible on white stories
@@ -251,7 +264,7 @@ fun StoryViewerScreen(
                     .padding(horizontal = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                storyUser.stories.forEachIndexed { index, story ->
+                storyUser.stories.forEachIndexed { index, _ ->
                     val barProgress = when {
                         index < currentStoryIndex -> 1f // Completed
                         index == currentStoryIndex -> progress // Current
@@ -295,9 +308,7 @@ fun StoryViewerScreen(
                         .size(40.dp)
                         .clip(CircleShape)
                 )
-                
                 Spacer(modifier = Modifier.width(12.dp))
-                
                 Column {
                     Text(
                         text = storyUser.displayName,
@@ -310,9 +321,7 @@ fun StoryViewerScreen(
                         color = Color.White.copy(alpha = 0.7f)
                     )
                 }
-                
                 Spacer(modifier = Modifier.weight(1f))
-                
                 // Delete Button (Only for own stories)
                 if (storyUser.isCurrentUser) {
                     IconButton(onClick = { 
@@ -335,7 +344,6 @@ fun StoryViewerScreen(
                         }
                     }
                 }
-                
                 IconButton(onClick = onClose) {
                     Box(
                         modifier = Modifier
@@ -496,13 +504,11 @@ fun StoryViewerScreen(
                 sheetState = androidx.compose.material3.rememberModalBottomSheetState()
             ) {
                 val viewers by viewModel.viewersState.collectAsState()
-                
                 Column(
                     modifier = Modifier.padding(16.dp).fillMaxWidth()
                 ) {
                     Text("بازدیدکنندگان", style = MessageAppTypography.chatName)
                     Spacer(modifier = Modifier.height(16.dp))
-                    
                     if (viewers.isEmpty()) {
                         Text("هنوز کسی ندیده است.", style = MessageAppTypography.body, color = Color.Gray)
                     } else {
@@ -556,19 +562,30 @@ fun StoryViewerScreen(
     }
 }
 
+/**
+ * Renders a single story's content (image or video).
+ * For video stories, uses the shared ExoPlayer passed from the viewer —
+ * guaranteeing only ONE player instance ever exists, eliminating audio overlap.
+ */
 @Composable
 fun StoryContent(
     story: Story,
-    isPaused: Boolean
+    isPaused: Boolean,
+    sharedExoPlayer: ExoPlayer
 ) {
     val context = LocalContext.current
-    
-    val isVideo = story.type == StoryType.VIDEO || 
+    val isVideo = story.type == StoryType.VIDEO ||
                   story.mediaUrl.endsWith(".mp4", ignoreCase = true) ||
                   story.mediaUrl.endsWith(".mov", ignoreCase = true) ||
                   story.mediaUrl.endsWith(".mkv", ignoreCase = true)
-
     if (!isVideo) {
+        // ── Image story: stop any lingering video audio immediately ──
+        LaunchedEffect(story.id) {
+            sharedExoPlayer.stop()
+            sharedExoPlayer.clearMediaItems()
+            sharedExoPlayer.volume = 0f
+            android.util.Log.d("StoryViewer", "🖼️ Image story — stopped shared player")
+        }
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(story.mediaUrl)
@@ -585,36 +602,74 @@ fun StoryContent(
             contentDescription = null,
             modifier = Modifier.fillMaxSize().background(Color.DarkGray),
             contentScale = ContentScale.Fit,
-            error = androidx.compose.ui.graphics.painter.ColorPainter(Color.Red) // Show RED if error
+            error = androidx.compose.ui.graphics.painter.ColorPainter(Color.Red)
         )
     } else {
-        // Video Player — keyed on story.id to prevent echo/reuse across stories
-        val exoPlayer = remember(story.id) {
-            ExoPlayer.Builder(context).build().apply {
-                val mediaItem = MediaItem.fromUri(story.mediaUrl)
-                setMediaItem(mediaItem)
-                repeatMode = androidx.media3.common.Player.REPEAT_MODE_OFF
-                prepare()
-                playWhenReady = true
+        // ── Video story: reuse shared ExoPlayer ──
+        var isVideoRendering by remember(story.id) { mutableStateOf(false) }
+        var isBuffering by remember(story.id) { mutableStateOf(true) }
+        // Attach listener for this story — removed when story changes
+        DisposableEffect(story.id) {
+            val listener = object : androidx.media3.common.Player.Listener {
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    isBuffering = playbackState == androidx.media3.common.Player.STATE_BUFFERING
+                }
+                override fun onRenderedFirstFrame() {
+                    if (!isVideoRendering) {
+                        isVideoRendering = true
+                        sharedExoPlayer.volume = 1f
+                        android.util.Log.d("StoryViewer", "✅ First frame rendered — audio unmuted for story ${story.id}")
+                    }
+                }
+            }
+            sharedExoPlayer.addListener(listener)
+            onDispose {
+                sharedExoPlayer.removeListener(listener)
             }
         }
+        // Load new media into the shared player — stop previous first
+        LaunchedEffect(story.id) {
+            sharedExoPlayer.stop()
+            sharedExoPlayer.clearMediaItems()
+            sharedExoPlayer.volume = 0f
+            isVideoRendering = false
+            isBuffering = true
+            val mediaItem = MediaItem.fromUri(story.mediaUrl)
+            sharedExoPlayer.setMediaItem(mediaItem)
+            sharedExoPlayer.prepare()
+            sharedExoPlayer.playWhenReady = true
+            android.util.Log.d("StoryViewer", "▶️ Prepared + playing story ${story.id}")
+        }
         // Handle Pause/Resume
-        LaunchedEffect(isPaused) {
-            if (isPaused) exoPlayer.pause() else exoPlayer.play()
+        LaunchedEffect(isPaused, isVideoRendering) {
+            if (!isVideoRendering) return@LaunchedEffect
+            if (isPaused) sharedExoPlayer.pause() else sharedExoPlayer.play()
         }
-        // Clean up when story changes or composable leaves
-        DisposableEffect(story.id) {
-            onDispose { exoPlayer.release() }
-        }
-        AndroidView(
-            factory = {
-                PlayerView(context).apply {
-                    player = exoPlayer
-                    useController = false
-                    resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+        Box(modifier = Modifier.fillMaxSize()) {
+            AndroidView(
+                factory = {
+                    PlayerView(context).apply {
+                        useController = false
+                        resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    }
+                },
+                update = { playerView ->
+                    playerView.player = sharedExoPlayer
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+            if (!isVideoRendering || isBuffering) {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        color = Color.White,
+                        strokeWidth = 3.dp,
+                        modifier = Modifier.size(40.dp)
+                    )
                 }
-            },
-            modifier = Modifier.fillMaxSize()
-        )
+            }
+        }
     }
 }

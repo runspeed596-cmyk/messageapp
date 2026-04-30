@@ -177,7 +177,32 @@ fun LocationPickerDialog(
                             MapView(ctx).apply {
                                 mapboxMap = this.getMapboxMap()
                                 
-                                getMapboxMap().loadStyleUri(Style.MAPBOX_STREETS) {
+                                getMapboxMap().loadStyleUri(Style.MAPBOX_STREETS) { loadedStyle ->
+                                    // Set Persian (Farsi) labels on symbol layers (Mapbox v10)
+                                    try {
+                                        val faExpr = com.mapbox.bindgen.Value(listOf(
+                                            com.mapbox.bindgen.Value("coalesce"),
+                                            com.mapbox.bindgen.Value(listOf(
+                                                com.mapbox.bindgen.Value("get"),
+                                                com.mapbox.bindgen.Value("name:fa")
+                                            )),
+                                            com.mapbox.bindgen.Value(listOf(
+                                                com.mapbox.bindgen.Value("get"),
+                                                com.mapbox.bindgen.Value("name:ar")
+                                            )),
+                                            com.mapbox.bindgen.Value(listOf(
+                                                com.mapbox.bindgen.Value("get"),
+                                                com.mapbox.bindgen.Value("name")
+                                            ))
+                                        ))
+                                        loadedStyle.styleLayers.forEach { layerInfo ->
+                                            if (layerInfo.type == "symbol") {
+                                                loadedStyle.setStyleLayerProperty(layerInfo.id, "text-field", faExpr)
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        android.util.Log.w("LocationPicker", "Could not set Persian locale: ${e.message}")
+                                    }
                                     // Default to Tehran
                                     getMapboxMap().setCamera(
                                         CameraOptions.Builder()

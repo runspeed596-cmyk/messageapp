@@ -120,6 +120,19 @@ data class WsChannelSubscriberEvent(
     val isAdmin: Boolean
 )
 
+/**
+ * DTO for real-time reaction updates on messages.
+ * Broadcast to all chat participants when a reaction is added/changed/removed.
+ */
+data class WsReactionEvent(
+    val messageId: UUID,
+    val chatId: UUID,
+    val userId: UUID,
+    val userName: String,
+    val reaction: String?,  // null = reaction removed
+    val timestamp: Long = System.currentTimeMillis()
+)
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🔌 WebSocket Message Handler
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -424,6 +437,25 @@ class WebSocketMessageHandler(
             )
         }
         logger.info("✅ Story deletion broadcast complete")
+    }
+    
+    /**
+     * Broadcast a reaction update to all participants in a chat.
+     * Enables real-time reaction display on all devices.
+     */
+    fun broadcastReactionUpdate(chatId: UUID, event: WsReactionEvent, recipientIds: List<UUID>) {
+        logger.info("💬 Broadcasting reaction update: messageId=${event.messageId} in chat $chatId to ${recipientIds.size} recipients")
+        val payload = mapOf(
+            "type" to "REACTION_UPDATE",
+            "data" to event
+        )
+        recipientIds.forEach { recipientId ->
+            messagingTemplate.convertAndSend(
+                "/topic/user/$recipientId/messages",
+                payload
+            )
+        }
+        logger.info("✅ Reaction update broadcast complete")
     }
 }
 

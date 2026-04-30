@@ -64,7 +64,7 @@ sealed class BottomNavItem(
     )
 
     data object Elm : BottomNavItem(
-        route = Routes.Elm.route,
+        route = Routes.MosbatElm.route,
         title = "علم+",
         selectedIcon = R.drawable.ic_science,
         unselectedIcon = R.drawable.ic_science
@@ -101,7 +101,6 @@ fun BottomNavBar(
     modifier: Modifier = Modifier
 ) {
     val extendedColors = MessageAppTheme.extendedColors
-    val context = androidx.compose.ui.platform.LocalContext.current
     
     // Items in Visual Left-to-Right order: Bazaar, Elm, Home, Messaging, Treasure
     val items = listOf(
@@ -180,11 +179,6 @@ fun BottomNavBar(
                             item = item,
                             isSelected = selected,
                             onClick = { 
-                                // Intercept Elm tab — show "under development" toast
-                                if (item is BottomNavItem.Elm) {
-                                    android.widget.Toast.makeText(context, "در حال توسعه", android.widget.Toast.LENGTH_SHORT).show()
-                                    return@AnimatedBottomNavItem
-                                }
                                 // Direct click handling
                                 if (item is BottomNavItem.Messaging && !selected) {
                                      onItemClick(Routes.Messaging.route)

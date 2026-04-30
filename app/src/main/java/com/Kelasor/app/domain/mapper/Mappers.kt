@@ -44,6 +44,15 @@ fun UserDto.toDomain(): User {
         lastSeen = lastSeen?.let { parseInstant(it) },
         contactName = null,
         
+        firstName = firstName,
+        lastName = lastName,
+        nationalCode = nationalCode,
+        educationalRole = educationalRole,
+        gradeLevel = gradeLevel,
+        major = major,
+        faculty = faculty,
+        birthDate = birthDate,
+        
         university = university,
         fieldOfStudy = fieldOfStudy,
         education = education,
@@ -66,7 +75,10 @@ fun UserDto.toDomain(): User {
         phoneVisibility = phoneVis,
         displayAvatarUrl = avatarUrl,
         displayOnlineStatus = isOnline ?: false,
-        displayPhoneNumber = displayPhone
+        displayPhoneNumber = displayPhone,
+        institutionId = institutionId,
+        institutionLogoUrl = institutionLogoUrl,
+        institutionName = institutionName
     )
 }
 
@@ -82,6 +94,15 @@ fun UserDto.toEntity(isCurrentUser: Boolean = false, contactName: String? = null
     contactName = contactName,
     isCurrentUser = isCurrentUser,
     isContact = isContact ?: false, // Map security field
+    
+    firstName = firstName,
+    lastName = lastName,
+    nationalCode = nationalCode,
+    educationalRole = educationalRole,
+    gradeLevel = gradeLevel,
+    major = major,
+    faculty = faculty,
+    birthDate = birthDate,
     
     university = university,
     fieldOfStudy = fieldOfStudy,
@@ -101,7 +122,10 @@ fun UserDto.toEntity(isCurrentUser: Boolean = false, contactName: String? = null
     
     profileVisibility = profileVisibility ?: "EVERYONE",
     onlineVisibility = onlineVisibility ?: "EVERYONE",
-    phoneVisibility = phoneVisibility ?: "CONTACTS"
+    phoneVisibility = phoneVisibility ?: "CONTACTS",
+    institutionId = institutionId,
+    institutionLogoUrl = institutionLogoUrl,
+    institutionName = institutionName
 )
 
 fun UserEntity.toDomain(): User {
@@ -132,6 +156,15 @@ fun UserEntity.toDomain(): User {
         lastSeen = lastSeenAt?.let { Instant.ofEpochMilli(it) },
         contactName = contactName,
         
+        firstName = firstName,
+        lastName = lastName,
+        nationalCode = nationalCode,
+        educationalRole = educationalRole,
+        gradeLevel = gradeLevel,
+        major = major,
+        faculty = faculty,
+        birthDate = birthDate,
+        
         university = university,
         fieldOfStudy = fieldOfStudy,
         education = education,
@@ -154,7 +187,10 @@ fun UserEntity.toDomain(): User {
         phoneVisibility = phoneVisibility,
         displayAvatarUrl = avatarUrl,
         displayOnlineStatus = isOnline,
-        displayPhoneNumber = displayPhone
+        displayPhoneNumber = displayPhone,
+        institutionId = institutionId,
+        institutionLogoUrl = institutionLogoUrl,
+        institutionName = institutionName
     )
 }
 
@@ -752,4 +788,85 @@ fun PollOptionDto.toDomain(): PollOption = PollOption(
     text = text,
     voteCount = voteCount,
     votePercentage = votePercentage
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🏛️ Institution Mappers
+// ═══════════════════════════════════════════════════════════════════════════════
+
+fun InstitutionDto.toDomain(): Institution = Institution(
+    id = id,
+    name = name,
+    type = type,
+    logoUrl = logoUrl,
+    description = description,
+    province = province,
+    city = city,
+    verificationStatus = verificationStatus,
+    channelId = channelId,
+    ownerId = ownerId,
+    isActive = isActive,
+    universities = universities ?: emptyList(),
+    faculties = faculties ?: emptyList(),
+    specialties = specialties ?: emptyList(),
+    achievements = achievements,
+    instructorIds = instructorIds ?: emptyList(),
+    adminIds = adminIds ?: emptyList(),
+    associatedClubIds = associatedClubIds ?: emptyList(),
+    associatedFieldOfStudyIds = associatedFieldOfStudyIds ?: emptyList(),
+    associatedStudentOrgIds = associatedStudentOrgIds ?: emptyList(),
+    followerCount = followerCount,
+    followingCount = followingCount,
+    courseCount = courseCount,
+    studentCount = studentCount,
+    totalTrainingHours = totalTrainingHours,
+    rating = rating,
+    honors = honors.map { it.toDomain() }
+)
+
+fun InstitutionHonorDto.toDomain(): InstitutionHonor = InstitutionHonor(
+    id = id,
+    title = title,
+    description = description,
+    imageUrl = imageUrl,
+    date = date
+)
+
+fun CourseDto.toDomain(): Course = Course(
+    id = id,
+    title = title,
+    slogan = slogan,
+    description = description,
+    posterUrl = coverImageUrl,
+    channelId = channelId,
+    groupId = groupId,
+    creatorId = organizerId,
+    organizerName = organizerName,
+    organizerAvatarUrl = organizerAvatarUrl,
+    organizerDescription = organizerDescription,
+    scientificAssociationName = scientificAssociationName,
+    institutionId = institutionId,
+    fieldOfStudy = fieldOfStudy,
+    educationLevel = educationLevel,
+    isFree = priceRials == 0L,
+    priceRials = priceRials,
+    instructors = teachers.map { it.toDomain() },
+    admins = admins.map { it.toDomain() },
+    durationMinutes = 0,
+    studentCount = enrolledCount.toInt(),
+    enrolledCount = enrolledCount.toInt(),
+    capacity = capacity,
+    enrollmentLimit = enrollmentLimit,
+    rating = 0.0,
+    favoritesCount = favoritesCount,
+    status = status,
+    adminNote = adminNote,
+    tags = tags,
+    suitableFor = suitableFor,
+    chapters = chapters.map { CourseChapter(it.title, it.durationText) },
+    startsAt = parseInstant(startsAt) ?: Instant.now(),
+    endsAt = parseInstant(endsAt) ?: Instant.now(),
+    isVerticalPoster = isVerticalPoster,
+    discountPercentage = discountPercentage ?: 0,
+    createdAt = parseInstant(createdAt) ?: Instant.now()
 )

@@ -1,409 +1,267 @@
 # MessageApp Deployment Guide
 
-Complete guide to deploy the MessageApp API and Admin Panel on Ubuntu 22.04 with Docker.
-
-## Table of Contents
-1. [Prerequisites](#1-prerequisites)
-2. [Server Setup](#2-server-setup)
-3. [Project Deployment](#3-project-deployment)
-4. [Android App Configuration](#4-android-app-configuration)
-5. [Verification](#5-verification)
-6. [Management Commands](#6-management-commands)
-7. [Troubleshooting](#7-troubleshooting)
+Deploy API + Admin Panel on **194.5.175.30** with domain **kelasorapp.ir**
 
 ---
 
-## 0. Prepare and Push Code to Git
+## 0. DNS Setup (Domain Provider)
 
-Before you can clone the project on your server, you need to have your code in a Git repository (GitHub/GitLab/Gitea).
+Set these DNS records at your domain registrar (nic.ir → Cloudflare):
 
-### 0.1 Create Repository
-Create a new **Private** repository on GitHub or your preferred Git provider.
-
-### 0.2 Initialize and Push (on Local Machine)
-
-Run these commands in your project root folder on your **Local Development Machine**:
-
-```bash
-# Initialize git if not already done
-git init
-
-# Add all files
-git add .
-
-# Commit changes
-git commit -m "Initial commit for deployment"
-
-# Rename branch to main (if needed)
-git branch -M main
-
-# Add your remote repository URL
-git remote add origin YOUR_REPOSITORY_URL
-
-# Push to the server
-git push -u origin main
-```
+| Type | Name | Value          |
+|------|------|----------------|
+| A    | @    | 194.5.175.30   |
+| A    | www  | 194.5.175.30   |
 
 ---
 
-## 1. Prerequisites
+## 1. Server Setup
 
-### Server Requirements
-- Ubuntu 22.04 LTS (64-bit)
-- Minimum 2GB RAM
-- Minimum 20GB disk space
-- Open ports: 80 (HTTP), optionally 443 (HTTPS)
-
-### Required Software
-- Docker Engine 24+
-- Docker Compose v2+
-- Git
-
----
-
-## 2. Server Setup
-
-### 2.1 Connect to Server
+### 1.1 Connect & Update
 
 ```bash
-ssh root@YOUR_SERVER_IP
-```
-
-### 2.2 Update System
-
-```bash
+ssh root@194.5.175.30
 apt update && apt upgrade -y
 ```
 
-### 2.3 Install Docker
+### 1.2 Install Docker
 
 ```bash
-# Install Docker
-
 curl -fsSL https://get.docker.com -o get-docker.sh
 sh get-docker.sh
-
-# Start Docker
-systemctl enable docker
-systemctl start docker
-
-# Verify installation
-docker --version
-docker compose version
+systemctl enable docker && systemctl start docker
+docker --version && docker compose version
 ```
 
-### 2.4 Install Git
+### 1.3 Install Utilities
 
 ```bash
-apt install git -y
+apt install unzip ufw fail2ban -y
 ```
 
 ---
 
-## 3. Project Deployment
+## 2. Security
 
-### 3.1 Clone Repository
+### 2.1 Firewall
+
+```bash
+ufw allow 22/tcp
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw enable
+ufw status
+```
+
+### 2.2 Fail2Ban
+
+```bash
+cat > /etc/fail2ban/jail.local << 'EOF'
+[DEFAULT]
+bantime = 3600
+findtime = 600
+maxretry = 3
+
+[sshd]
+enabled = true
+port = 22
+logpath = /var/log/auth.log
+maxretry = 3
+EOF
+
+systemctl enable fail2ban && systemctl restart fail2ban
+```
+
+---
+
+## 3. Deploy Code (ZIP + SCP)
+
+> GitHub is blocked on Iranian servers. Use ZIP archive method.
+
+### 3.1 Archive (Windows PowerShell)
+
+```powershell
+cd E:\Learn\programming\ponisha\MessageApp2
+Compress-Archive -Path "SpringBoot","admin-panel","nginx","docker-compose.yml",".env.example",".gitignore" -DestinationPath "$env:USERPROFILE\Desktop\messageapp.zip" -Force
+```
+
+### 3.2 Upload to Server (Windows PowerShell)
+
+```powershell
+scp "$env:USERPROFILE\Desktop\messageapp.zip" root@194.5.175.30:/opt/
+```
+
+### 3.3 Extract on Server
 
 ```bash
 cd /opt
-git clone YOUR_REPOSITORY_URL messageapp
+mkdir -p messageapp
+unzip messageapp.zip -d messageapp
 cd messageapp
 ```
 
-### 3.2 Configure Environment
+### 3.4 Configure Environment
 
 ```bash
-# Copy environment template
 cp .env.example .env
-
-# Edit configuration
 nano .env
 ```
 
-**Update these values in `.env`:**
-
+Set these values:
 ```env
-# Replace with your server's public IP or domain
-APP_BASE_URL=http://YOUR_SERVER_IP
-
-# Set a secure database password
-POSTGRES_PASSWORD=YOUR_SECURE_PASSWORD
-
-# Generate a secure JWT secret (optional, default works for testing)
-# JWT_SECRET=your_generated_secret
+APP_BASE_URL=https://kelasorapp.ir
+POSTGRES_PASSWORD=YOUR_STRONG_PASSWORD
+JWT_SECRET=YOUR_JWT_SECRET
 ```
 
-### 3.3 Build and Start Services
+Generate secrets:
+```bash
+openssl rand -base64 32   # for password
+openssl rand -base64 64   # for JWT secret
+```
+
+---
+
+## 4. First Deploy (HTTP Only)
+
+Use HTTP-only nginx config first to get SSL certificate:
 
 ```bash
-# Build all images and start containers
+cd /opt/messageapp
+cp nginx/nginx-http-only.conf nginx/nginx.conf
 docker compose up -d --build
-```
-
-This will:
-1. Build the Spring Boot API image
-2. Build the Admin Panel image
-3. Start PostgreSQL database
-4. Start all services with Nginx reverse proxy
-
-### 3.4 Check Status
-
-```bash
-# View running containers
 docker compose ps
-
-# View logs
-docker compose logs -f
 ```
 
-**Expected output:**
-```
-NAME                COMMAND                  SERVICE   STATUS
-messageapp-db       "docker-entrypoint.s…"   postgres  Up (healthy)
-messageapp-api      "java -jar app.jar"      api       Up (healthy)
-messageapp-admin    "/docker-entrypoint.…"   admin     Up (healthy)
-messageapp-nginx    "/docker-entrypoint.…"   nginx     Up (healthy)
+### Verify
+
+```bash
+curl http://194.5.175.30/api/health
+curl http://194.5.175.30/ca978112ca/
 ```
 
 ---
 
-## 4. Android App Configuration
+## 5. SSL Certificate
 
-Before building the Android APK, update the server URLs in these files:
+### Option A: Cloudflare Proxy (Recommended)
 
-### 4.1 Constants.kt
-**File:** `app/src/main/java/com/Kelasor/app/util/Constants.kt`
+If using Cloudflare with **Proxied** (orange cloud ☁️):
+- SSL is handled by Cloudflare automatically
+- Keep `nginx-http-only.conf` — no need for Certbot
+- In Cloudflare: SSL/TLS → **Full (Strict)**
 
-```kotlin
-object Constants {
-    const val BASE_URL = "http://YOUR_SERVER_IP/"
-}
-```
-
-### 4.2 NetworkModule.kt
-**File:** `app/src/main/java/com/Kelasor/app/di/NetworkModule.kt`
-
-```kotlin
-private const val BASE_URL = "http://YOUR_SERVER_IP/"
-```
-
-### 4.3 WebSocketManager.kt
-**File:** `app/src/main/java/com/Kelasor/app/data/websocket/WebSocketManager.kt`
-
-```kotlin
-private const val WS_BASE_URL = "ws://YOUR_SERVER_IP/ws"
-```
-
-### 4.4 StoryMappers.kt
-**File:** `app/src/main/java/com/Kelasor/app/data/mapper/StoryMappers.kt`
-
-```kotlin
-private const val BASE_URL = "http://YOUR_SERVER_IP"
-```
-
-### 4.5 Build APK
-
-After updating all URLs, build the release APK:
+### Option B: Let's Encrypt (without Cloudflare proxy)
 
 ```bash
-# On your development machine
-./gradlew assembleRelease
-```
+docker compose stop nginx
 
----
+docker run --rm -p 80:80 -p 443:443 \
+  -v messageapp_certbot_etc:/etc/letsencrypt \
+  -v messageapp_certbot_var:/var/lib/letsencrypt \
+  certbot/certbot certonly \
+  --standalone \
+  -d kelasorapp.ir \
+  -d www.kelasorapp.ir \
+  --email your@email.com \
+  --agree-tos --no-eff-email
 
-## 5. Verification
-
-### 5.1 Check Services
-
-```bash
-# API Health Check
-curl http://YOUR_SERVER_IP/api/health
-
-# Admin Panel
-curl -I http://YOUR_SERVER_IP/admin/
-```
-
-### 5.2 Access Points
-
-| Service | URL |
-|---------|-----|
-| Admin Panel | http://YOUR_SERVER_IP/admin/ |
-| API Base | http://YOUR_SERVER_IP/api/ |
-| Swagger UI | http://YOUR_SERVER_IP/swagger-ui.html |
-| WebSocket | ws://YOUR_SERVER_IP/ws |
-
-### 5.3 Database Verification
-
-```bash
-docker compose exec postgres psql -U postgres -d messageapp -c "SELECT 1;"
-```
-
----
-
-## 6. Management Commands
-
-### Start Services
-```bash
+# Switch to SSL nginx config
+cp nginx/nginx-ssl.conf nginx/nginx.conf
 docker compose up -d
 ```
 
-### Stop Services
+Auto-renewal cron:
 ```bash
-docker compose down
+crontab -e
+# Add:
+0 3 * * * cd /opt/messageapp && docker compose run --rm certbot renew && docker compose exec nginx nginx -s reload
 ```
 
-### Restart Services
-```bash
-docker compose restart
+---
+
+## 6. Update Deployment
+
+### On Windows:
+
+```powershell
+cd E:\Learn\programming\ponisha\MessageApp2
+Remove-Item "$env:USERPROFILE\Desktop\messageapp.zip" -ErrorAction SilentlyContinue
+Compress-Archive -Path "SpringBoot","admin-panel","nginx","docker-compose.yml",".env.example",".gitignore" -DestinationPath "$env:USERPROFILE\Desktop\messageapp.zip" -Force
+scp "$env:USERPROFILE\Desktop\messageapp.zip" root@194.5.175.30:/opt/
 ```
 
-### View Logs
-```bash
-# All services
-docker compose logs -f
+### On Server:
 
-# Specific service
-docker compose logs -f api
-docker compose logs -f admin
-docker compose logs -f postgres
-docker compose logs -f nginx
-```
-
-### Rebuild After Code Changes
 ```bash
+cd /opt
+rm -rf messageapp/SpringBoot messageapp/admin-panel messageapp/nginx messageapp/docker-compose.yml
+unzip -o messageapp.zip -d messageapp
+cd messageapp
 docker compose up -d --build
 ```
 
-### Database Backup
-```bash
-docker compose exec postgres pg_dump -U postgres messageapp > backup_$(date +%Y%m%d).sql
-```
+> `.env` is preserved since it's not in the zip.
 
-### Database Restore
+---
+
+## 7. Access Points
+
+| Service       | URL                                     |
+|---------------|-----------------------------------------|
+| Admin Panel   | https://kelasorapp.ir/ca978112ca/       |
+| API           | https://kelasorapp.ir/api/              |
+| WebSocket     | wss://kelasorapp.ir/ws/                 |
+| Swagger       | https://kelasorapp.ir/swagger-ui.html   |
+
+---
+
+## 8. Android App URLs
+
+Update these files before building APK:
+
+| File | Value |
+|------|-------|
+| `Constants.kt` | `BASE_URL = "https://kelasorapp.ir/"` |
+| `NetworkModule.kt` | `BASE_URL = "https://kelasorapp.ir/"` |
+| `WebSocketManager.kt` | `WS_BASE_URL = "wss://kelasorapp.ir/ws"` |
+| `StoryMappers.kt` | `BASE_URL = "https://kelasorapp.ir"` |
+
+---
+
+## 9. Management Commands
+
 ```bash
+docker compose logs -f              # All logs
+docker compose logs -f api           # API logs
+docker compose restart               # Restart all
+docker compose ps                    # Status
+
+# Database backup
+docker compose exec postgres pg_dump -U postgres messageapp > backup_$(date +%Y%m%d).sql
+
+# Database restore
 cat backup.sql | docker compose exec -T postgres psql -U postgres -d messageapp
 ```
 
-### Clean Up
-```bash
-# Remove containers and networks
-docker compose down
-
-# Remove containers, networks, and volumes (DELETES DATA!)
-docker compose down -v
-
-# Remove unused images
-docker image prune -a
-```
-
 ---
 
-## 7. Troubleshooting
-
-### Container Won't Start
-
-```bash
-# Check logs
-docker compose logs api
-
-# Check if port is in use
-netstat -tlnp | grep :80
-```
-
-### Database Connection Error
-
-```bash
-# Check PostgreSQL is running
-docker compose ps postgres
-
-# Test database connection
-docker compose exec postgres psql -U postgres -d messageapp
-```
-
-### API Returns 502 Bad Gateway
-
-```bash
-# Check if API container is healthy
-docker compose ps api
-
-# Check API logs for errors
-docker compose logs api --tail=100
-```
-
-### Admin Panel Not Loading
-
-```bash
-# Check admin container
-docker compose logs admin
-
-# Verify nginx config
-docker compose exec nginx nginx -t
-```
-
-### WebSocket Connection Failed
-
-Ensure the WebSocket endpoint is accessible:
-```bash
-# Install wscat if needed
-npm install -g wscat
-
-# Test WebSocket
-wscat -c "ws://YOUR_SERVER_IP/ws"
-```
-
-### Reset Everything
-
-```bash
-# Stop and remove all containers, volumes, networks
-docker compose down -v
-
-# Remove all images
-docker compose down --rmi all
-
-# Start fresh
-docker compose up -d --build
-```
-
----
-
-## Architecture Summary
+## Architecture
 
 ```
-                    ┌─────────────────────────────────────────┐
-                    │           Ubuntu 22.04 Server           │
-                    │                                         │
-┌─────────┐         │  ┌─────────┐      ┌─────────────────┐  │
-│ Android │────────────▶│  Nginx  │──────▶│  Spring Boot    │  │
-│   App   │         │  │  :80    │      │  API :8080      │  │
-└─────────┘         │  │         │      │                 │  │
-                    │  │  /api   │──────▶│  - REST API     │  │
-┌─────────┐         │  │  /ws    │──────▶│  - WebSocket    │  │
-│ Browser │────────────▶│  /admin │      │  - File Upload  │  │
-└─────────┘         │  │         │      └────────┬────────┘  │
-                    │  │         │               │           │
-                    │  │         │      ┌────────▼────────┐  │
-                    │  │         │      │   PostgreSQL    │  │
-                    │  │         │      │     :5432       │  │
-                    │  │         │      └─────────────────┘  │
-                    │  │         │                           │
-                    │  │         │      ┌─────────────────┐  │
-                    │  │  /admin ├──────▶│  Admin Panel    │  │
-                    │  │         │      │  (React/Nginx)  │  │
-                    │  └─────────┘      └─────────────────┘  │
-                    │                                         │
-                    └─────────────────────────────────────────┘
+Internet → Cloudflare (SSL) → 194.5.175.30
+                                    │
+                              ┌─────▼──────┐
+                              │   Nginx    │ :80/:443
+                              │            │
+                              │  /api/* ───▶ Spring Boot :8080
+                              │  /ws/*  ───▶ WebSocket
+                              │  /ca978112ca/ ──▶ Admin Panel
+                              │  /uploads/* ──▶ Files
+                              │  / ────────▶ Other Website
+                              └─────┬──────┘
+                                    │
+                              ┌─────▼──────┐
+                              │ PostgreSQL │ (internal)
+                              └────────────┘
 ```
-
----
-
-## Quick Start Checklist
-
-- [ ] Server has Docker and Docker Compose installed
-- [ ] Repository cloned to `/opt/messageapp`
-- [ ] `.env` file configured with server IP
-- [ ] `docker compose up -d --build` completed successfully
-- [ ] All 4 containers running and healthy
-- [ ] Admin panel accessible at `http://SERVER_IP/admin/`
-- [ ] API responding at `http://SERVER_IP/api/`
-- [ ] Android app URLs updated and APK built

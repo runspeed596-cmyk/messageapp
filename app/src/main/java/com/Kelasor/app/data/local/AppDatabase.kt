@@ -26,7 +26,7 @@ import androidx.room.TypeConverters
         StoryUserEntity::class,
         CourseEntity::class
     ],
-    version = 4, // Bumped for teacher role columns (isTeacher, teachingField, teachingUniversity)
+    version = 5, // Bumped for new profile fields (birthDate, etc.)
     exportSchema = false
 )
 @TypeConverters(Converters::class)
