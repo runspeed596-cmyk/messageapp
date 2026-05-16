@@ -68,7 +68,7 @@ import com.Kelasor.app.ui.components.PrimaryButton
 import com.Kelasor.app.ui.theme.AppAnimations
 import com.Kelasor.app.ui.theme.CardShapes
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import com.Kelasor.app.ui.viewmodel.AuthEvent
 import com.Kelasor.app.ui.viewmodel.AuthViewModel
 import kotlinx.coroutines.delay
@@ -244,7 +244,7 @@ fun LoginScreen(
             Text(
                 text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.welcome),
                 style = MaterialTheme.typography.headlineMedium,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.graphicsLayer {
@@ -257,7 +257,7 @@ fun LoginScreen(
             Text(
                 text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.login_title),
                 style = MaterialTheme.typography.bodyLarge,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.graphicsLayer {
@@ -286,13 +286,13 @@ fun LoginScreen(
                         label = {
                             Text(
                                 text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.mobile_number),
-                                fontFamily = VazirFontFamily
+                                fontFamily = DanaFontFamily
                             )
                         },
                         placeholder = {
                             Text(
                                 text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.phone_placeholder),
-                                fontFamily = VazirFontFamily
+                                fontFamily = DanaFontFamily
                             )
                         },
                         leadingIcon = {
@@ -333,7 +333,7 @@ fun LoginScreen(
                 Text(
                     text = state.error ?: "",
                     style = MaterialTheme.typography.bodySmall,
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(top = 10.dp)
                 )
@@ -363,7 +363,7 @@ fun LoginScreen(
             Text(
                 text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.login_terms),
                 style = MaterialTheme.typography.bodySmall,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                 textAlign = TextAlign.Center,
                 modifier = Modifier

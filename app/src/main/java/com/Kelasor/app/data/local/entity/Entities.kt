@@ -39,6 +39,9 @@ data class UserEntity(
     // Profile Enhancements
     val university: String? = null,
     val fieldOfStudy: String? = null,
+    val universities: List<String>? = null,
+    val fieldsOfStudy: List<String>? = null,
+    val isGraduated: Boolean = false,
     val education: String? = null,
     val skills: String? = null,
     val interests: String? = null,
@@ -63,7 +66,8 @@ data class UserEntity(
     val phoneVisibility: String = "CONTACTS",
     val institutionId: String? = null,
     val institutionLogoUrl: String? = null,
-    val institutionName: String? = null
+    val institutionName: String? = null,
+    val role: String = "NORMAL"
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -119,7 +123,10 @@ data class MessageEntity(
     val amplitudes: String? = null,
     val isPinned: Boolean = false,
     val pinnedAt: Long? = null,
-    val scheduledAt: Long? = null
+    val scheduledAt: Long? = null,
+    val actionLabel: String? = null,
+    val actionUrl: String? = null,
+    val timerTargetAt: Long? = null
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -187,7 +194,13 @@ data class GroupMessageEntity(
     val reactions: String? = null,
     val myReaction: String? = null,
     val poll: String? = null,
-    val amplitudes: String? = null
+    val amplitudes: String? = null,
+    val actionLabel: String? = null,
+    val actionUrl: String? = null,
+    val isPinned: Boolean = false,
+    val pinnedAt: Long? = null,
+    val scheduledAt: Long? = null,
+    val timerTargetAt: Long? = null
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -239,7 +252,13 @@ data class ChannelPostEntity(
     val scheduledAt: Long? = null,
     val forwardedFrom: String? = null,
     val isEdited: Boolean = false,
-    val myReaction: String? = null
+    val myReaction: String? = null,
+    val actionLabel: String? = null,
+    val actionUrl: String? = null,
+    val timerTargetAt: Long? = null,
+    val isAd: Boolean = false,
+    val adLabel: String? = null,
+    val adSourceChannelId: String? = null
 )
 
 @Entity(

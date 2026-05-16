@@ -22,7 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🤝 Collaboration Request Dialog
@@ -44,7 +44,7 @@ fun CollaborationRequestDialog(
             Text(
                 text = "درخواست همکاری",
                 style = MaterialTheme.typography.headlineSmall,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.Bold
             )
         },
@@ -55,7 +55,7 @@ fun CollaborationRequestDialog(
                 Text(
                     text = "ارسال درخواست همکاری به $recipientName",
                     style = MaterialTheme.typography.bodyMedium,
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -65,13 +65,13 @@ fun CollaborationRequestDialog(
                     label = { 
                         Text(
                             text = "عنوان درخواست",
-                            fontFamily = VazirFontFamily
+                            fontFamily = DanaFontFamily
                         )
                     },
                     placeholder = {
                         Text(
                             text = "مثال: همکاری در پروژه...",
-                            fontFamily = VazirFontFamily
+                            fontFamily = DanaFontFamily
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -84,13 +84,13 @@ fun CollaborationRequestDialog(
                     label = { 
                         Text(
                             text = "پیام",
-                            fontFamily = VazirFontFamily
+                            fontFamily = DanaFontFamily
                         )
                     },
                     placeholder = {
                         Text(
                             text = "توضیحات درخواست خود را بنویسید...",
-                            fontFamily = VazirFontFamily
+                            fontFamily = DanaFontFamily
                         )
                     },
                     modifier = Modifier
@@ -115,7 +115,7 @@ fun CollaborationRequestDialog(
             ) {
                 Text(
                     text = "ارسال",
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -124,7 +124,7 @@ fun CollaborationRequestDialog(
             OutlinedButton(onClick = onDismiss) {
                 Text(
                     text = "انصراف",
-                    fontFamily = VazirFontFamily
+                    fontFamily = DanaFontFamily
                 )
             }
         }

@@ -22,6 +22,7 @@ data class ReferenceDataState(
     val fieldsOfStudy: List<FieldOfStudyDto> = emptyList(),
     val faculties: List<FacultyDto> = emptyList(),
     val educationalRoles: List<EducationalRoleOptionDto> = emptyList(),
+    val universities: List<com.Kelasor.app.data.remote.dto.UniversitySimpleDto> = emptyList(),
     val error: String? = null
 )
 
@@ -51,7 +52,8 @@ class ReferenceDataViewModel @Inject constructor(
                                 educationLevels = result.data.educationLevels,
                                 fieldsOfStudy = result.data.fieldsOfStudy,
                                 faculties = result.data.faculties,
-                                educationalRoles = result.data.educationalRoles
+                                educationalRoles = result.data.educationalRoles,
+                                universities = result.data.universities
                             )
                         }
                     }

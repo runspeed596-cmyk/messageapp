@@ -60,7 +60,7 @@ import com.Kelasor.app.ui.components.CollaborationRequestDialog
 import com.Kelasor.app.ui.theme.CardShapes
 import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.theme.MessageAppTypography
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import com.Kelasor.app.ui.viewmodel.UserProfileViewModel
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Stars
@@ -182,7 +182,7 @@ fun UserProfileScreen(
                 title = {
                     Text(
                         text = user?.contactName ?: user?.displayName ?: androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.profile_title_default),
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -238,7 +238,7 @@ fun UserProfileScreen(
                             Text(
                                 text = user.contactName ?: user.displayName,
                                 style = MaterialTheme.typography.headlineSmall,
-                                fontFamily = VazirFontFamily,
+                                fontFamily = DanaFontFamily,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onBackground
                             )
@@ -255,7 +255,7 @@ fun UserProfileScreen(
                                 Text(
                                     text = user.bio,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    fontFamily = VazirFontFamily,
+                                    fontFamily = DanaFontFamily,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(horizontal = 16.dp)
                                 )
@@ -293,7 +293,7 @@ fun UserProfileScreen(
                                         text = roleLabel,
                                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                                         style = MaterialTheme.typography.labelMedium,
-                                        fontFamily = VazirFontFamily,
+                                        fontFamily = DanaFontFamily,
                                         color = extendedColors.accent
                                     )
                                 }
@@ -371,7 +371,7 @@ fun UserProfileScreen(
                                     Text(
                                         text = "درخواست همکاری",
                                         style = MaterialTheme.typography.labelLarge,
-                                        fontFamily = VazirFontFamily,
+                                        fontFamily = DanaFontFamily,
                                         fontWeight = FontWeight.SemiBold,
                                         color = MaterialTheme.colorScheme.onSecondaryContainer
                                     )
@@ -429,13 +429,13 @@ fun UserProfileScreen(
                                 Text(
                                     text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.mobile_number),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    fontFamily = VazirFontFamily,
+                                    fontFamily = DanaFontFamily,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
                                     text = state.displayPhoneNumber,
                                     style = MaterialTheme.typography.bodyLarge,
-                                    fontFamily = VazirFontFamily,
+                                    fontFamily = DanaFontFamily,
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
@@ -457,14 +457,14 @@ fun UserProfileScreen(
                                         Text(
                                             text = "موقعیت",
                                             style = MaterialTheme.typography.bodyMedium,
-                                            fontFamily = VazirFontFamily,
+                                            fontFamily = DanaFontFamily,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                     Text(
                                         text = listOfNotNull(user.province, user.city).joinToString("، "),
                                         style = MaterialTheme.typography.bodyLarge,
-                                        fontFamily = VazirFontFamily,
+                                        fontFamily = DanaFontFamily,
                                         fontWeight = FontWeight.Medium,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
@@ -484,14 +484,14 @@ fun UserProfileScreen(
                                     Text(
                                         text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.bio_short),
                                         style = MaterialTheme.typography.bodyMedium,
-                                        fontFamily = VazirFontFamily,
+                                        fontFamily = DanaFontFamily,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.padding(bottom = 4.dp)
                                     )
                                     Text(
                                         text = user.bio,
                                         style = MaterialTheme.typography.bodyLarge,
-                                        fontFamily = VazirFontFamily,
+                                        fontFamily = DanaFontFamily,
                                         color = MaterialTheme.colorScheme.onSurface,
                                         modifier = Modifier.fillMaxWidth()
                                     )
@@ -567,7 +567,7 @@ fun UserProfileScreen(
                     Text(
                         text = state.error ?: androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.error_loading),
                         style = MaterialTheme.typography.bodyMedium,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         color = MaterialTheme.colorScheme.error
                     )
                 }
@@ -607,7 +607,7 @@ private fun UserProfileActionButton(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelLarge,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White
             )
@@ -637,7 +637,7 @@ private fun BioChannelsSection(
             Text(
                 text = "کانال‌ها",
                 style = MaterialTheme.typography.titleMedium,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.Bold,
                 color = extendedColors.accent
             )
@@ -663,14 +663,14 @@ private fun BioChannelsSection(
                     Text(
                         text = channel.name,
                         style = MaterialTheme.typography.bodyLarge,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = if (!channel.publicId.isNullOrBlank()) "@${channel.publicId}" else "${channel.subscriberCount} مشترک",
                         style = MaterialTheme.typography.bodySmall,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

@@ -65,7 +65,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.foundation.layout.fillMaxHeight
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import com.Kelasor.app.domain.model.GroupMember
 import com.Kelasor.app.domain.model.MemberRole
 import com.Kelasor.app.ui.components.AvatarImage
@@ -407,7 +407,7 @@ fun GroupSettingsScreen(
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "افزودن",
-                                fontFamily = VazirFontFamily,
+                                fontFamily = DanaFontFamily,
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
@@ -731,7 +731,7 @@ private fun AddMemberDialog(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("لغو", fontFamily = VazirFontFamily)
+                        Text("لغو", fontFamily = DanaFontFamily)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -744,7 +744,7 @@ private fun AddMemberDialog(
                             containerColor = MaterialTheme.colorScheme.primary
                         )
                     ) {
-                        Text("افزودن (${selectedUserIds.size})", fontFamily = VazirFontFamily)
+                        Text("افزودن (${selectedUserIds.size})", fontFamily = DanaFontFamily)
                     }
                 }
             }

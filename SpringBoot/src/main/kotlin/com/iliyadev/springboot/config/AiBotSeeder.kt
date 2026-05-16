@@ -11,8 +11,7 @@ class AiBotSeeder(
     private val aiBotRepository: AiBotRepository
 ) : ApplicationRunner {
     override fun run(args: ApplicationArguments?) {
-        if (aiBotRepository.count() > 0) return
-        val bots: List<AiBot> = listOf(
+        val botsToSeed: List<AiBot> = listOf(
             // ── مدل‌های عمومی ──
             AiBot(name = "ChatGPT", botType = "chatgpt", category = "GENERAL", description = "مدل هوش مصنوعی OpenAI", displayOrder = 1),
             AiBot(name = "Gemini", botType = "gemini", category = "GENERAL", description = "مدل هوش مصنوعی Google", displayOrder = 2),
@@ -27,8 +26,37 @@ class AiBotSeeder(
             AiBot(name = "دستیار تخصصی تولید تصویر", botType = "image_generation", category = "SPECIALIST", description = "تولید تصاویر با هوش مصنوعی ⭐", displayOrder = 14),
             AiBot(name = "دستیار تخصصی ساخت پاورپوینت", botType = "powerpoint_assistant", category = "SPECIALIST", description = "ساخت خودکار پاورپوینت ⭐", displayOrder = 15),
             AiBot(name = "دستیار تخصصی ساخت کلیپ علمی", botType = "clip_assistant", category = "SPECIALIST", description = "ساخت کلیپ‌های علمی ⭐", displayOrder = 16),
-            AiBot(name = "جستجوی مقالات", botType = "paper_search", category = "SPECIALIST", description = "جستجو در سایت‌های ایرانی + Sci-Hub ⭐", displayOrder = 17)
+            AiBot(name = "جستجوی مقالات", botType = "paper_search", category = "SPECIALIST", description = "جستجو در سایت‌های ایرانی + Sci-Hub ⭐", displayOrder = 17),
+            AiBot(
+                name = "ربات مثبت علم",
+                botType = "mosbat_elm",
+                category = "SPECIALIST",
+                description = "دستیار هوشمند شما در دوره‌های آموزشی مثبت علم 🎓",
+                displayOrder = 0,
+                avatarUrl = "https://img.icons8.com/fluency/96/graduation-cap.png"
+            )
         )
-        aiBotRepository.saveAll(bots)
+        
+        botsToSeed.forEach { bot ->
+            if (aiBotRepository.findByBotType(bot.botType) == null) {
+                try {
+                    aiBotRepository.save(bot)
+                } catch (e: Exception) {
+                    // Log and continue
+                }
+            }
+        }
+        
+        // Final fallback for Mosbat Elm bot specifically
+        if (aiBotRepository.findByBotType("mosbat_elm") == null) {
+            aiBotRepository.save(AiBot(
+                name = "ربات مثبت علم",
+                botType = "mosbat_elm",
+                category = "SPECIALIST",
+                description = "دستیار هوشمند شما در دوره‌های آموزشی مثبت علم 🎓",
+                displayOrder = 0,
+                avatarUrl = "https://img.icons8.com/fluency/96/graduation-cap.png"
+            ))
+        }
     }
 }

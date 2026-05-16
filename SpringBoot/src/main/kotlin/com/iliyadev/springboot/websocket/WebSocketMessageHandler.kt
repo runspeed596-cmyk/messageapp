@@ -46,7 +46,10 @@ data class WsMessage(
     val timestamp: Instant = Instant.now(),
     val replyToMessageId: UUID? = null,
     val replyToSenderName: String? = null,
-    val replyToContent: String? = null
+    val replyToContent: String? = null,
+    val actionLabel: String? = null,  // For buttons/links
+    val actionUrl: String? = null,     // For navigation
+    val timerTargetAt: Instant? = null // For countdown timer
 )
 
 data class WsTypingStatus(
@@ -130,6 +133,17 @@ data class WsReactionEvent(
     val userId: UUID,
     val userName: String,
     val reaction: String?,  // null = reaction removed
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+/**
+ * DTO for real-time course capacity updates (Mosbat Elm)
+ */
+data class WsCourseCapacityUpdateEvent(
+    val event: String, // "CAPACITY_UPDATED"
+    val courseId: UUID,
+    val currentEnrollment: Int,
+    val capacity: Int,
     val timestamp: Long = System.currentTimeMillis()
 )
 
@@ -456,6 +470,24 @@ class WebSocketMessageHandler(
             )
         }
         logger.info("✅ Reaction update broadcast complete")
+    }
+
+    /**
+     * Broadcast a course capacity update to all clients watching the course or mosbat elm home.
+     * We'll broadcast it to public topics.
+     */
+    fun broadcastCourseCapacityUpdate(courseId: UUID, currentEnrollment: Int, capacity: Int) {
+        val event = WsCourseCapacityUpdateEvent(
+            event = "CAPACITY_UPDATED",
+            courseId = courseId,
+            currentEnrollment = currentEnrollment,
+            capacity = capacity
+        )
+        logger.info("📈 Broadcasting course capacity update for $courseId: $currentEnrollment/$capacity")
+        // Broadcast to specific course topic
+        messagingTemplate.convertAndSend("/topic/courses/$courseId/capacity", event)
+        // Broadcast to general mosbat-elm capacity topic
+        messagingTemplate.convertAndSend("/topic/mosbat-elm/courses/capacity", event)
     }
 }
 

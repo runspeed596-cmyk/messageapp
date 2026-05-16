@@ -24,7 +24,7 @@ import coil3.request.crossfade
 import androidx.compose.ui.platform.LocalContext
 import com.Kelasor.app.domain.model.SharedContent
 import com.Kelasor.app.domain.model.MessageType
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import com.Kelasor.app.ui.theme.CardShapes
 
 @Composable
@@ -56,7 +56,7 @@ fun SharedMediaGrid(
             Text(
                 text = "محتوایی یافت نشد",
                 style = MaterialTheme.typography.bodyMedium,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -160,7 +160,7 @@ private fun MediaItem(
                     Text(
                         text = item.name ?: "فایل",
                         style = MaterialTheme.typography.labelSmall,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -194,7 +194,7 @@ private fun MediaItem(
                     Text(
                         text = item.caption ?: "لینک",
                         style = MaterialTheme.typography.labelSmall,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center

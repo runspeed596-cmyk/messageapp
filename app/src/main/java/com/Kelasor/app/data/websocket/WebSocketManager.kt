@@ -60,6 +60,9 @@ sealed class WebSocketMessage {
     data class ChannelCreated(val channel: com.Kelasor.app.data.local.entity.ChannelEntity) : WebSocketMessage()
     data class MessageDeleted(val chatId: String, val messageId: String) : WebSocketMessage()
     data class StoryEvent(val event: String, val storyId: String, val userId: String) : WebSocketMessage()
+    
+    // Mosbat Elm Events
+    data class CourseCapacityUpdate(val courseId: String, val currentEnrollment: Int, val capacity: Int) : WebSocketMessage()
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -87,7 +90,7 @@ class WebSocketManager @Inject constructor(
 ) {
     companion object {
         private const val TAG = "WebSocketManager"
-        private const val WS_BASE_URL = "ws://192.168.70.113:8080/ws"
+        private val WS_BASE_URL = com.Kelasor.app.util.Constants.WS_URL
         private const val RECONNECT_DELAY_MS = 2000L
         private const val MAX_RECONNECT_DELAY_MS = 60000L
         private const val MAX_RECONNECT_ATTEMPTS = 100
@@ -334,6 +337,52 @@ class WebSocketManager @Inject constructor(
     fun unsubscribeFromChannel(channelId: String) {
         activeSubscriptions.remove("channel_$channelId")
     }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 📈 Mosbat Elm Capacity Subscriptions
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    fun subscribeToMosbatElmCapacityUpdates() {
+        val topic = "/topic/mosbat-elm/courses/capacity"
+        if (activeSubscriptions.contains(topic)) return
+        
+        Log.i(TAG, "📡 Subscribing to $topic")
+        scope.launch {
+            try {
+                activeSubscriptions.add(topic)
+                stompSession?.subscribeText(topic)?.collect { frame ->
+                    Log.d(TAG, "📨 Received Mosbat Elm capacity update: $frame")
+                    handleMessage(frame)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in Mosbat Elm capacity subscription", e)
+                activeSubscriptions.remove(topic)
+            }
+        }
+    }
+
+    fun subscribeToCourseCapacity(courseId: String) {
+        val topic = "/topic/courses/$courseId/capacity"
+        if (activeSubscriptions.contains(topic)) return
+
+        Log.i(TAG, "📡 Subscribing to $topic")
+        scope.launch {
+            try {
+                activeSubscriptions.add(topic)
+                stompSession?.subscribeText(topic)?.collect { frame ->
+                    Log.d(TAG, "📨 Received Course capacity update: $frame")
+                    handleMessage(frame)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in Course capacity subscription", e)
+                activeSubscriptions.remove(topic)
+            }
+        }
+    }
+
+    fun unsubscribeFromCourseCapacity(courseId: String) {
+        activeSubscriptions.remove("/topic/courses/$courseId/capacity")
+    }
     
     // ═══════════════════════════════════════════════════════════════════════════
     // 📥 Handle Incoming Messages
@@ -359,11 +408,13 @@ class WebSocketManager @Inject constructor(
                 "REACTION_UPDATE" -> handleReactionUpdate(json)
                 "STORY_CREATED", "STORY_DELETED" -> handleStoryEvent(json)
                 else -> {
-                    // Check for event field (CHAT_CREATED, etc)
-                    val event = json.get("event")?.safeString()
-                    if (event != null && (event == "CHAT_CREATED" || event == "CHAT_UPDATED" || event == "CHAT_DELETED")) {
-                         handleChatEvent(json)
-                     } else {
+                        // Check for event field (CHAT_CREATED, CAPACITY_UPDATED, etc)
+                        val event = json.get("event")?.safeString()
+                        if (event != null && event == "CAPACITY_UPDATED") {
+                            handleCourseCapacityUpdate(json)
+                        } else if (event != null && (event == "CHAT_CREATED" || event == "CHAT_UPDATED" || event == "CHAT_DELETED")) {
+                             handleChatEvent(json)
+                         } else {
                         // Try to parse as direct message format (without type wrapper)
                         if (json.has("chatId") && json.has("content") && json.has("senderId")) {
                             val chatId = json.get("chatId").asString
@@ -1412,6 +1463,19 @@ class WebSocketManager @Inject constructor(
             java.time.Instant.parse(timestamp).toEpochMilli()
         } catch (e: Exception) {
             timestamp.toLongOrNull() ?: System.currentTimeMillis()
+        }
+    }
+    
+    private suspend fun handleCourseCapacityUpdate(json: com.google.gson.JsonObject) {
+        try {
+            val courseId = json.get("courseId")?.safeString() ?: return
+            val currentEnrollment = json.get("currentEnrollment")?.safeInt() ?: return
+            val capacity = json.get("capacity")?.safeInt() ?: return
+            
+            Log.d(TAG, "📈 Received course capacity update: courseId=$courseId, count=$currentEnrollment/$capacity")
+            _messages.emit(WebSocketMessage.CourseCapacityUpdate(courseId, currentEnrollment, capacity))
+        } catch (e: Exception) {
+            Log.e(TAG, "Error handling course capacity update", e)
         }
     }
 }

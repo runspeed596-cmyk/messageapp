@@ -24,6 +24,7 @@ class AuthService(
     private val userRepository: UserRepository,
     private val otpCodeRepository: OtpCodeRepository,
     private val refreshTokenRepository: RefreshTokenRepository,
+    private val userSessionRepository: UserSessionRepository,
     private val jwtTokenUtils: JwtTokenUtils,
     private val najvaSmsService: NajvaSmsService
 ) {
@@ -43,8 +44,18 @@ class AuthService(
             this.createdAt = Instant.now()
         }
         otpCodeRepository.save(otpCode)
-        // DEV MODE: Only log OTP, do NOT send via Najva SMS
-        println("📱 [DEV] OTP for $normalizedPhone: $code")
+        
+        // SERVER MODE: Send via Najva SMS
+        val isSent = najvaSmsService.sendOtpViaSms(normalizedPhone, code)
+        
+        if (!isSent) {
+            return SendOtpResponse(
+                success = false,
+                message = "خطا در ارسال پیامک. لطفاً دقایقی دیگر تلاش کنید.",
+                expiresInSeconds = 0
+            )
+        }
+
         return SendOtpResponse(
             success = true,
             message = "کد تأیید ارسال شد",
@@ -83,8 +94,21 @@ class AuthService(
             user.lastSeen = Instant.now()
             userRepository.save(user)
         }
-        val accessToken = jwtTokenUtils.generateToken(user.id.toString())
-        val refreshToken = createRefreshToken(user)
+        // Create session
+        val session = UserSession().apply {
+            this.userId = user.id!!
+            this.deviceName = request.deviceName ?: "Unknown Device"
+            this.platform = request.platform ?: "Android"
+            this.osVersion = request.osVersion ?: "Unknown"
+            this.appVersion = request.appVersion ?: "1.0.0"
+            this.lastActiveAt = Instant.now()
+            this.isActive = true
+        }
+        val savedSession = userSessionRepository.save(session)
+
+        val accessToken = jwtTokenUtils.generateToken(user.id.toString(), savedSession.id.toString())
+        val refreshToken = createRefreshToken(user, savedSession.id)
+
         return AuthResponse(
             success = true,
             message = if (isNewUser) "ثبت‌نام با موفقیت انجام شد" else "ورود موفق",
@@ -106,8 +130,11 @@ class AuthService(
         val user = storedToken.user ?: return AuthResponse(success = false, message = "کاربر یافت نشد")
         storedToken.isRevoked = true
         refreshTokenRepository.save(storedToken)
-        val newAccessToken = jwtTokenUtils.generateToken(user.id.toString())
-        val newRefreshToken = createRefreshToken(user)
+        // Note: For refresh token, we don't necessarily have the sessionId here unless we store it with the refresh token.
+        // For now, we generate a token without sessionId claim or let the filter handle it if it can.
+        // Better: We should probably keep the sessionId in the refresh token too.
+        val newAccessToken = jwtTokenUtils.generateToken(user.id.toString(), storedToken.sessionId?.toString())
+        val newRefreshToken = createRefreshToken(user, storedToken.sessionId)
         return AuthResponse(
             success = true,
             message = "توکن بروزرسانی شد",
@@ -127,6 +154,56 @@ class AuthService(
             token.isRevoked = true
             refreshTokenRepository.save(token)
         }
+        // Invalidate all active sessions for this user on logout
+        val sessions = userSessionRepository.findByUserIdAndIsActiveTrue(userId)
+        sessions.forEach { it.isActive = false; userSessionRepository.save(it) }
+        
+        return true
+    }
+
+    fun getActiveSessions(userId: UUID, currentSessionId: UUID? = null): List<DeviceSessionDto> {
+        return userSessionRepository.findByUserIdAndIsActiveTrue(userId).map {
+            DeviceSessionDto(
+                id = it.id.toString(),
+                deviceName = it.deviceName ?: "Unknown",
+                platform = it.platform ?: "Android",
+                osVersion = it.osVersion ?: "Unknown",
+                appVersion = it.appVersion ?: "1.0.0",
+                lastActiveIp = it.lastActiveIp ?: "0.0.0.0",
+                lastActiveAt = it.lastActiveAt.toString(),
+                isCurrent = it.id == currentSessionId
+            )
+        }
+    }
+    
+    @Transactional
+    fun updateSessionActivity(userId: UUID, sessionId: UUID) {
+        val session = userSessionRepository.findByUserIdAndId(userId, sessionId)
+        if (session != null && session.isActive) {
+            session.lastActiveAt = Instant.now()
+            userSessionRepository.save(session)
+        }
+    }
+
+    @Transactional
+    fun terminateSession(userId: UUID, sessionId: UUID): Boolean {
+        val session = userSessionRepository.findByUserIdAndId(userId, sessionId) ?: return false
+        session.isActive = false
+        userSessionRepository.save(session)
+        return true
+    }
+
+    @Transactional
+    fun terminateAllOtherSessions(userId: UUID, currentSessionId: UUID?): Boolean {
+        val sessions = if (currentSessionId != null) {
+            userSessionRepository.findByUserIdAndIsActiveTrueAndIdNot(userId, currentSessionId)
+        } else {
+            userSessionRepository.findByUserIdAndIsActiveTrue(userId)
+        }
+        sessions.forEach { 
+            it.isActive = false
+            userSessionRepository.save(it)
+        }
         return true
     }
     private fun generateOtpCode(): String = (100000..999999).random().toString()
@@ -138,10 +215,11 @@ class AuthService(
     private fun generateUsername(phone: String): String {
         return "user_${phone.takeLast(4)}_${Random.nextInt(1000, 9999)}"
     }
-    private fun createRefreshToken(user: User): RefreshToken {
+    private fun createRefreshToken(user: User, sessionId: UUID? = null): RefreshToken {
         val token = RefreshToken().apply {
             this.user = user
             this.token = UUID.randomUUID().toString()
+            this.sessionId = sessionId
             this.expiresAt = Instant.now().plusSeconds(REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60)
             this.createdAt = Instant.now()
         }
@@ -196,7 +274,7 @@ class UserService(
             request.skills != null || request.interests != null || request.workExperience != null || 
             request.achievements != null || request.isTeacher != null || request.teachingField != null ||
             request.teachingUniversity != null || request.province != null || request.city != null ||
-            request.faculty != null) {
+            request.faculty != null || request.universities != null || request.fieldsOfStudy != null || request.isGraduated != null) {
             
             var details = user.profileDetails
             if (details == null) {
@@ -206,6 +284,9 @@ class UserService(
             
             if (request.university != null) { details.university = request.university; profileFieldsChanged = true }
             if (request.fieldOfStudy != null) { details.fieldOfStudy = request.fieldOfStudy; profileFieldsChanged = true }
+            if (request.universities != null) { details.universities = request.universities.toMutableSet(); profileFieldsChanged = true }
+            if (request.fieldsOfStudy != null) { details.fieldsOfStudy = request.fieldsOfStudy.toMutableSet(); profileFieldsChanged = true }
+            if (request.isGraduated != null) { details.isGraduated = request.isGraduated }
             if (request.education != null) { details.education = request.education; profileFieldsChanged = true }
             if (request.faculty != null) { details.faculty = request.faculty; profileFieldsChanged = true }
             if (request.skills != null) details.skills = request.skills
@@ -230,16 +311,31 @@ class UserService(
             specialFolderService.autoSubscribeUser(savedUser)
         }
         // Auto-create channel when user becomes a teacher
-        if (request.isTeacher == true) {
+        val isTeacherRole = request.educationalRole == "TEACHER" || request.isTeacher == true
+        if (isTeacherRole) {
             val existingChannels = channelRepository.findByOwnerId(savedUser.id!!)
             if (existingChannels.isEmpty()) {
                 val channelRequest = CreateChannelRequest(
-                    name = "کانال ${savedUser.displayName}",
-                    description = "کانال رسمی استاد ${savedUser.displayName}",
+                    name = "کانال رسمی استاد ${savedUser.displayName}",
+                    description = "کانال رسمی استاد ${savedUser.displayName} در پیام‌رسان کلاسور",
                     isPublic = true
                 )
-                channelService.createChannel(savedUser.id!!, channelRequest)
-                println("📢 Auto-created teacher channel for user ${savedUser.id}")
+                val createdChannel = channelService.createChannel(savedUser.id!!, channelRequest)
+                if (createdChannel != null) {
+                    // Update classification and verified status
+                    val channelEntity = channelRepository.findById(createdChannel.id).orElse(null)
+                    if (channelEntity != null) {
+                        channelEntity.classification = ChannelClassification.VERIFIED_TEACHER
+                        channelEntity.isVerifiedTeacher = true
+                        channelEntity.isOfficial = true
+                        channelEntity.officialCategory = OfficialChannelCategory.TEACHERS
+                        channelEntity.displayMode = OfficialDisplayMode.TAB
+                        channelRepository.save(channelEntity)
+                    }
+                    savedUser.officialChannelId = createdChannel.id
+                    userRepository.save(savedUser)
+                    println("📢 Auto-created teacher channel for user ${savedUser.id}: ${createdChannel.id}")
+                }
             }
         }
         return savedUser

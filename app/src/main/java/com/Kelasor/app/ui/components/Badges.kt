@@ -45,10 +45,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.Kelasor.app.ui.theme.CardShapes
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🔴 Premium Unread Badge with Glow Effect
+//   Premium Unread Badge with Glow Effect
 // ═══════════════════════════════════════════════════════════════════════════════
 
 @Composable
@@ -119,7 +119,7 @@ fun UnreadBadge(
                 text = if (count > 99) "99+" else count.toString(),
                 color = textColor,
                 fontSize = 11.sp,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.Bold
             )
         }
@@ -332,7 +332,7 @@ fun StatusTextBadge(
             text = text,
             style = MaterialTheme.typography.labelSmall,
             color = if (isOnline) extendedColors.onlineIndicator else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-            fontFamily = VazirFontFamily
+            fontFamily = DanaFontFamily
         )
     }
 }

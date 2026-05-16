@@ -193,11 +193,21 @@ class SpecialFolderService(
         userFieldOfStudy: String?,
         userEducationLevel: String?
     ): Boolean {
-        if (channel.targetProvince != null && channel.targetProvince != userProvince) return false
-        if (channel.targetCity != null && channel.targetCity != userCity) return false
-        if (channel.targetUniversity != null && channel.targetUniversity != userUniversity) return false
-        if (channel.targetFieldOfStudy != null && channel.targetFieldOfStudy != userFieldOfStudy) return false
-        if (channel.targetEducationLevel != null && channel.targetEducationLevel != userEducationLevel) return false
+        if (channel.targetProvince != null) {
+            if (userProvince == null || !channel.targetProvince!!.split(",").map { it.trim() }.contains(userProvince.trim())) return false
+        }
+        if (channel.targetCity != null) {
+            if (userCity == null || !channel.targetCity!!.split(",").map { it.trim() }.contains(userCity.trim())) return false
+        }
+        if (channel.targetUniversity != null) {
+            if (userUniversity == null || !channel.targetUniversity!!.split(",").map { it.trim() }.contains(userUniversity.trim())) return false
+        }
+        if (channel.targetFieldOfStudy != null) {
+            if (userFieldOfStudy == null || !channel.targetFieldOfStudy!!.split(",").map { it.trim() }.contains(userFieldOfStudy.trim())) return false
+        }
+        if (channel.targetEducationLevel != null) {
+            if (userEducationLevel == null || !channel.targetEducationLevel!!.split(",").map { it.trim() }.contains(userEducationLevel.trim())) return false
+        }
         return true
     }
 
@@ -214,11 +224,21 @@ class SpecialFolderService(
         userFieldOfStudy: String?,
         userEducationLevel: String?
     ): Boolean {
-        if (group.targetProvince != null && group.targetProvince != userProvince) return false
-        if (group.targetCity != null && group.targetCity != userCity) return false
-        if (group.targetUniversity != null && group.targetUniversity != userUniversity) return false
-        if (group.targetFieldOfStudy != null && group.targetFieldOfStudy != userFieldOfStudy) return false
-        if (group.targetEducationLevel != null && group.targetEducationLevel != userEducationLevel) return false
+        if (group.targetProvince != null) {
+            if (userProvince == null || !group.targetProvince!!.split(",").map { it.trim() }.contains(userProvince.trim())) return false
+        }
+        if (group.targetCity != null) {
+            if (userCity == null || !group.targetCity!!.split(",").map { it.trim() }.contains(userCity.trim())) return false
+        }
+        if (group.targetUniversity != null) {
+            if (userUniversity == null || !group.targetUniversity!!.split(",").map { it.trim() }.contains(userUniversity.trim())) return false
+        }
+        if (group.targetFieldOfStudy != null) {
+            if (userFieldOfStudy == null || !group.targetFieldOfStudy!!.split(",").map { it.trim() }.contains(userFieldOfStudy.trim())) return false
+        }
+        if (group.targetEducationLevel != null) {
+            if (userEducationLevel == null || !group.targetEducationLevel!!.split(",").map { it.trim() }.contains(userEducationLevel.trim())) return false
+        }
         return true
     }
 
@@ -260,6 +280,7 @@ class SpecialFolderService(
             targetProvince = request.targetProvince,
             targetCity = request.targetCity,
             targetUniversity = request.targetUniversity,
+            targetMinistry = request.targetMinistry,
             createdBy = creator
         )
         val savedGroup: Group = groupRepository.save(group)
@@ -309,6 +330,7 @@ class SpecialFolderService(
             targetProvince = request.targetProvince,
             targetCity = request.targetCity,
             targetUniversity = request.targetUniversity,
+            targetMinistry = request.targetMinistry,
             owner = creator
         )
         val savedChannel: Channel = channelRepository.save(channel)
@@ -411,7 +433,8 @@ class SpecialFolderService(
                 targetEducationLevel = channel.targetEducationLevel,
                 targetProvince = channel.targetProvince,
                 targetCity = channel.targetCity,
-                targetUniversity = channel.targetUniversity
+                targetUniversity = channel.targetUniversity,
+                targetMinistry = channel.targetMinistry
             )
         }
     }
@@ -438,7 +461,8 @@ class SpecialFolderService(
                 targetEducationLevel = group.targetEducationLevel,
                 targetProvince = group.targetProvince,
                 targetCity = group.targetCity,
-                targetUniversity = group.targetUniversity
+                targetUniversity = group.targetUniversity,
+                targetMinistry = group.targetMinistry
             )
         }
     }
@@ -461,6 +485,7 @@ class SpecialFolderService(
         channel.targetProvince = request.targetProvince
         channel.targetCity = request.targetCity
         channel.targetUniversity = request.targetUniversity
+        channel.targetMinistry = request.targetMinistry
         val savedChannel: Channel = channelRepository.save(channel)
         val subscriberCount: Long = channelSubscriberRepository.countByChannelId(savedChannel.id!!)
         val admins: List<UserDto> = channelSubscriberRepository.findByChannelId(savedChannel.id!!)
@@ -479,7 +504,8 @@ class SpecialFolderService(
             targetEducationLevel = savedChannel.targetEducationLevel,
             targetProvince = savedChannel.targetProvince,
             targetCity = savedChannel.targetCity,
-            targetUniversity = savedChannel.targetUniversity
+            targetUniversity = savedChannel.targetUniversity,
+            targetMinistry = savedChannel.targetMinistry
         )
     }
 
@@ -502,6 +528,7 @@ class SpecialFolderService(
         group.targetProvince = request.targetProvince
         group.targetCity = request.targetCity
         group.targetUniversity = request.targetUniversity
+        group.targetMinistry = request.targetMinistry
         val savedGroup: Group = groupRepository.save(group)
         val memberCount: Long = groupMemberRepository.countByGroupId(savedGroup.id!!)
         val admins: List<UserDto> = groupMemberRepository.findByGroupId(savedGroup.id!!)
@@ -521,7 +548,8 @@ class SpecialFolderService(
             targetEducationLevel = savedGroup.targetEducationLevel,
             targetProvince = savedGroup.targetProvince,
             targetCity = savedGroup.targetCity,
-            targetUniversity = savedGroup.targetUniversity
+            targetUniversity = savedGroup.targetUniversity,
+            targetMinistry = savedGroup.targetMinistry
         )
     }
 

@@ -18,7 +18,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 
 /**
  * PIN Lock Screen - Shows when app starts if PIN lock is enabled
@@ -72,7 +72,7 @@ fun PinLockScreen(
             Text(
                 text = "رمز امنیتی را وارد کنید",
                 style = MaterialTheme.typography.headlineSmall,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -82,7 +82,7 @@ fun PinLockScreen(
             Text(
                 text = "برای دسترسی به اپلیکیشن رمز ۴ رقمی را وارد کنید",
                 style = MaterialTheme.typography.bodyMedium,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
@@ -109,7 +109,7 @@ fun PinLockScreen(
                         }
                     }
                 },
-                label = { Text("رمز PIN", fontFamily = VazirFontFamily) },
+                label = { Text("رمز PIN", fontFamily = DanaFontFamily) },
                 singleLine = true,
                 isError = isError,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
@@ -117,7 +117,7 @@ fun PinLockScreen(
                 modifier = Modifier.width(200.dp),
                 textStyle = LocalTextStyle.current.copy(
                     textAlign = TextAlign.Center,
-                    fontFamily = VazirFontFamily
+                    fontFamily = DanaFontFamily
                 )
             )
             
@@ -127,7 +127,7 @@ fun PinLockScreen(
                     text = errorMessage,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
-                    fontFamily = VazirFontFamily
+                    fontFamily = DanaFontFamily
                 )
             }
             

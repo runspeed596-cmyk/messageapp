@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -23,30 +24,27 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Navigation
-import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
+import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
 import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.theme.MessageAppTypography
 import com.Kelasor.app.domain.model.MessageStatus
-import com.mapbox.geojson.Point
-import com.mapbox.maps.CameraOptions
-import com.mapbox.maps.MapView
-import com.mapbox.maps.Style
 
 /**
- * Location message bubble with static map preview and navigation button.
+ * Location message bubble with Map.ir static map preview and navigation button.
+ * Uses Map.ir Static Map API to show a preview without needing a native SDK or full WebView.
  */
 
 @Composable
@@ -71,6 +69,11 @@ fun LocationMessageBubble(
     }
     
     val accentColor = if (isMyMessage) extendedColors.accent else MaterialTheme.colorScheme.primary
+    
+    // Map.ir Static Map URL
+    // Format: https://map.ir/static?width=600&height=400&zoom_level=14&markers=color:red|35.70014,51.33647
+    // Using a placeholder API Key - in production this should be the user's key
+    val staticMapUrl = "https://map.ir/static?width=500&height=300&zoom_level=14&markers=color:red|$latitude,$longitude&x-api-key=YOUR_MAPIR_API_KEY"
 
     Column(
         modifier = modifier
@@ -81,53 +84,55 @@ fun LocationMessageBubble(
                 openLocationInMapsApp(context, latitude, longitude)
             }
     ) {
-        // Static Map Preview
+        // Static Map Preview using Coil
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(16f / 10f)
                 .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                .background(Color.Gray.copy(alpha = 0.2f)),
+            contentAlignment = Alignment.Center
         ) {
-            AndroidView(
-                factory = { ctx ->
-                    MapView(ctx).apply {
-                        // Disable user interaction
-                        setOnTouchListener { _, _ -> true }
-                        
-                        getMapboxMap().loadStyleUri(Style.MAPBOX_STREETS) {
-                             getMapboxMap().setCamera(
-                                 CameraOptions.Builder()
-                                     .center(Point.fromLngLat(longitude, latitude))
-                                     .zoom(14.0)
-                                     .build()
-                             )
-                             
-                             // Add Marker (using ViewAnnotation or similar in v10, but simplistic approach:
-                             // Just center the map, the bubble has a pin icon? 
-                             // Or we can add a simple ViewAnnotation if really needed.
-                             // For now, let's trust the center is enough, or add a center view overlay in Compose.
-                        }
+            SubcomposeAsyncImage(
+                model = staticMapUrl,
+                contentDescription = "نقشه موقعیت",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                loading = {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
-            )
-            
-            // Overlay to handle clicks (since MapView consumes touches)
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .clickable {
-                        openLocationInMapsApp(context, latitude, longitude)
+                error = {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            tint = Color.Gray,
+                            modifier = Modifier.size(32.dp)
+                        )
                     }
+                }
             )
             
-            // Tap hint overlay
+            // Center Pin Overlay (Compose-based)
+            Icon(
+                imageVector = Icons.Default.LocationOn,
+                contentDescription = null,
+                tint = Color.Red,
+                modifier = Modifier
+                    .size(32.dp)
+                    .align(Alignment.Center)
+                    .padding(bottom = 16.dp)
+            )
+            
+            // Navigation hint overlay
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
                     .background(Color.Black.copy(alpha = 0.5f))
-                    .padding(8.dp),
+                    .padding(6.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Row(
@@ -137,7 +142,7 @@ fun LocationMessageBubble(
                         imageVector = Icons.Default.Navigation,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
@@ -199,7 +204,8 @@ fun LocationMessageBubble(
                 }
             }
         }
-        // Reactions inside card
+        
+        // Reactions
         if (reactions.isNotEmpty()) {
             ReactionRow(
                 reactions = reactions,
@@ -217,17 +223,13 @@ fun LocationMessageBubble(
  */
 private fun openLocationInMapsApp(context: Context, latitude: Double, longitude: Double) {
     try {
-        // Use geo URI which is supported by most map apps
         val geoUri = Uri.parse("geo:$latitude,$longitude?q=$latitude,$longitude")
         val intent = Intent(Intent.ACTION_VIEW, geoUri)
-        
-        // Create a chooser to let the user select their preferred app (Balad, Neshan, etc.)
         val chooser = Intent.createChooser(intent, "مسیریابی با...")
         
         if (intent.resolveActivity(context.packageManager) != null) {
             context.startActivity(chooser)
         } else {
-            // Fallback to Google Maps web URL if no app is installed
             val webUri = Uri.parse("https://www.google.com/maps?q=$latitude,$longitude")
             val webIntent = Intent(Intent.ACTION_VIEW, webUri)
             context.startActivity(webIntent)

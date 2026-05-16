@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🔴 Redis Configuration - Lettuce async client (Optional)
+//   Redis Configuration - Lettuce async client (Optional)
 // Gracefully skips Redis if not available — app runs without caching
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -31,7 +31,7 @@ class RedisConfig(
 
     @PostConstruct
     fun init() {
-        logger.info("🔴 Redis config loaded — will connect to $host:$port")
+        logger.info("  Redis config loaded — will connect to $host:$port")
     }
 
     @Bean
@@ -71,7 +71,7 @@ class RedisConfig(
     fun shutdown() {
         if (::_redisClient.isInitialized) {
             _redisClient.shutdown()
-            logger.info("🔴 Redis connection closed")
+            logger.info("  Redis connection closed")
         }
     }
 }

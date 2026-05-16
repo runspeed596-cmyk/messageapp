@@ -1,0 +1,100 @@
+/* ══════════════════════════════════════════════════════════
+   کلاسور آنلاین — Custom Jitsi Meet Styles
+   ══════════════════════════════════════════════════════════ */
+/* Vazirmatn Font (CDN + Local Fallback) */
+@import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css');
+
+@font-face {
+    font-family: 'Vazirmatn Local';
+    src: url('fonts/vazir/Vazirmatn-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Vazirmatn Local';
+    src: url('fonts/vazir/Vazirmatn-Bold.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* Global font override */
+* {
+    font-family: 'Vazirmatn', 'Vazirmatn Local', 'Vazir', 'Tahoma', 'Arial', sans-serif !important;
+}
+
+/* Force RTL for Persian */
+html[lang="fa"],
+html[lang="fa"] body {
+    direction: rtl !important;
+}
+
+/* Branding colors — match Kelasor Online theme */
+:root {
+    --primary-color: #6366F1;
+    --kelasor-primary-dark: #4F46E5;
+}
+
+/* Hide Jitsi default watermark images */
+.watermark.leftwatermark,
+.watermark.rightwatermark {
+    display: none !important;
+}
+
+/* Add custom text watermark */
+.header-logo {
+    display: flex !important;
+    align-items: center;
+    padding-right: 20px;
+}
+.header-logo::after {
+    content: "کلاسور آنلاین";
+    color: white;
+    font-family: 'Vazirmatn', sans-serif;
+    font-size: 24px;
+    font-weight: bold;
+    text-shadow: 1px 1px 4px rgba(0,0,0,0.5);
+    background: linear-gradient(135deg, #FFF 0%, #E2E8F0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Welcome page customization */
+.welcome-page .header {
+    background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%) !important;
+}
+
+/* Toolbar styling */
+.toolbox-background {
+    background: rgba(15, 11, 30, 0.85) !important;
+}
+
+/* Lobby page RTL fix */
+.lobby-screen {
+    direction: rtl;
+    text-align: right;
+}
+
+/* Chat panel RTL */
+#chat-panel {
+    direction: rtl;
+    text-align: right;
+}
+
+/* Prejoin screen */
+.prejoin-dialog {
+    direction: rtl;
+}
+
+/* Dialog boxes RTL */
+.jitsi-dialog {
+    direction: rtl;
+    text-align: right;
+}
+
+/* Filmstrip participant names */
+.displayname {
+    font-family: 'Vazirmatn', 'Vazir', 'Tahoma', sans-serif !important;
+}

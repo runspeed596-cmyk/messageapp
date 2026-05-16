@@ -96,7 +96,7 @@ val AwayYellow = Color(0xFFFFD60A)
 val OfflineGray = Color(0xFF8E8E93)
 
 // ─────────────────────────────────────────────────────────────────────────────────
-//  🔴 Notification & Badge Colors
+//    Notification & Badge Colors
 // ─────────────────────────────────────────────────────────────────────────────────
 
 val UnreadBadgeBlue = Color(0xFF007AFF)

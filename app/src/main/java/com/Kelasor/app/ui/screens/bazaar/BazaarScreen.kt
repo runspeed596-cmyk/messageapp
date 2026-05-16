@@ -17,7 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 
 @Composable
 fun BazaarScreen() {
@@ -36,14 +36,14 @@ fun BazaarScreen() {
             Text(
                 text = "بخش بازار در حال توسعه است",
                 style = MaterialTheme.typography.headlineSmall,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
             Text(
                 text = "به زودی می‌توانید محصولات خود را اینجا عرضه کنید",
                 style = MaterialTheme.typography.bodyMedium,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp)
             )

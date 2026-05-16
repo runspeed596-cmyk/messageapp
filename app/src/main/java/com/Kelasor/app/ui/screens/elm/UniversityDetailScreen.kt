@@ -22,10 +22,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.Kelasor.app.data.University
 
+import com.Kelasor.app.domain.model.Course
+import com.Kelasor.app.ui.screens.mosbat_elm.CourseCard
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UniversityDetailScreen(
     university: University,
+    courses: List<Course> = emptyList(),
     onBack: () -> Unit
 ) {
     val isDark = isSystemInDarkTheme()
@@ -89,6 +93,10 @@ fun UniversityDetailScreen(
 
             // More Stats
             DetailCard(backgroundColor = cardColor) {
+                InfoRow(label = "استان", value = university.province, textColor = textColor)
+                HorizontalDivider(color = textColor.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 12.dp))
+                InfoRow(label = "شهر", value = university.city, textColor = textColor)
+                HorizontalDivider(color = textColor.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 12.dp))
                 InfoRow(label = "وزارت مربوطه", value = university.ministry, textColor = textColor)
                 HorizontalDivider(color = textColor.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 12.dp))
                 InfoRow(label = "سال تأسیس", value = university.establishmentYear, textColor = textColor)
@@ -128,6 +136,26 @@ fun UniversityDetailScreen(
             }
             
             Spacer(Modifier.height(32.dp))
+            
+            // University Courses
+            if (courses.isNotEmpty()) {
+                SectionHeader(title = "دوره‌های مرتبط با این دانشگاه", textColor = textColor)
+                Spacer(Modifier.height(12.dp))
+                
+                // Using Horizontal flow of vertical course cards
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    courses.forEach { course ->
+                        CourseCard(
+                            course = course,
+                            onClick = { /* In ElmScreen, we don't have nav controller directly in this composable context easily unless passed, but we can just let it be a placeholder or pass nav */ }
+                        )
+                    }
+                }
+                Spacer(Modifier.height(32.dp))
+            }
         }
     }
 }

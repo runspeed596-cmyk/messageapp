@@ -1,5 +1,15 @@
 package com.Kelasor.app.ui.screens.main
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -96,7 +106,7 @@ fun MainScreen(
     onNavigateToGroupChat: (String) -> Unit,
     onNavigateToGroupDetail: (String) -> Unit = {},
     onNavigateToChannelView: (String) -> Unit,
-    onNavigateToProfile: () -> Unit,
+    onNavigateToProfile: (Int) -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToArchivedChats: () -> Unit = {},
     onNavigateToUserProfile: (String) -> Unit = {},
@@ -110,6 +120,7 @@ fun MainScreen(
     onNavigateToAiBotList: () -> Unit = {},
     onNavigateToEditProfile: () -> Unit = {},
     onNavigateToAcademyProfile: (String) -> Unit = {},
+    onNavigateToTeacherProfile: (String) -> Unit = {},
     onLogout: () -> Unit,
     chatListViewModel: ChatListViewModel = hiltViewModel(),
     // notificationViewModel: com.Kelasor.app.ui.viewmodel.NotificationViewModel = hiltViewModel()
@@ -144,11 +155,31 @@ fun MainScreen(
         }
     }
 
+    // Scroll connection to detect scroll direction and hide/show bottom nav
+    var isBottomNavVisible by rememberSaveable { mutableStateOf(true) }
+
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                // If scrolling down significantly, hide the nav bar
+                if (available.y < -15) {
+                    isBottomNavVisible = false
+                } 
+                // If scrolling up significantly, show the nav bar
+                else if (available.y > 15) {
+                    isBottomNavVisible = true
+                }
+                return Offset.Zero
+            }
+        }
+    }
+
     // Root Container - No Scaffold here to avoid double padding/insets
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .nestedScroll(nestedScrollConnection)
     ) {
         NavHost(
             navController = bottomNavController,
@@ -159,7 +190,7 @@ fun MainScreen(
             composable(Routes.MosbatElm.route) {
                 com.Kelasor.app.ui.screens.mosbat_elm.MosbatElmScreen(
                     onNavigateToElm = onNavigateToElm,
-                    onNavigateToProfile = onNavigateToProfile,
+                    onNavigateToProfile = { onNavigateToProfile(1) },
                     onNavigateToOrganizerSetup = onNavigateToOrganizerSetup,
                     onNavigateToCreateCourse = onNavigateToCreateCourse,
                     appConnectionState = appConnectionState,
@@ -169,6 +200,7 @@ fun MainScreen(
                     onNavigateToInstitution = { institutionId ->
                         onNavigateToAcademyProfile(institutionId)
                     },
+                    onNavigateToTeacherProfile = onNavigateToTeacherProfile,
                     onNavigateToNotifications = onNavigateToNotifications,
                     onNavigateToCategory = { category ->
                         bottomNavController.navigate("mosbat_elm_category/$category")
@@ -191,7 +223,10 @@ fun MainScreen(
                     courseId = courseId,
                     onBack = { bottomNavController.popBackStack() },
                     onOrganizerClick = onNavigateToAcademyProfile,
-                    onNavigateToEditCourse = onNavigateToEditCourse
+                    onNavigateToEditCourse = onNavigateToEditCourse,
+                    onNavigateToCourseDetail = { id -> bottomNavController.navigate(Routes.CourseDetail.createRoute(id)) },
+                    onNavigateToCategory = { category -> bottomNavController.navigate("mosbat_elm_category/$category") },
+                    onChannelClick = onNavigateToChannelView
                 )
             }
             composable(Routes.Home.route) { 
@@ -201,6 +236,8 @@ fun MainScreen(
                             onNavigateToElm()
                         } else if (route == Routes.Notifications.route) {
                             onNavigateToNotifications()
+                        } else if (route == Routes.GlobalSettings.route) {
+                            onNavigateToSettings()
                         } else {
                             bottomNavController.navigate(route) {
                                 launchSingleTop = true
@@ -222,7 +259,7 @@ fun MainScreen(
                     onNavigateToGroupChat = onNavigateToGroupChat,
                     onNavigateToGroupDetail = onNavigateToGroupDetail,
                     onNavigateToChannelView = onNavigateToChannelView,
-                    onNavigateToProfile = onNavigateToProfile,
+                    onNavigateToProfile = { onNavigateToProfile(0) },
                     onNavigateToSettings = onNavigateToSettings,
                     onNavigateToArchivedChats = onNavigateToArchivedChats,
                     onNavigateToUserProfile = onNavigateToUserProfile,
@@ -233,7 +270,11 @@ fun MainScreen(
                     chatListViewModel = chatListViewModel
                 )
             }
-            composable(Routes.Treasure.route) { TreasureScreen() }
+            composable(Routes.Treasure.route) { 
+                TreasureScreen(
+                    onNavigateToAiBotList = onNavigateToAiBotList
+                ) 
+            }
             
             // New Linked Sections
             composable(Routes.Fun.route) { 
@@ -258,17 +299,31 @@ fun MainScreen(
             }
         }
         
-        // Floating Bottom Navigation with Backdrop - Hidden in Messaging section and CourseDetail
-        val showBottomNav = currentRoute != Routes.Messaging.route && currentRoute?.startsWith("course_detail") != true
+        // Floating Bottom Navigation with Backdrop
+        // Show only on main tabs and when not scrolling down
+        val navBarRoutes = listOf(
+            Routes.Home.route,
+            Routes.Bazaar.route,
+            Routes.MosbatElm.route,
+            Routes.Treasure.route,
+            Routes.Messaging.route
+        )
+        
+        // Ensure it hides on CourseDetail, and only shows on the root nav bar routes
+        val isRootPage = currentRoute in navBarRoutes
+        val showBottomNav = isRootPage && isBottomNavVisible
+        
         androidx.compose.animation.AnimatedVisibility(
             visible = showBottomNav,
             modifier = Modifier.align(androidx.compose.ui.Alignment.BottomCenter),
-            enter = androidx.compose.animation.slideInVertically(
-                initialOffsetY = { it }
-            ) + androidx.compose.animation.fadeIn(),
-            exit = androidx.compose.animation.slideOutVertically(
-                targetOffsetY = { it }
-            ) + androidx.compose.animation.fadeOut()
+            enter = slideInVertically(
+                initialOffsetY = { it },
+                animationSpec = spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMediumLow)
+            ) + fadeIn(animationSpec = tween(300)),
+            exit = slideOutVertically(
+                targetOffsetY = { it },
+                animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMedium)
+            ) + fadeOut(animationSpec = tween(250))
         ) {
             Column {
                 BottomNavBar(
@@ -309,7 +364,7 @@ fun MessagingContent(
     onNavigateToGroupChat: (String) -> Unit,
     onNavigateToGroupDetail: (String) -> Unit,
     onNavigateToChannelView: (String) -> Unit,
-    onNavigateToProfile: () -> Unit,
+    onNavigateToProfile: (Int) -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToArchivedChats: () -> Unit,
     onNavigateToUserProfile: (String) -> Unit,
@@ -324,6 +379,7 @@ fun MessagingContent(
 ) {
     val extendedColors = MessageAppTheme.extendedColors
     val specialFolderState by specialFolderViewModel.state.collectAsState()
+    val isProfileBannerDismissed by specialFolderViewModel.isProfileBannerDismissed.collectAsState()
     
     // Trigger data reload on reconnection
     LaunchedEffect(appConnectionState) {
@@ -383,7 +439,7 @@ fun MessagingContent(
                         .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = onNavigateToProfile) {
+                    IconButton(onClick = { onNavigateToProfile(0) }) {
                         Icon(
                             imageVector = Icons.Default.Person,
                             contentDescription = "Profile",
@@ -495,11 +551,14 @@ fun MessagingContent(
                 }
 
                 // Profile Completion Banner (compact, above tabs)
-                if (!specialFolderState.isProfileComplete) {
+                if (!specialFolderState.isProfileComplete && !isProfileBannerDismissed) {
                     androidx.compose.foundation.layout.Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable(onClick = onNavigateToEditProfile)
+                            .clickable {
+                                specialFolderViewModel.dismissProfileBanner()
+                                onNavigateToEditProfile()
+                            }
                             .background(Color(0xFFFFF3E0))
                             .padding(horizontal = 12.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -553,7 +612,7 @@ fun MessagingContent(
                                 }
                             },
                             onNewChatClick = onNavigateToNewChat,
-                            onProfileClick = onNavigateToProfile,
+                            onProfileClick = { onNavigateToProfile(0) },
                             onChatAvatarClick = { chat ->
                                 when (chat.type) {
                                     ChatType.GROUP -> onNavigateToGroupDetail(chat.id)
@@ -616,6 +675,7 @@ fun MessagingContent(
                             emptyMessage = "هنوز دوره‌ای ثبت نشده",
                             accentColor = Color(0xFFE65100),
                             onChannelClick = onNavigateToChannelView,
+                            onGroupClick = onNavigateToGroupChat,
                             onMyStoriesClick = onNavigateToMyStories,
                             onNavigateToChannelStories = onNavigateToChannelStories,
                             viewModel = smartFolderViewModel,
@@ -683,3 +743,4 @@ fun MessagingContent(
         }
     }
 }
+

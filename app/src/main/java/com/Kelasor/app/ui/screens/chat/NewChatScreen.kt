@@ -79,7 +79,7 @@ import com.Kelasor.app.ui.components.AvatarImage
 import com.Kelasor.app.ui.components.AvatarSize
 import com.Kelasor.app.ui.components.SearchBar
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import com.Kelasor.app.ui.viewmodel.NewChatViewModel
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -137,7 +137,7 @@ fun NewChatScreen(
             title = {
                 Text(
                     text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.new_chat),
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleMedium
                 )
@@ -252,7 +252,7 @@ fun NewChatScreen(
                 Text(
                     text = error,
                     style = MaterialTheme.typography.bodySmall,
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     color = MaterialTheme.colorScheme.error
                 )
             }
@@ -309,7 +309,7 @@ private fun PremiumCreateCard(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White,
                 textAlign = TextAlign.Center
@@ -357,7 +357,7 @@ private fun PremiumPermissionRequest(
         Text(
             text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.access_contacts_title),
             style = MaterialTheme.typography.titleMedium,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
         )
@@ -365,7 +365,7 @@ private fun PremiumPermissionRequest(
         Text(
             text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.access_contacts_rationale),
             style = MaterialTheme.typography.bodyMedium,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
@@ -378,7 +378,7 @@ private fun PremiumPermissionRequest(
         ) {
             Text(
                 text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.allow_access),
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 15.sp
             )
@@ -420,7 +420,7 @@ private fun PremiumEmptyState(
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
@@ -445,7 +445,7 @@ private fun PremiumUsersList(
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelLarge,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.SemiBold,
                 color = MessageAppTheme.extendedColors.accent,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
@@ -516,14 +516,14 @@ private fun PremiumContactItem(
                 text = resolvedName,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Medium,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = "@${user.username}",
                 style = MaterialTheme.typography.bodySmall,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

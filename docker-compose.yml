@@ -1,6 +1,6 @@
 services:
   # =============================================
-  # PostgreSQL Database
+  # PostgreSQL Database — پایگاه داده
   # =============================================
   postgres:
     image: postgres:15-alpine
@@ -21,7 +21,7 @@ services:
       retries: 5
 
   # =============================================
-  # Redis Cache + Pub/Sub
+  # Redis Cache + Pub/Sub — کش و پیام‌رسانی
   # =============================================
   redis:
     image: redis:7-alpine
@@ -41,7 +41,7 @@ services:
       - "6379"
 
   # =============================================
-  # MinIO S3 Object Storage
+  # MinIO S3 Object Storage — ذخیره‌سازی فایل
   # =============================================
   minio:
     image: minio/minio
@@ -65,7 +65,7 @@ services:
       - "9001"
 
   # =============================================
-  # Spring Boot API + Netty WebSocket
+  # Spring Boot API + Netty WebSocket — بکند
   # =============================================
   api:
     build:
@@ -82,7 +82,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-messageapp}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-123}
-      APP_BASE_URL: ${APP_BASE_URL:-http://localhost}
+      APP_BASE_URL: ${APP_BASE_URL:-http://185.116.162.68}
       JWT_SECRET: ${JWT_SECRET:-2Qw1Qk5vQ2p6b3J4bGd2d2h5b2J6d3J4bGd2d2h5b2J6d3J4bGd2d2h5b2J6d3J4bGd2d2h5b2J6d3J4bGd2d2h5b2J6d3J4bGd2d2h5b2J6d3J4bGQ=}
       NAJVA_SMS_API_KEY: ${NAJVA_SMS_API_KEY:-YOUR_API_KEY_HERE}
       REDIS_HOST: redis
@@ -94,30 +94,66 @@ services:
       NETTY_PORT: 9090
     volumes:
       - uploads_data:/app/uploads
+    extra_hosts:
+      - "sms.najva.com:185.166.104.6"
+    dns:
+      - 178.22.122.100
+      - 185.51.200.2
+      - 8.8.8.8
+      - 1.1.1.1
     networks:
       - messageapp-network
     expose:
       - "8080"
       - "9090"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   # =============================================
-  # Admin Panel (React + Nginx)
+  # Admin Panel (React + Nginx) — پنل مدیریت
   # =============================================
   admin:
     build:
       context: ./admin-panel
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: ${APP_BASE_URL:-http://localhost}/api
+        VITE_API_URL: ${APP_BASE_URL:-http://185.116.162.68}/api
     container_name: messageapp-admin
     restart: unless-stopped
     networks:
       - messageapp-network
     expose:
       - "80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   # =============================================
-  # Nginx Reverse Proxy (with SSL)
+  # Kelasor Online Portal — کلاسور آنلاین
+  # =============================================
+  kelasor-online:
+    build:
+      context: ./kelasor-online
+      dockerfile: Dockerfile
+    container_name: messageapp-kelasor-online
+    restart: unless-stopped
+    networks:
+      - messageapp-network
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # =============================================
+  # Nginx Reverse Proxy — پراکسی معکوس
   # =============================================
   nginx:
     image: nginx:alpine
@@ -126,24 +162,153 @@ services:
     depends_on:
       - api
       - admin
+      - kelasor-online
     ports:
       - "80:80"
       - "443:443"
       - "9090:9090"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/intro.html:/usr/share/nginx/html/index.html:ro
       - uploads_data:/app/uploads:ro
-      - /etc/ssl/cloudflare:/etc/ssl/cloudflare:ro
+      - ./ssl:/etc/ssl/server:ro
     networks:
       - messageapp-network
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/health"]
       interval: 30s
       timeout: 3s
       retries: 3
 
+  # =============================================
+  # Jitsi Meet — کلاسور آنلاین (ویدئو کنفرانس)
+  # =============================================
+  jitsi-web:
+    image: docker.arvancloud.ir/jitsi/web:stable-9823
+    container_name: kelasor-jitsi-web
+    restart: unless-stopped
+    environment:
+      PUBLIC_URL: https://online.kelasorapp.ir
+      ENABLE_AUTH: 1
+      AUTH_TYPE: jwt
+      JWT_APP_ID: ${JITSI_JWT_APP_ID:-kelasor-online}
+      JWT_APP_SECRET: ${JITSI_JWT_SECRET_V2:-K3las0r_J1ts1_S3cr3t_2026_KelasorApp_V2}
+      ENABLE_GUESTS: 1
+      ENABLE_LOBBY: 1
+      ENABLE_PREJOIN_PAGE: 1
+      ENABLE_WELCOME_PAGE: 0
+      DEFAULT_LANGUAGE: fa
+      XMPP_DOMAIN: meet.jitsi
+      XMPP_AUTH_DOMAIN: auth.meet.jitsi
+      XMPP_BOSH_URL_BASE: http://jitsi-prosody:5280
+      XMPP_MUC_DOMAIN: muc.meet.jitsi
+      XMPP_GUEST_DOMAIN: guest.meet.jitsi
+      XMPP_RECORDER_DOMAIN: recorder.meet.jitsi
+      JIBRI_BREWERY_MUC: jibribrewery
+      JIBRI_PENDING_TIMEOUT: 90
+      JIBRI_XMPP_USER: jibri
+      JIBRI_XMPP_PASSWORD: ${JIBRI_XMPP_PASSWORD:-jibripass}
+      JIGASI_XMPP_USER: jigasi
+      JIGASI_XMPP_PASSWORD: ${JIGASI_XMPP_PASSWORD:-jigasipass}
+      TZ: Asia/Tehran
+    volumes:
+      - ./jitsi-config/custom.css:/config/custom-css/custom.css:ro
+      - ./jitsi-config/fonts:/usr/share/jitsi-meet/css/fonts/vazir:ro
+      - ./jitsi-config/custom-config.js:/config/custom-config.js:ro
+      - ./jitsi-config/custom-interface_config.js:/config/custom-interface_config.js:ro
+      - jitsi-web-config:/config
+    networks:
+      - messageapp-network
+    expose:
+      - "80"
+
+  jitsi-prosody:
+    image: docker.arvancloud.ir/jitsi/prosody:stable-9823
+    container_name: kelasor-jitsi-prosody
+    restart: unless-stopped
+    environment:
+      ENABLE_AUTH: 1
+      AUTH_TYPE: jwt
+      JWT_APP_ID: ${JITSI_JWT_APP_ID:-kelasor-online}
+      JWT_APP_SECRET: ${JITSI_JWT_SECRET_V2:-K3las0r_J1ts1_S3cr3t_2026_KelasorApp_V2}
+      ENABLE_GUESTS: 1
+      ENABLE_LOBBY: 1
+      PUBLIC_URL: https://online.kelasorapp.ir
+      XMPP_DOMAIN: meet.jitsi
+      XMPP_AUTH_DOMAIN: auth.meet.jitsi
+      XMPP_MUC_DOMAIN: muc.meet.jitsi
+      XMPP_INTERNAL_MUC_DOMAIN: internal-muc.meet.jitsi
+      XMPP_GUEST_DOMAIN: guest.meet.jitsi
+      XMPP_RECORDER_DOMAIN: recorder.meet.jitsi
+      JICOFO_AUTH_USER: focus
+      JICOFO_AUTH_PASSWORD: ${JICOFO_AUTH_PASSWORD:-focuspass}
+      JIBRI_XMPP_USER: jibri
+      JIBRI_XMPP_PASSWORD: ${JIBRI_XMPP_PASSWORD:-jibripass}
+      JIGASI_XMPP_USER: jigasi
+      JIGASI_XMPP_PASSWORD: ${JIGASI_XMPP_PASSWORD:-jigasipass}
+      JVB_AUTH_USER: jvb
+      JVB_AUTH_PASSWORD: ${JVB_AUTH_PASSWORD:-jvbpass}
+      TZ: Asia/Tehran
+    volumes:
+      - jitsi-prosody-config:/config
+      - jitsi-prosody-plugins:/prosody-plugins-custom
+    networks:
+      - messageapp-network
+    expose:
+      - "5222"
+      - "5280"
+      - "5347"
+
+  jitsi-jicofo:
+    image: docker.arvancloud.ir/jitsi/jicofo:stable-9823
+    container_name: kelasor-jitsi-jicofo
+    restart: unless-stopped
+    depends_on:
+      - jitsi-prosody
+    environment:
+      ENABLE_AUTH: 1
+      AUTH_TYPE: jwt
+      PUBLIC_URL: https://online.kelasorapp.ir
+      XMPP_DOMAIN: meet.jitsi
+      XMPP_AUTH_DOMAIN: auth.meet.jitsi
+      XMPP_MUC_DOMAIN: muc.meet.jitsi
+      XMPP_INTERNAL_MUC_DOMAIN: internal-muc.meet.jitsi
+      XMPP_SERVER: jitsi-prosody
+      JICOFO_AUTH_USER: focus
+      JICOFO_AUTH_PASSWORD: ${JICOFO_AUTH_PASSWORD:-focuspass}
+      ENABLE_LOBBY: 1
+      TZ: Asia/Tehran
+    volumes:
+      - jitsi-jicofo-config:/config
+    networks:
+      - messageapp-network
+
+  jitsi-jvb:
+    image: docker.arvancloud.ir/jitsi/jvb:stable-9823
+    container_name: kelasor-jitsi-jvb
+    restart: unless-stopped
+    depends_on:
+      - jitsi-prosody
+    environment:
+      XMPP_AUTH_DOMAIN: auth.meet.jitsi
+      XMPP_INTERNAL_MUC_DOMAIN: internal-muc.meet.jitsi
+      XMPP_SERVER: jitsi-prosody
+      JVB_AUTH_USER: jvb
+      JVB_AUTH_PASSWORD: ${JVB_AUTH_PASSWORD:-jvbpass}
+      JVB_PORT: 10000
+      JVB_STUN_SERVERS: stun.l.google.com:19302,stun1.l.google.com:19302
+      PUBLIC_URL: https://online.kelasorapp.ir
+      DOCKER_HOST_ADDRESS: 185.116.162.68
+      TZ: Asia/Tehran
+    volumes:
+      - jitsi-jvb-config:/config
+    ports:
+      - "10000:10000/udp"
+    networks:
+      - messageapp-network
+
 # =============================================
-# Volumes
+# Volumes — حجم‌های داده
 # =============================================
 volumes:
   postgres_data:
@@ -154,10 +319,21 @@ volumes:
     driver: local
   minio_data:
     driver: local
+  jitsi-web-config:
+    driver: local
+  jitsi-prosody-config:
+    driver: local
+  jitsi-prosody-plugins:
+    driver: local
+  jitsi-jicofo-config:
+    driver: local
+  jitsi-jvb-config:
+    driver: local
 
 # =============================================
-# Networks
+# Networks — شبکه داخلی
 # =============================================
 networks:
   messageapp-network:
     driver: bridge
+

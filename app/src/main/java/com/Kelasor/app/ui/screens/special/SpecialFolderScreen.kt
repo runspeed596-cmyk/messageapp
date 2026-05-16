@@ -35,7 +35,7 @@ import androidx.compose.material.icons.outlined.SupportAgent
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
+
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -101,14 +101,6 @@ fun SpecialFolderScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 100.dp)
             ) {
-                // ── AI Bot Banner ────────────────────────────────────────────
-                item {
-                    AiBotBanner(
-                        aiBots = state.aiBots,
-                        onBotClick = { _ -> onNavigateToAiBotList() }
-                    )
-                }
-
                 // ── Channels Section ─────────────────────────────────────────
                 if (state.channels.isNotEmpty()) {
                     item {
@@ -263,7 +255,7 @@ private fun SectionHeader(title: String) {
             )
         )
     }
-    Divider(
+    androidx.compose.material3.HorizontalDivider(
         modifier = Modifier.padding(horizontal = 16.dp),
         color = extendedColors.glassBorder.copy(alpha = 0.3f),
         thickness = 0.5.dp

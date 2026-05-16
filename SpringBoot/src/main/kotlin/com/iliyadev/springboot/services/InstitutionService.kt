@@ -10,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.server.ResponseStatusException
 import java.time.Instant
 import java.util.UUID
+import org.springframework.security.core.context.SecurityContextHolder
+import com.iliyadev.springboot.config.security.UserPrincipal
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Request / Response DTOs
@@ -26,12 +28,15 @@ data class InstitutionRegisterRequest(
     val address: String? = null,
     val logoUrl: String? = null,
     val description: String? = null,
+    val isSubsidiary: Boolean = false,
+    val dependencyDescription: String? = null,
     val universities: List<String> = emptyList(),
     val specialties: List<String> = emptyList(),
     val associatedClubIds: List<String> = emptyList(),
     val associatedFieldOfStudyIds: List<String> = emptyList(),
     val associatedStudentOrgIds: List<String> = emptyList(),
     val instructorIds: List<UUID> = emptyList(),
+    val manualInstructors: List<ManualInstructorDto> = emptyList(),
     val adminIds: List<UUID> = emptyList()
 )
 
@@ -46,7 +51,8 @@ class InstitutionService(
     private val userRepository: UserRepository,
     private val channelRepository: ChannelRepository,
     private val courseRepository: CourseRepository,
-    private val userFollowRepository: UserFollowRepository
+    private val userFollowRepository: UserFollowRepository,
+    private val enrollmentRepository: CourseEnrollmentRepository
 ) {
     @Transactional
     fun registerInstitution(ownerId: UUID, request: InstitutionRegisterRequest): InstitutionResponse {
@@ -66,12 +72,15 @@ class InstitutionService(
             address = request.address,
             logoUrl = request.logoUrl,
             description = request.description,
+            isSubsidiary = request.isSubsidiary,
+            dependencyDescription = request.dependencyDescription,
             universities = request.universities.toMutableList(),
             specialties = request.specialties.toMutableList(),
             associatedClubIds = request.associatedClubIds.toMutableList(),
             associatedFieldOfStudyIds = request.associatedFieldOfStudyIds.toMutableList(),
             associatedStudentOrgIds = request.associatedStudentOrgIds.toMutableList(),
             instructorIds = request.instructorIds.toMutableList(),
+            manualInstructors = request.manualInstructors.map { ManualInstructor(name = it.name, avatarUrl = it.avatarUrl, resume = it.resume) }.toMutableList(),
             adminIds = request.adminIds.toMutableList(),
             owner = owner,
             verificationStatus = VerificationStatus.PENDING_VERIFICATION
@@ -98,6 +107,8 @@ class InstitutionService(
         entity.type = request.type
         if (request.logoUrl != null) entity.logoUrl = request.logoUrl
         if (request.description != null) entity.description = request.description
+        entity.isSubsidiary = request.isSubsidiary
+        entity.dependencyDescription = request.dependencyDescription
         if (request.province != null) entity.province = request.province
         if (request.city != null) entity.city = request.city
         entity.universities = request.universities.toMutableList()
@@ -106,6 +117,8 @@ class InstitutionService(
         entity.associatedFieldOfStudyIds = request.associatedFieldOfStudyIds.toMutableList()
         entity.associatedStudentOrgIds = request.associatedStudentOrgIds.toMutableList()
         entity.instructorIds = request.instructorIds.toMutableList()
+        entity.manualInstructors.clear()
+        entity.manualInstructors.addAll(request.manualInstructors.map { ManualInstructor(name = it.name, avatarUrl = it.avatarUrl, resume = it.resume) })
         entity.adminIds = request.adminIds.toMutableList()
         entity.updatedAt = Instant.now()
         val saved: Institution = institutionRepository.save(entity)
@@ -204,8 +217,46 @@ class InstitutionService(
     }
 
     private fun mapToResponse(entity: Institution): InstitutionResponse {
+        val institutionId: UUID = entity.id!!
+        
+        // Fetch all approved courses for this institution
+        val approvedCourses = courseRepository.findByInstitutionIdOrOrganizerId(institutionId, entity.owner!!.id!!, org.springframework.data.domain.Pageable.unpaged()).content
+            .filter { it.status == com.iliyadev.springboot.models.CourseStatus.APPROVED }
+            
+        var totalTrainingHours = 0
+        var totalPersonHours = 0
+        var totalRevenue: Long = 0
+        
+        for (course in approvedCourses) {
+            val durationHours = java.time.Duration.between(course.startsAt, course.endsAt).toHours().toInt()
+            val enrolled = enrollmentRepository.countByCourseIdAndIsActiveTrue(course.id!!).toInt()
+            
+            totalTrainingHours += durationHours
+            totalPersonHours += (durationHours * enrolled)
+            totalRevenue += (course.priceRials * enrolled)
+        }
+
+        val totalStudents: Long = enrollmentRepository.countTotalEnrollmentsForInstitution(institutionId)
+        val avgRating: Double = courseRepository.calculateAverageRatingForInstitution(institutionId) ?: 0.0
+        val totalReviews: Int = courseRepository.countTotalReviewsForInstitution(institutionId)
+        val approvedCourseCount: Long = approvedCourses.size.toLong()
+        
+        val totalTeachersCount = entity.instructorIds.size + entity.manualInstructors.size
+        val totalCollaborations = entity.associatedClubIds.size + entity.associatedFieldOfStudyIds.size + entity.associatedStudentOrgIds.size
+
+        // Hide revenue for non-owners
+        val authentication = SecurityContextHolder.getContext().authentication
+        var isOwner = false
+        if (authentication != null && authentication.principal is UserPrincipal) {
+            val principal = authentication.principal as UserPrincipal
+            if (principal.id == entity.owner?.id) {
+                isOwner = true
+            }
+        }
+        val finalRevenue: Long? = if (isOwner) totalRevenue else null
+
         return InstitutionResponse(
-            id = entity.id!!,
+            id = institutionId,
             name = entity.name,
             type = entity.type.name,
             registrationNumber = entity.registrationNumber,
@@ -216,12 +267,15 @@ class InstitutionService(
             address = entity.address,
             logoUrl = entity.logoUrl,
             description = entity.description,
+            isSubsidiary = entity.isSubsidiary,
+            dependencyDescription = entity.dependencyDescription,
             universities = entity.universities.toList(),
             specialties = entity.specialties.toList(),
             associatedClubIds = entity.associatedClubIds.toList(),
             associatedFieldOfStudyIds = entity.associatedFieldOfStudyIds.toList(),
             associatedStudentOrgIds = entity.associatedStudentOrgIds.toList(),
             instructorIds = entity.instructorIds.toList(),
+            manualInstructors = entity.manualInstructors.map { ManualInstructorDto(it.name, it.avatarUrl, it.resume) },
             adminIds = entity.adminIds.toList(),
             ownerId = entity.owner!!.id!!,
             channelId = entity.channel?.id,
@@ -231,10 +285,16 @@ class InstitutionService(
             createdAt = entity.createdAt,
             followerCount = entity.owner?.id?.let { userFollowRepository.countFollowersByUserId(it) } ?: 0,
             followingCount = entity.owner?.id?.let { userFollowRepository.countFollowingByUserId(it) } ?: 0,
-            courseCount = courseRepository.findByInstitutionId(entity.id!!, org.springframework.data.domain.Pageable.unpaged()).totalElements.toInt(),
-            studentCount = 0,
-            totalTrainingHours = 0,
-            rating = 4.8,
+            courseCount = approvedCourseCount.toInt(),
+            studentCount = totalStudents.toInt(),
+            totalTrainingHours = totalTrainingHours,
+            totalPersonHours = totalPersonHours,
+            totalTeachersCount = totalTeachersCount,
+            totalCollaborations = totalCollaborations,
+            totalRevenue = finalRevenue,
+            rating = avgRating,
+            averageRating = avgRating,
+            reviewCount = totalReviews,
             honors = entity.honors.map { it.toDto() }
         )
     }

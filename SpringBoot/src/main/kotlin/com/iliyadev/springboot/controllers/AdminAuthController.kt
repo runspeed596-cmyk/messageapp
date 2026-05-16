@@ -19,10 +19,10 @@ class AdminAuthController(
                 .body(ApiResponse(false, "نام کاربری یا رمز عبور اشتباه است"))
         val token = jwtTokenUtils.generateToken(admin.id.toString())
         return ResponseEntity.ok(
-            ApiResponse(true, "ورود موفق", AdminLoginResponse(token, admin.isSuperAdmin, admin.id.toString()))
+            ApiResponse(true, "ورود موفق", AdminLoginResponse(token, admin.isSuperAdmin, admin.id.toString(), admin.permissions))
         )
     }
 }
 
 data class AdminLoginRequest(val username: String, val password: String)
-data class AdminLoginResponse(val token: String, val isSuperAdmin: Boolean = false, val adminId: String = "")
+data class AdminLoginResponse(val token: String, val isSuperAdmin: Boolean = false, val adminId: String = "", val permissions: List<String> = emptyList())

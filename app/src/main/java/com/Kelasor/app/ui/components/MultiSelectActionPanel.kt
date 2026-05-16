@@ -32,7 +32,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 
 /**
  * Bottom action panel for multi-select message mode.
@@ -142,7 +142,7 @@ private fun ActionIconButton(
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             fontWeight = FontWeight.Medium,
             color = tint,
             fontSize = 10.sp

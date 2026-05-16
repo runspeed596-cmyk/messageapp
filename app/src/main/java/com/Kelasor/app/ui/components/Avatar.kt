@@ -42,13 +42,14 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 📐 Avatar Size Enum — Refined sizes for premium layout
 // ═══════════════════════════════════════════════════════════════════════════════
 
 enum class AvatarSize(val sizeDp: Dp, val fontSize: Int) {
+    EXTRA_SMALL(24.dp, 10),
     SMALL(36.dp, 13),
     MEDIUM(52.dp, 18),
     LARGE(68.dp, 22),
@@ -175,7 +176,7 @@ fun AvatarImage(
                                 text = initials,
                                 color = Color.White,
                                 fontSize = size.fontSize.sp,
-                                fontFamily = VazirFontFamily,
+                                fontFamily = DanaFontFamily,
                                 fontWeight = FontWeight.Bold,
                                 textAlign = TextAlign.Center
                             )
@@ -210,6 +211,7 @@ fun AvatarImage(
         // Premium online indicator — pulsing green dot with white ring
         if (isOnline) {
             val dotSize: Dp = when (size) {
+                AvatarSize.EXTRA_SMALL -> 8.dp
                 AvatarSize.SMALL -> 10.dp
                 AvatarSize.MEDIUM -> 14.dp
                 AvatarSize.LARGE -> 16.dp

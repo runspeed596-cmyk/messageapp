@@ -39,7 +39,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import java.io.File
 import java.io.FileOutputStream
 import kotlin.math.roundToInt
@@ -251,7 +251,7 @@ fun ProfilePhotoEditorScreen(
             Text(
                 "ویرایش تصویر پروفایل",
                 color = Color.White,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.Bold
             )
             
@@ -372,7 +372,7 @@ private fun EditorToolButton(
             label,
             color = if (selected) MessageAppTheme.extendedColors.accent else Color.White.copy(alpha = 0.7f),
             fontSize = 10.sp,
-            fontFamily = VazirFontFamily
+            fontFamily = DanaFontFamily
         )
     }
 }
@@ -536,7 +536,7 @@ private fun AdjustToolPanel(
 @Composable
 private fun AdjustSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, onValueChange: (Float) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(label, color = Color.White, fontSize = 12.sp, fontFamily = VazirFontFamily, modifier = Modifier.width(60.dp))
+        Text(label, color = Color.White, fontSize = 12.sp, fontFamily = DanaFontFamily, modifier = Modifier.width(60.dp))
         Slider(
             value = value,
             onValueChange = onValueChange,

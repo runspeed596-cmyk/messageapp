@@ -55,6 +55,9 @@ fun UserDto.toDomain(): User {
         
         university = university,
         fieldOfStudy = fieldOfStudy,
+        universities = universities ?: emptyList(),
+        fieldsOfStudy = fieldsOfStudy ?: emptyList(),
+        isGraduated = isGraduated,
         education = education,
         skills = skills,
         interests = interests,
@@ -78,7 +81,11 @@ fun UserDto.toDomain(): User {
         displayPhoneNumber = displayPhone,
         institutionId = institutionId,
         institutionLogoUrl = institutionLogoUrl,
-        institutionName = institutionName
+        institutionName = institutionName,
+        role = role ?: "NORMAL",
+        averageRating = averageRating,
+        reviewCount = reviewCount,
+        officialChannelId = officialChannelId
     )
 }
 
@@ -106,6 +113,9 @@ fun UserDto.toEntity(isCurrentUser: Boolean = false, contactName: String? = null
     
     university = university,
     fieldOfStudy = fieldOfStudy,
+    universities = universities,
+    fieldsOfStudy = fieldsOfStudy,
+    isGraduated = isGraduated,
     education = education,
     skills = skills,
     interests = interests,
@@ -125,7 +135,8 @@ fun UserDto.toEntity(isCurrentUser: Boolean = false, contactName: String? = null
     phoneVisibility = phoneVisibility ?: "CONTACTS",
     institutionId = institutionId,
     institutionLogoUrl = institutionLogoUrl,
-    institutionName = institutionName
+    institutionName = institutionName,
+    role = role ?: "NORMAL"
 )
 
 fun UserEntity.toDomain(): User {
@@ -167,6 +178,9 @@ fun UserEntity.toDomain(): User {
         
         university = university,
         fieldOfStudy = fieldOfStudy,
+        universities = universities ?: emptyList(),
+        fieldsOfStudy = fieldsOfStudy ?: emptyList(),
+        isGraduated = isGraduated,
         education = education,
         skills = skills,
         interests = interests,
@@ -190,7 +204,8 @@ fun UserEntity.toDomain(): User {
         displayPhoneNumber = displayPhone,
         institutionId = institutionId,
         institutionLogoUrl = institutionLogoUrl,
-        institutionName = institutionName
+        institutionName = institutionName,
+        role = role
     )
 }
 
@@ -295,7 +310,10 @@ fun MessageDto.toDomain(): Message = Message(
     amplitudes = amplitudes,
     isPinned = isPinned,
     pinnedAt = pinnedAt?.let { parseInstant(it) },
-    scheduledAt = scheduledAt?.let { parseInstant(it) }
+    scheduledAt = scheduledAt?.let { parseInstant(it) },
+    actionLabel = actionLabel,
+    actionUrl = actionUrl,
+    timerTargetAt = timerTargetAt?.let { parseInstant(it) }
 )
 
 fun MessageDto.toEntity(): MessageEntity = MessageEntity(
@@ -320,7 +338,10 @@ fun MessageDto.toEntity(): MessageEntity = MessageEntity(
     amplitudes = amplitudes?.joinToString(","),
     isPinned = isPinned,
     pinnedAt = pinnedAt?.let { parseInstant(it)?.toEpochMilli() },
-    scheduledAt = scheduledAt?.let { parseInstant(it)?.toEpochMilli() }
+    scheduledAt = scheduledAt?.let { parseInstant(it)?.toEpochMilli() },
+    actionLabel = actionLabel,
+    actionUrl = actionUrl,
+    timerTargetAt = timerTargetAt?.let { parseInstant(it)?.toEpochMilli() }
 )
 
 fun MessageEntity.toDomain(): Message = Message(
@@ -369,7 +390,10 @@ fun MessageEntity.toDomain(): Message = Message(
     amplitudes = amplitudes?.split(",")?.mapNotNull { it.toIntOrNull() },
     isPinned = isPinned,
     pinnedAt = pinnedAt?.let { Instant.ofEpochMilli(it) },
-    scheduledAt = scheduledAt?.let { Instant.ofEpochMilli(it) }
+    scheduledAt = scheduledAt?.let { Instant.ofEpochMilli(it) },
+    actionLabel = actionLabel,
+    actionUrl = actionUrl,
+    timerTargetAt = timerTargetAt?.let { Instant.ofEpochMilli(it) }
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -521,7 +545,12 @@ fun GroupMessageDto.toEntity(): GroupMessageEntity = GroupMessageEntity(
     reactions = com.google.gson.Gson().toJson(reactions),
     myReaction = myReaction,
     poll = if (poll != null) com.google.gson.Gson().toJson(poll) else null,
-    amplitudes = amplitudes?.joinToString(",")
+    amplitudes = amplitudes?.joinToString(","),
+    actionLabel = actionLabel,
+    actionUrl = actionUrl,
+    isPinned = isPinned,
+    pinnedAt = pinnedAt?.let { parseInstant(it)?.toEpochMilli() },
+    scheduledAt = scheduledAt?.let { parseInstant(it)?.toEpochMilli() }
 )
 
 fun GroupMessageEntity.toDomain(replyMessage: Message? = null): Message = Message(
@@ -556,7 +585,12 @@ fun GroupMessageEntity.toDomain(replyMessage: Message? = null): Message = Messag
             com.google.gson.Gson().fromJson(poll, com.Kelasor.app.data.remote.dto.PollDto::class.java)?.toDomain()
         } catch (e: Exception) { null }
     } else null,
-    amplitudes = amplitudes?.split(",")?.mapNotNull { it.toIntOrNull() }
+    amplitudes = amplitudes?.split(",")?.mapNotNull { it.toIntOrNull() },
+    isPinned = isPinned,
+    pinnedAt = pinnedAt?.let { Instant.ofEpochMilli(it) },
+    scheduledAt = scheduledAt?.let { Instant.ofEpochMilli(it) },
+    actionLabel = actionLabel,
+    actionUrl = actionUrl
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -636,6 +670,7 @@ fun ChannelEntity.toDomain(): Channel {
             bio = null,
             isOnline = false,
             lastSeen = null,
+            role = "NORMAL",
             createdAt = Instant.now()
         )
     }
@@ -680,7 +715,13 @@ fun ChannelPostDto.toDomain(): ChannelPost = ChannelPost(
     pinnedAt = pinnedAt?.let { parseInstant(it) },
     scheduledAt = scheduledAt?.let { parseInstant(it) },
     forwardedFrom = forwardedFrom,
-    isEdited = isEdited
+    isEdited = isEdited,
+    actionLabel = actionLabel,
+    actionUrl = actionUrl,
+    timerTargetAt = timerTargetAt?.let { parseInstant(it) },
+    isAd = isAd,
+    adLabel = adLabel,
+    adSourceChannelId = adSourceChannelId
 )
 
 fun ChannelPostDto.toEntity(): ChannelPostEntity = ChannelPostEntity(
@@ -701,7 +742,13 @@ fun ChannelPostDto.toEntity(): ChannelPostEntity = ChannelPostEntity(
     scheduledAt = scheduledAt?.let { parseInstant(it)?.toEpochMilli() },
     forwardedFrom = forwardedFrom,
     isEdited = isEdited,
-    myReaction = myReaction
+    myReaction = myReaction,
+    actionLabel = actionLabel,
+    actionUrl = actionUrl,
+    timerTargetAt = timerTargetAt?.let { parseInstant(it)?.toEpochMilli() },
+    isAd = isAd,
+    adLabel = adLabel,
+    adSourceChannelId = adSourceChannelId
 )
 
 fun ChannelPostEntity.toDomain(): ChannelPost = ChannelPost(
@@ -732,7 +779,13 @@ fun ChannelPostEntity.toDomain(): ChannelPost = ChannelPost(
     pinnedAt = pinnedAt?.let { Instant.ofEpochMilli(it) },
     scheduledAt = scheduledAt?.let { Instant.ofEpochMilli(it) },
     forwardedFrom = forwardedFrom,
-    isEdited = isEdited
+    isEdited = isEdited,
+    actionLabel = actionLabel,
+    actionUrl = actionUrl,
+    timerTargetAt = timerTargetAt?.let { Instant.ofEpochMilli(it) },
+    isAd = isAd,
+    adLabel = adLabel,
+    adSourceChannelId = adSourceChannelId
 )
 
 fun ChannelSubscriberDto.toDomain(): ChannelSubscriber = ChannelSubscriber(
@@ -768,6 +821,20 @@ internal fun parseInstant(dateString: String?): Instant? {
     }
 }
 
+internal fun parseSyllabusDuration(durationStr: String?): Int {
+    if (durationStr == null) return 0
+    var hours = 0
+    var minutes = 0
+    
+    val hMatch = Regex("(\\d+)h").find(durationStr)
+    if (hMatch != null) hours = hMatch.groupValues[1].toInt()
+    
+    val mMatch = Regex("(\\d+)m").find(durationStr)
+    if (mMatch != null) minutes = mMatch.groupValues[1].toInt()
+    
+    return (hours * 60) + minutes
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // 📊 Poll Mappers
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -800,6 +867,8 @@ fun InstitutionDto.toDomain(): Institution = Institution(
     type = type,
     logoUrl = logoUrl,
     description = description,
+    isSubsidiary = isSubsidiary,
+    dependencyDescription = dependencyDescription,
     province = province,
     city = city,
     verificationStatus = verificationStatus,
@@ -811,6 +880,7 @@ fun InstitutionDto.toDomain(): Institution = Institution(
     specialties = specialties ?: emptyList(),
     achievements = achievements,
     instructorIds = instructorIds ?: emptyList(),
+    manualInstructors = manualInstructors?.map { it.toDomain() } ?: emptyList(),
     adminIds = adminIds ?: emptyList(),
     associatedClubIds = associatedClubIds ?: emptyList(),
     associatedFieldOfStudyIds = associatedFieldOfStudyIds ?: emptyList(),
@@ -820,7 +890,13 @@ fun InstitutionDto.toDomain(): Institution = Institution(
     courseCount = courseCount,
     studentCount = studentCount,
     totalTrainingHours = totalTrainingHours,
+    totalPersonHours = totalPersonHours,
+    totalTeachersCount = totalTeachersCount,
+    totalCollaborations = totalCollaborations,
+    totalRevenue = totalRevenue,
     rating = rating,
+    averageRating = averageRating,
+    reviewCount = reviewCount,
     honors = honors.map { it.toDomain() }
 )
 
@@ -832,6 +908,12 @@ fun InstitutionHonorDto.toDomain(): InstitutionHonor = InstitutionHonor(
     date = date
 )
 
+fun ManualInstructorDto.toDomain(): ManualInstructor = ManualInstructor(
+    name = name,
+    avatarUrl = avatarUrl,
+    resume = resume
+)
+
 fun CourseDto.toDomain(): Course = Course(
     id = id,
     title = title,
@@ -840,7 +922,9 @@ fun CourseDto.toDomain(): Course = Course(
     posterUrl = coverImageUrl,
     channelId = channelId,
     groupId = groupId,
-    creatorId = organizerId,
+    managerId = managerId,
+    managerName = managerName,
+    managerAvatarUrl = managerAvatarUrl,
     organizerName = organizerName,
     organizerAvatarUrl = organizerAvatarUrl,
     organizerDescription = organizerDescription,
@@ -851,22 +935,27 @@ fun CourseDto.toDomain(): Course = Course(
     isFree = priceRials == 0L,
     priceRials = priceRials,
     instructors = teachers.map { it.toDomain() },
+    manualInstructors = manualInstructors.map { it.toDomain() },
     admins = admins.map { it.toDomain() },
-    durationMinutes = 0,
+    durationMinutes = parseSyllabusDuration(syllabusDuration),
     studentCount = enrolledCount.toInt(),
     enrolledCount = enrolledCount.toInt(),
     capacity = capacity,
     enrollmentLimit = enrollmentLimit,
-    rating = 0.0,
+    rating = averageRating,
+    reviewCount = reviewCount,
     favoritesCount = favoritesCount,
     status = status,
     adminNote = adminNote,
     tags = tags,
     suitableFor = suitableFor,
-    chapters = chapters.map { CourseChapter(it.title, it.durationText) },
+    chapters = chapters.map { CourseChapter(it.title, it.durationText, parseInstant(it.sessionStartTime), parseInstant(it.sessionEndTime)) },
     startsAt = parseInstant(startsAt) ?: Instant.now(),
     endsAt = parseInstant(endsAt) ?: Instant.now(),
     isVerticalPoster = isVerticalPoster,
+    hasOnlineClass = hasOnlineClass,
     discountPercentage = discountPercentage ?: 0,
+    organizerType = organizerType,
     createdAt = parseInstant(createdAt) ?: Instant.now()
 )
+

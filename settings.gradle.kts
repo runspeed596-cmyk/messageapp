@@ -1,14 +1,11 @@
 pluginManagement {
     repositories {
-        google {
-            content {
-                includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("com\\.google.*")
-                includeGroupByRegex("androidx.*")
-            }
-        }
+        google()
         mavenCentral()
         gradlePluginPortal()
+        // Iranian mirrors — uncomment when on national network only
+        // maven { url = uri("https://maven.irrepo.ir/public") }
+        // maven { url = uri("https://maven.map.ir") }
     }
 }
 dependencyResolutionManagement {
@@ -16,18 +13,9 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven {
-            url = uri("https://api.mapbox.com/downloads/v2/releases/maven")
-            authentication {
-                create<BasicAuthentication>("basic")
-            }
-            credentials {
-                // Do not change the username
-                username = "mapbox"
-                // Use the secret token from environment variable or local properties
-                password = System.getenv("MAPBOX_DOWNLOADS_TOKEN") ?: ""
-            }
-        }
+        // Iranian mirrors — uncomment when on national network only
+        // maven { url = uri("https://maven.irrepo.ir/public") }
+        // maven { url = uri("https://maven.map.ir") }
     }
 }
 

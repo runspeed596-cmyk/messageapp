@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
@@ -30,7 +31,9 @@ import com.Kelasor.app.domain.model.Institution
 import com.Kelasor.app.domain.model.User
 import com.Kelasor.app.ui.components.AvatarImage
 import com.Kelasor.app.ui.components.AvatarSize
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.util.toPersianNumbers
+import com.Kelasor.app.util.toPersianPrice
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -43,6 +46,7 @@ fun AcademyPublicProfileScreen(
     onNavigateToChat: (String) -> Unit = {},
     onNavigateToUserProfile: (String) -> Unit = {},
     onNavigateToEditProfile: (String) -> Unit = {},
+    onNavigateToChannel: (String) -> Unit = {},
     viewModel: AcademyPublicProfileViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -54,6 +58,7 @@ fun AcademyPublicProfileScreen(
                 is AcademyPublicProfileEvent.NavigateToChat -> onNavigateToChat(event.chatId)
                 is AcademyPublicProfileEvent.NavigateToUserProfile -> onNavigateToUserProfile(event.userId)
                 is AcademyPublicProfileEvent.NavigateToEditProfile -> onNavigateToEditProfile(event.institutionId)
+                is AcademyPublicProfileEvent.NavigateToChannel -> onNavigateToChannel(event.channelId)
             }
         }
     }
@@ -78,7 +83,7 @@ fun AcademyPublicProfileScreen(
                 title = {
                     Text(
                         text = institution.name,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
                         maxLines = 1,
@@ -101,12 +106,12 @@ fun AcademyPublicProfileScreen(
                             onDismissRequest = { showMoreMenu = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("اشتراک‌گذاری", fontFamily = VazirFontFamily) },
+                                text = { Text("اشتراک‌گذاری", fontFamily = DanaFontFamily) },
                                 onClick = { showMoreMenu = false },
                                 leadingIcon = { Icon(Icons.Rounded.Share, contentDescription = null) }
                             )
                             DropdownMenuItem(
-                                text = { Text("گزارش", fontFamily = VazirFontFamily) },
+                                text = { Text("گزارش", fontFamily = DanaFontFamily) },
                                 onClick = { showMoreMenu = false },
                                 leadingIcon = { Icon(Icons.Rounded.Flag, contentDescription = null) }
                             )
@@ -135,7 +140,8 @@ fun AcademyPublicProfileScreen(
                 calculatedRating = state.calculatedRating,
                 onFollowClick = { viewModel.toggleFollow() },
                 onMessageClick = { viewModel.startChatWithUser(institution.ownerId) },
-                onEditProfileClick = { viewModel.navigateToEditProfile() }
+                onEditProfileClick = { viewModel.navigateToEditProfile() },
+                onChannelClick = { viewModel.navigateToOfficialChannel() }
             )
 
             // Description and Links
@@ -167,7 +173,7 @@ fun AcademyPublicProfileScreen(
                         text = {
                             Text(
                                 text = title,
-                                fontFamily = VazirFontFamily,
+                                fontFamily = DanaFontFamily,
                                 fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Medium,
                                 fontSize = 14.sp,
                                 color = if (selectedTabIndex == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
@@ -184,6 +190,7 @@ fun AcademyPublicProfileScreen(
                     1 -> HonorsTabContent(honors = state.honors)
                     2 -> InstructorsTabContent(
                         instructors = state.instructors,
+                        manualInstructors = state.manualInstructors,
                         onInstructorClick = { user -> viewModel.navigateToUserProfile(user.id) },
                         onFollowClick = { user -> viewModel.followUser(user.id) }
                     )
@@ -207,7 +214,8 @@ fun ProfileHeader(
     calculatedRating: Double,
     onFollowClick: () -> Unit,
     onMessageClick: () -> Unit,
-    onEditProfileClick: () -> Unit = {}
+    onEditProfileClick: () -> Unit = {},
+    onChannelClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -238,6 +246,25 @@ fun ProfileHeader(
                         .fillMaxSize()
                         .clip(CircleShape)
                 )
+
+                // Popular Badge Overlay
+                if (institution.averageRating >= 4.5) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(24.dp)
+                            .background(Color(0xFFFFD700), CircleShape)
+                            .border(2.dp, MaterialTheme.colorScheme.background, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Star,
+                            contentDescription = "محبوب",
+                            tint = Color.White,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
             }
             
             Spacer(modifier = Modifier.width(24.dp))
@@ -247,10 +274,26 @@ fun ProfileHeader(
                 modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                ProfileStat(count = institution.courseCount.toString(), label = "دوره‌ها")
-                ProfileStat(count = String.format("%.1f", calculatedRating), label = "امتیاز دوره‌ها")
-                ProfileStat(count = String.format("%.1f", calculatedScore), label = "سطح آکادمی")
+                ProfileStat(count = institution.courseCount.toString().toPersianNumbers(), label = "دوره‌ها")
+                ProfileStat(count = institution.studentCount.toString().toPersianNumbers(), label = "دانشجو")
+                ProfileStat(count = institution.followerCount.toString().toPersianNumbers(), label = "دنبال‌کننده")
             }
+        }
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        // Extended Stats Row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            MiniStat(icon = Icons.Rounded.Star, value = String.format("%.1f", calculatedRating).toPersianNumbers(), label = "رتبه")
+            MiniStat(icon = Icons.Rounded.People, value = institution.instructorIds.size.toString().toPersianNumbers(), label = "اساتید")
+            MiniStat(icon = Icons.Rounded.EmojiEvents, value = String.format("%.1f", calculatedScore).toPersianNumbers(), label = "سطح")
+            MiniStat(icon = Icons.Rounded.Reviews, value = institution.reviewCount.toString().toPersianNumbers(), label = "نظرات")
         }
         
         Spacer(modifier = Modifier.height(16.dp))
@@ -269,7 +312,7 @@ fun ProfileHeader(
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
-                    Text("ویرایش پروفایل", fontFamily = VazirFontFamily, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Text("ویرایش پروفایل", fontFamily = DanaFontFamily, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
                 }
             } else {
                 Button(
@@ -284,13 +327,52 @@ fun ProfileHeader(
                 ) {
                     Text(
                         text = if (isFollowing) "دنبال شده" else "دنبال کردن",
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontSize = 13.sp,
                         color = if (isFollowing) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onPrimary
                     )
                 }
-                
 
+                if (!institution.channelId.isNullOrEmpty()) {
+                    Button(
+                        onClick = onChannelClick,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(36.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Campaign,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            "کانال رسمی",
+                            fontFamily = DanaFontFamily,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                }
+
+                IconButton(
+                    onClick = onMessageClick,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.Chat,
+                        contentDescription = "پیام",
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
@@ -301,15 +383,41 @@ fun ProfileStat(count: String, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = count,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp,
             color = MaterialTheme.colorScheme.onBackground
         )
         Text(
             text = label,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+fun MiniStat(icon: androidx.compose.ui.graphics.vector.ImageVector, value: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = value,
+            fontFamily = DanaFontFamily,
+            fontWeight = FontWeight.Bold,
+            fontSize = 13.sp,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Text(
+            text = label,
+            fontFamily = DanaFontFamily,
+            fontSize = 10.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
@@ -326,7 +434,7 @@ fun ProfileBio(institution: Institution) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = institution.name,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
                 color = MaterialTheme.colorScheme.onBackground
@@ -356,7 +464,7 @@ fun ProfileBio(institution: Institution) {
         
         Text(
             text = typePersian,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             fontSize = 13.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 4.dp)
@@ -365,7 +473,7 @@ fun ProfileBio(institution: Institution) {
         if (!institution.description.isNullOrEmpty()) {
             Text(
                 text = institution.description,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
                 color = MaterialTheme.colorScheme.onSurface
@@ -412,12 +520,12 @@ fun CoursesTabContent(courses: List<Course>, onCourseClick: (String) -> Unit) {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("جستجوی دوره...", fontFamily = VazirFontFamily, fontSize = 12.sp) },
+                placeholder = { Text("جستجوی دوره...", fontFamily = DanaFontFamily, fontSize = 12.sp) },
                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
                 modifier = Modifier.weight(1f).height(50.dp),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
-                textStyle = androidx.compose.ui.text.TextStyle(fontFamily = VazirFontFamily, fontSize = 14.sp)
+                textStyle = androidx.compose.ui.text.TextStyle(fontFamily = DanaFontFamily, fontSize = 14.sp)
             )
             
             // Filter Dropdown
@@ -430,7 +538,7 @@ fun CoursesTabContent(courses: List<Course>, onCourseClick: (String) -> Unit) {
                 ) {
                     Icon(Icons.Rounded.FilterList, contentDescription = "فیلتر", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(selectedFilter.first, fontFamily = VazirFontFamily, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(selectedFilter.first, fontFamily = DanaFontFamily, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 DropdownMenu(
                     expanded = expanded,
@@ -439,7 +547,7 @@ fun CoursesTabContent(courses: List<Course>, onCourseClick: (String) -> Unit) {
                 ) {
                     filterOptions.forEach { option ->
                         DropdownMenuItem(
-                            text = { Text(option.first, fontFamily = VazirFontFamily, fontSize = 14.sp) },
+                            text = { Text(option.first, fontFamily = DanaFontFamily, fontSize = 14.sp) },
                             onClick = {
                                 selectedFilter = option
                                 expanded = false
@@ -497,7 +605,7 @@ fun AcademyProfileCourseItem(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = course.title,
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
                     maxLines = 1,
@@ -517,7 +625,7 @@ fun AcademyProfileCourseItem(
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = course.organizerName ?: "ناشناس",
-                            fontFamily = VazirFontFamily,
+                            fontFamily = DanaFontFamily,
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
@@ -525,9 +633,12 @@ fun AcademyProfileCourseItem(
                         )
                     }
                     
+                    val price = course.priceRials / 10
+                    val discountPct = course.discountPercentage ?: 0
+                    val discountedPrice = if (discountPct > 0) price - (price * discountPct / 100) else price
+                    
                     Text(
-                        text = if (course.isFree) "رایگان" else "${course.priceRials / 10} تومان",
-                        fontFamily = VazirFontFamily,
+                        text = if (course.isFree) "رایگان" else "${discountedPrice.toPersianPrice()} تومان",
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.primary
@@ -556,7 +667,7 @@ fun AcademyProfileCourseItem(
                     Text(
                         text = statusText,
                         color = statusColor,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -600,7 +711,7 @@ fun HonorsTabContent(honors: List<com.Kelasor.app.domain.model.InstitutionHonor>
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = honor.title,
-                            fontFamily = VazirFontFamily,
+                            fontFamily = DanaFontFamily,
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp,
                             color = MaterialTheme.colorScheme.onSurface
@@ -608,7 +719,7 @@ fun HonorsTabContent(honors: List<com.Kelasor.app.domain.model.InstitutionHonor>
                         if (honor.description != null) {
                             Text(
                                 text = honor.description,
-                                fontFamily = VazirFontFamily,
+                                fontFamily = DanaFontFamily,
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 2,
@@ -619,7 +730,7 @@ fun HonorsTabContent(honors: List<com.Kelasor.app.domain.model.InstitutionHonor>
                     if (honor.date != null) {
                         Text(
                             text = honor.date,
-                            fontFamily = VazirFontFamily,
+                            fontFamily = DanaFontFamily,
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -654,21 +765,21 @@ fun AdminsTabContent(admins: List<com.Kelasor.app.domain.model.User>, onAdminCli
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = admin.displayName,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "ادمین آکادمی",
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 
                 IconButton(onClick = { onMessageClick(admin) }) {
-                    Icon(imageVector = Icons.Rounded.Chat, contentDescription = "Chat", tint = MaterialTheme.colorScheme.primary)
+                    Icon(imageVector = Icons.AutoMirrored.Rounded.Chat, contentDescription = "Chat", tint = MaterialTheme.colorScheme.primary)
                 }
             }
         }
@@ -676,8 +787,13 @@ fun AdminsTabContent(admins: List<com.Kelasor.app.domain.model.User>, onAdminCli
 }
 
 @Composable
-fun InstructorsTabContent(instructors: List<User>, onInstructorClick: (User) -> Unit, onFollowClick: (User) -> Unit = {}) {
-    if (instructors.isEmpty()) {
+fun InstructorsTabContent(
+    instructors: List<User>,
+    manualInstructors: List<com.Kelasor.app.domain.model.ManualInstructor> = emptyList(),
+    onInstructorClick: (User) -> Unit,
+    onFollowClick: (User) -> Unit = {}
+) {
+    if (instructors.isEmpty() && manualInstructors.isEmpty()) {
         EmptyTabState(icon = Icons.Rounded.PeopleOutline, message = "مدرسی یافت نشد")
         return
     }
@@ -699,14 +815,14 @@ fun InstructorsTabContent(instructors: List<User>, onInstructorClick: (User) -> 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = instructor.displayName,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "مدرس",
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -719,7 +835,52 @@ fun InstructorsTabContent(instructors: List<User>, onInstructorClick: (User) -> 
                     modifier = Modifier.height(32.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp)
                 ) {
-                    Text("دنبال کردن", fontFamily = VazirFontFamily, fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Text("دنبال کردن", fontFamily = DanaFontFamily, fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                }
+            }
+        }
+        // Manual (guest) instructors
+        items(manualInstructors) { manual ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val fullUrl = com.Kelasor.app.util.UrlUtils.getFullUrl(manual.avatarUrl)
+                if (fullUrl != null) {
+                    AsyncImage(
+                        model = fullUrl,
+                        contentDescription = manual.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.size(48.dp).clip(CircleShape).border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                    )
+                } else {
+                    AvatarImage(imageUrl = null, name = manual.name, size = AvatarSize.LARGE)
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = manual.name,
+                        fontFamily = DanaFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "مدرس مهمان",
+                        fontFamily = DanaFontFamily,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    if (!manual.resume.isNullOrEmpty()) {
+                        Text(
+                            text = manual.resume,
+                            fontFamily = DanaFontFamily,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }
@@ -761,7 +922,7 @@ fun AboutTabContent(institution: Institution) {
                             ) {
                                 Text(
                                     text = item,
-                                    fontFamily = VazirFontFamily,
+                                    fontFamily = DanaFontFamily,
                                     fontSize = 13.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -777,7 +938,7 @@ fun AboutTabContent(institution: Institution) {
                 AboutSectionCard(title = "دستاوردها") {
                     Text(
                         text = institution.achievements,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontSize = 14.sp,
                         lineHeight = 22.sp,
                         color = MaterialTheme.colorScheme.onSurface
@@ -799,7 +960,7 @@ fun AboutSectionCard(title: String, content: @Composable ColumnScope.() -> Unit)
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = title,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
                 color = MaterialTheme.colorScheme.primary,
@@ -828,14 +989,14 @@ fun AboutInfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, title: S
         Column {
             Text(
                 text = title,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = value,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Medium
@@ -862,7 +1023,7 @@ fun EmptyTabState(icon: androidx.compose.ui.graphics.vector.ImageVector, message
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = message,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -896,7 +1057,7 @@ fun CollaborationsTabContent(
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = "درخواست همکاری در دوره",
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
@@ -904,7 +1065,7 @@ fun CollaborationsTabContent(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = request.courseTitle,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontSize = 16.sp,
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold
@@ -912,7 +1073,7 @@ fun CollaborationsTabContent(
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "ارسال کننده: ${request.senderInstitutionName}",
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -920,7 +1081,7 @@ fun CollaborationsTabContent(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "پیام: ${request.message}",
-                            fontFamily = VazirFontFamily,
+                            fontFamily = DanaFontFamily,
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -936,7 +1097,7 @@ fun CollaborationsTabContent(
                             shape = RoundedCornerShape(8.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
                         ) {
-                            Text("قبول", fontFamily = VazirFontFamily, fontSize = 13.sp, color = Color.White)
+                            Text("قبول", fontFamily = DanaFontFamily, fontSize = 13.sp, color = Color.White)
                         }
                         Button(
                             onClick = { onReject(request.id) },
@@ -944,7 +1105,7 @@ fun CollaborationsTabContent(
                             shape = RoundedCornerShape(8.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                         ) {
-                            Text("رد کردن", fontFamily = VazirFontFamily, fontSize = 13.sp, color = MaterialTheme.colorScheme.onError)
+                            Text("رد کردن", fontFamily = DanaFontFamily, fontSize = 13.sp, color = MaterialTheme.colorScheme.onError)
                         }
                     }
                 }

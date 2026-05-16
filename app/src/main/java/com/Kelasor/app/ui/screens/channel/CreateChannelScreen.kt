@@ -49,7 +49,7 @@ import androidx.compose.ui.unit.dp
 import com.Kelasor.app.ui.components.PrimaryButton
 import com.Kelasor.app.ui.theme.CardShapes
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ➕ Create Channel Screen
@@ -89,7 +89,7 @@ fun CreateChannelScreen(
                 title = {
                     Text(
                         text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.create_channel),
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -155,7 +155,7 @@ fun CreateChannelScreen(
                         value = state.name,
                         onValueChange = { viewModel.setName(it) },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text(androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.channel_name), fontFamily = VazirFontFamily) },
+                        label = { Text(androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.channel_name), fontFamily = DanaFontFamily) },
                         singleLine = true,
                         shape = CardShapes.inputField,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -172,7 +172,7 @@ fun CreateChannelScreen(
                         value = state.description,
                         onValueChange = { viewModel.setDescription(it) },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text(androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.description_optional), fontFamily = VazirFontFamily) },
+                        label = { Text(androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.description_optional), fontFamily = DanaFontFamily) },
                         minLines = 3,
                         maxLines = 5,
                         shape = CardShapes.inputField,
@@ -226,16 +226,16 @@ fun CreateChannelScreen(
                             value = state.publicId,
                             onValueChange = { viewModel.setPublicId(it) },
                             modifier = Modifier.fillMaxWidth(),
-                            label = { Text("شناسه عمومی (لینک)", fontFamily = VazirFontFamily) },
-                            placeholder = { Text("my_channel", fontFamily = VazirFontFamily) },
+                            label = { Text("شناسه عمومی (لینک)", fontFamily = DanaFontFamily) },
+                            placeholder = { Text("my_channel", fontFamily = DanaFontFamily) },
                             leadingIcon = { Text("@", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = 12.dp)) },
                             singleLine = true,
                             isError = state.publicIdError != null,
                             supportingText = {
                                 if (state.publicIdError != null) {
-                                    Text(state.publicIdError!!, color = MaterialTheme.colorScheme.error, fontFamily = VazirFontFamily)
+                                    Text(state.publicIdError!!, color = MaterialTheme.colorScheme.error, fontFamily = DanaFontFamily)
                                 } else {
-                                    Text("لینک اختصاصی کانال شما", color = MaterialTheme.colorScheme.onSurfaceVariant, fontFamily = VazirFontFamily)
+                                    Text("لینک اختصاصی کانال شما", color = MaterialTheme.colorScheme.onSurfaceVariant, fontFamily = DanaFontFamily)
                                 }
                             },
                             shape = CardShapes.inputField,
@@ -304,7 +304,7 @@ fun CreateChannelScreen(
                         value = state.searchQuery,
                         onValueChange = { viewModel.onSearchQueryChange(it) },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("جستجوی نام کاربری...", fontFamily = VazirFontFamily) },
+                        placeholder = { Text("جستجوی نام کاربری...", fontFamily = DanaFontFamily) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Search,
@@ -343,7 +343,7 @@ fun CreateChannelScreen(
                                         Text(
                                             text = user.contactName ?: user.displayName,
                                             style = MaterialTheme.typography.bodySmall,
-                                            fontFamily = VazirFontFamily,
+                                            fontFamily = DanaFontFamily,
                                             color = extendedColors.accent
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))

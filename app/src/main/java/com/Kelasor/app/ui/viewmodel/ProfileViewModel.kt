@@ -50,6 +50,13 @@ class ProfileViewModel @Inject constructor(
         loadCurrentUser()
         observeCurrentUser()
         loadProvinces()
+        viewModelScope.launch {
+            userRepository.currentUserId.collect { newUserId ->
+                if (newUserId != null && _state.value.user?.id != newUserId && _state.value.user != null) {
+                    loadCurrentUser(forceRefresh = true)
+                }
+            }
+        }
     }
     private fun observeCurrentUser() {
         viewModelScope.launch {

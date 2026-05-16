@@ -48,7 +48,7 @@ import com.hasani.messageapp.ui.theme.MessageAppTheme
 import com.hasani.messageapp.ui.theme.VazirFontFamily
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🔴 Premium Unread Badge with Glow Effect
+//   Premium Unread Badge with Glow Effect
 // ═══════════════════════════════════════════════════════════════════════════════
 
 @Composable

@@ -2,12 +2,16 @@ package com.Kelasor.app.data.repository
 
 import com.Kelasor.app.data.local.dao.CourseDao
 import com.Kelasor.app.data.local.entity.CourseEntity
+import com.Kelasor.app.data.remote.dto.CourseDto
+import com.Kelasor.app.data.remote.dto.EnrollmentResponseDto
 import com.Kelasor.app.data.session.SessionManager
 import com.Kelasor.app.domain.mapper.toDomain
+import com.Kelasor.app.domain.model.Course
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.asRequestBody
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -33,6 +37,38 @@ class CourseRepository @Inject constructor(
                 }
             } else {
                 Result.failure(Exception(response.body()?.message ?: "Course not found"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getJoinClassUrl(courseId: String): Result<String> {
+        return try {
+            val response = apiService.getJoinClassUrl(courseId)
+            if (response.isSuccessful && response.body()?.success == true) {
+                val url = response.body()?.data?.get("url")
+                if (url != null) Result.success(url) else Result.failure(Exception("URL is null"))
+            } else {
+                Result.failure(Exception(response.body()?.message ?: "Failed to get join URL"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun createKelasorOnline(courseId: String): Result<com.Kelasor.app.domain.model.Course> {
+        return try {
+            val response = apiService.createKelasorOnline(courseId)
+            if (response.isSuccessful && response.body()?.success == true) {
+                val courseDto = response.body()?.data
+                if (courseDto != null) {
+                    Result.success(courseDto.toDomain())
+                } else {
+                    Result.failure(Exception("Course data is null"))
+                }
+            } else {
+                Result.failure(Exception(response.body()?.message ?: "Failed to create kelasor online"))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -88,15 +124,32 @@ class CourseRepository @Inject constructor(
     suspend fun isFavorite(courseId: String): Boolean {
         return try {
             val response = apiService.isCourseFavorite(courseId)
-            if (response.isSuccessful) response.body()?.data ?: false else false
+            if (response.isSuccessful && response.body()?.success == true) {
+                response.body()?.data ?: false
+            } else {
+                false
+            }
         } catch (e: Exception) {
             false
         }
     }
 
-    suspend fun enrollInCourse(courseId: String): Result<Unit> {
+    suspend fun getFavoriteCourses(): List<CourseDto> {
         return try {
-            val response = apiService.enrollInCourse(courseId)
+            val response = apiService.getFavoriteCourses()
+            if (response.isSuccessful && response.body()?.success == true) {
+                response.body()?.data ?: emptyList()
+            } else {
+                emptyList()
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun enrollInCourse(courseId: String, paymentType: String): Result<Unit> {
+        return try {
+            val response = apiService.enrollInCourse(courseId, com.Kelasor.app.data.remote.dto.EnrollmentRequestDto(paymentType))
             if (response.isSuccessful && response.body()?.success == true) {
                 Result.success(Unit)
             } else {
@@ -318,6 +371,20 @@ class CourseRepository @Inject constructor(
         }
     }
 
+    suspend fun getMyEnrollments(): List<Course> {
+        try {
+            val response = apiService.getMyEnrollments()
+            if (response.isSuccessful) {
+                val data = response.body()?.data
+                val content = data?.content
+                return content?.mapNotNull { it.course?.toDomain() } ?: emptyList()
+            }
+            return emptyList()
+        } catch (e: Exception) {
+            return emptyList()
+        }
+    }
+
     suspend fun uploadFile(uri: android.net.Uri, context: android.content.Context): Result<String> {
         return try {
             val file = java.io.File(context.cacheDir, "temp_upload_${System.currentTimeMillis()}.jpg")
@@ -327,7 +394,7 @@ class CourseRepository @Inject constructor(
                 }
             }
             
-            val requestFile = okhttp3.RequestBody.create("image/*".toMediaTypeOrNull(), file)
+            val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
             val body = okhttp3.MultipartBody.Part.createFormData("file", file.name, requestFile)
             
             val response = apiService.uploadFile(body)
@@ -343,7 +410,7 @@ class CourseRepository @Inject constructor(
 
     suspend fun uploadPoster(file: java.io.File): Result<String> {
         return try {
-            val requestFile = okhttp3.RequestBody.create("image/*".toMediaTypeOrNull(), file)
+            val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
             val body = okhttp3.MultipartBody.Part.createFormData("file", file.name, requestFile)
             val response = apiService.uploadFile(body)
             if (response.isSuccessful && response.body()?.success == true) {

@@ -76,7 +76,7 @@ import com.Kelasor.app.ui.components.PrimaryButton
 import com.Kelasor.app.ui.theme.CardShapes
 import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.theme.MessageAppTypography
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import com.Kelasor.app.ui.viewmodel.CreateGroupViewModel
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -124,7 +124,7 @@ fun CreateGroupScreen(
                 title = {
                     Text(
                         text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.create_group),
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -207,7 +207,7 @@ fun CreateGroupScreen(
                         value = state.name,
                         onValueChange = { viewModel.setName(it) },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text(androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.group_name), fontFamily = VazirFontFamily) },
+                        label = { Text(androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.group_name), fontFamily = DanaFontFamily) },
                         singleLine = true,
                         shape = CardShapes.inputField,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -223,7 +223,7 @@ fun CreateGroupScreen(
                         value = state.description,
                         onValueChange = { viewModel.setDescription(it) },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text(androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.description_optional), fontFamily = VazirFontFamily) },
+                        label = { Text(androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.description_optional), fontFamily = DanaFontFamily) },
                         minLines = 3,
                         maxLines = 5,
                         shape = CardShapes.inputField,
@@ -251,13 +251,13 @@ fun CreateGroupScreen(
                                 Text(
                                     text = "\u06AF\u0631\u0648\u0647 \u0639\u0645\u0648\u0645\u06CC",
                                     style = MessageAppTypography.chatName,
-                                    fontFamily = VazirFontFamily,
+                                    fontFamily = DanaFontFamily,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = if (state.isPublic) "\u0647\u0631\u06A9\u0633\u06CC \u0645\u06CC\u200C\u062A\u0648\u0627\u0646\u062F \u0627\u06CC\u0646 \u06AF\u0631\u0648\u0647 \u0631\u0627 \u067E\u06CC\u062F\u0627 \u06A9\u0646\u062F" else "\u0641\u0642\u0637 \u0628\u0627 \u0644\u06CC\u0646\u06A9 \u062F\u0639\u0648\u062A",
                                     style = MessageAppTypography.chatTime,
-                                    fontFamily = VazirFontFamily,
+                                    fontFamily = DanaFontFamily,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -339,7 +339,7 @@ fun CreateGroupScreen(
                                         Text(
                                             text = user.displayName,
                                             style = MaterialTheme.typography.bodySmall,
-                                            fontFamily = VazirFontFamily,
+                                            fontFamily = DanaFontFamily,
                                             color = extendedColors.accent
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
@@ -364,7 +364,7 @@ fun CreateGroupScreen(
                         value = state.searchQuery,
                         onValueChange = { viewModel.searchUsers(it) },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text(androidx.compose.ui.res.stringResource(R.string.search_by_id_hint), fontFamily = VazirFontFamily) },
+                        placeholder = { Text(androidx.compose.ui.res.stringResource(R.string.search_by_id_hint), fontFamily = DanaFontFamily) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Search,
@@ -429,7 +429,7 @@ fun CreateGroupScreen(
                         Text(
                             text = state.error ?: "",
                             style = MaterialTheme.typography.bodySmall,
-                            fontFamily = VazirFontFamily,
+                            fontFamily = DanaFontFamily,
                             color = MaterialTheme.colorScheme.error
                         )
                     }
@@ -553,13 +553,13 @@ fun TargetingSection(
                     Text(
                         text = "هدف‌گذاری",
                         style = MessageAppTypography.chatName,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "تعیین مخاطبان بر اساس مشخصات پروفایل",
                         style = MessageAppTypography.chatTime,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -603,8 +603,8 @@ fun TargetingSection(
                         value = targetUniversity ?: "",
                         onValueChange = { onUniversityChanged(it.ifBlank { null }) },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("دانشگاه", fontFamily = VazirFontFamily) },
-                        placeholder = { Text("اختیاری", fontFamily = VazirFontFamily) },
+                        label = { Text("دانشگاه", fontFamily = DanaFontFamily) },
+                        placeholder = { Text("اختیاری", fontFamily = DanaFontFamily) },
                         singleLine = true,
                         shape = CardShapes.inputField,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -619,8 +619,8 @@ fun TargetingSection(
                         value = targetFieldOfStudy ?: "",
                         onValueChange = { onFieldOfStudyChanged(it.ifBlank { null }) },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("رشته تحصیلی", fontFamily = VazirFontFamily) },
-                        placeholder = { Text("اختیاری", fontFamily = VazirFontFamily) },
+                        label = { Text("رشته تحصیلی", fontFamily = DanaFontFamily) },
+                        placeholder = { Text("اختیاری", fontFamily = DanaFontFamily) },
                         singleLine = true,
                         shape = CardShapes.inputField,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -669,7 +669,7 @@ private fun TargetingDropdown(
             modifier = Modifier
                 .fillMaxWidth()
                 .menuAnchor(),
-            label = { Text(label, fontFamily = VazirFontFamily) },
+            label = { Text(label, fontFamily = DanaFontFamily) },
             readOnly = true,
             enabled = enabled,
             singleLine = true,
@@ -698,7 +698,7 @@ private fun TargetingDropdown(
         ) {
             options.forEach { option: String ->
                 DropdownMenuItem(
-                    text = { Text(option, fontFamily = VazirFontFamily) },
+                    text = { Text(option, fontFamily = DanaFontFamily) },
                     onClick = {
                         onSelected(option)
                         expanded = false

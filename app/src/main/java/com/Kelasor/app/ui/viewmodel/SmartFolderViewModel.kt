@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.Kelasor.app.data.websocket.WebSocketManager
+import com.Kelasor.app.data.websocket.WebSocketMessage
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 📁 Smart Folder ViewModel
@@ -29,13 +31,33 @@ data class SmartFolderState(
 
 @HiltViewModel
 class SmartFolderViewModel @Inject constructor(
-    private val apiService: ApiService
+    private val apiService: ApiService,
+    private val webSocketManager: WebSocketManager
 ) : ViewModel() {
     private val _state: MutableStateFlow<SmartFolderState> = MutableStateFlow(SmartFolderState())
     val state: StateFlow<SmartFolderState> = _state.asStateFlow()
     init {
         Log.d("SmartFolderVM", "🔥 ViewModel created, calling loadSmartFolders()")
         loadSmartFolders()
+        observeWebSockets()
+    }
+
+    private fun observeWebSockets() {
+        viewModelScope.launch {
+            webSocketManager.messages.collect { message ->
+                when (message) {
+                    is WebSocketMessage.ChannelCreated,
+                    is WebSocketMessage.GroupCreated,
+                    is WebSocketMessage.GroupMemberUpdate,
+                    is WebSocketMessage.ChannelPost,
+                    is WebSocketMessage.GroupMessage -> {
+                        // Refresh folders when relevant real-time events occur
+                        loadSmartFolders()
+                    }
+                    else -> {} // Ignore other events
+                }
+            }
+        }
     }
     fun loadSmartFolders() {
         viewModelScope.launch {

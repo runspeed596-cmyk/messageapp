@@ -1,6 +1,7 @@
 package com.Kelasor.app.ui.screens.mosbat_elm
 
 import androidx.compose.animation.*
+import coil3.compose.AsyncImage
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -23,6 +24,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import android.net.Uri
@@ -39,7 +41,9 @@ import com.Kelasor.app.domain.model.User
 import com.Kelasor.app.ui.components.AvatarImage
 import com.Kelasor.app.ui.components.AvatarSize
 import com.Kelasor.app.ui.components.PrimaryButton
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.components.DynamicChipGroup
+import com.Kelasor.app.ui.theme.DanaFontFamily
+import com.Kelasor.app.ui.theme.MessageAppTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,7 +64,8 @@ fun AcademyProfileSetupScreen(
     }
 
     var showUserSearchDialog by remember { mutableStateOf(false) }
-    var searchTarget by remember { mutableStateOf<SearchTarget>(SearchTarget.INSTRUCTOR) }
+    var searchTarget by remember { mutableStateOf(SearchTarget.INSTRUCTOR) }
+    var showManualInstructorDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModel.events) {
         viewModel.events.collect { event ->
@@ -74,7 +79,7 @@ fun AcademyProfileSetupScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("پروفایل آکادمی", fontFamily = VazirFontFamily, fontWeight = FontWeight.Bold) },
+                title = { Text("پروفایل آکادمی", fontFamily = DanaFontFamily, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "بازگشت")
@@ -88,13 +93,22 @@ fun AcademyProfileSetupScreen(
                         )
                     } else {
                         IconButton(
-                            onClick = { viewModel.submit() },
-                            enabled = state.name.isNotBlank()
+                            onClick = {
+                                if (state.name.isBlank()) {
+                                    com.Kelasor.app.ui.components.KelasorToast.show(
+                                        context,
+                                        "لطفاً فیلدهای الزامی را تکمیل کنید",
+                                        com.Kelasor.app.ui.components.ToastType.ERROR
+                                    )
+                                } else {
+                                    viewModel.submit()
+                                }
+                            }
                         ) {
                             Icon(
                                 Icons.Default.Check,
                                 contentDescription = "ذخیره",
-                                tint = if (state.name.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
@@ -160,7 +174,7 @@ fun AcademyProfileSetupScreen(
             }
             Text(
                 "لوگوی مجموعه",
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
@@ -174,13 +188,11 @@ fun AcademyProfileSetupScreen(
             val types = mapOf(
                 "CLUB" to "کانون",
                 "SCIENTIFIC_ASSOCIATION" to "انجمن علمی",
-                "ACADEMY" to "آکادمی",
-                "INSTITUTE" to "موسسه آموزشی",
+                "ACADEMY" to "آکادمی و موسسات",
                 "STUDENT_ORG" to "تشکل دانشجویی",
-                "RESEARCH_CENTER" to "مرکز تحقیقاتی",
-                "INDEPENDENT" to "به جایی وابسته نیستم"
+                "RESEARCH_CENTER" to "مرکز تحقیقاتی"
             )
-            val currentTypeLabel = types[state.type] ?: "به جایی وابسته نیستم"
+            val currentTypeLabel = types[state.type] ?: "آکادمی و موسسات"
 
             ExposedDropdownMenuBox(
                 expanded = expandedType,
@@ -191,9 +203,9 @@ fun AcademyProfileSetupScreen(
                     value = currentTypeLabel,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("نوع مجموعه", fontFamily = VazirFontFamily) },
+                    label = { Text("نوع مجموعه", fontFamily = DanaFontFamily) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedType) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    modifier = Modifier.menuAnchor(androidx.compose.material3.MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 )
                 ExposedDropdownMenu(
@@ -202,7 +214,7 @@ fun AcademyProfileSetupScreen(
                 ) {
                     types.forEach { (key, label) ->
                         DropdownMenuItem(
-                            text = { Text(label, fontFamily = VazirFontFamily) },
+                            text = { Text(label, fontFamily = DanaFontFamily) },
                             onClick = {
                                 viewModel.onTypeChange(key)
                                 expandedType = false
@@ -217,7 +229,7 @@ fun AcademyProfileSetupScreen(
             OutlinedTextField(
                 value = state.name,
                 onValueChange = { viewModel.onNameChange(it) },
-                label = { Text("نام مجموعه برگزارکننده", fontFamily = VazirFontFamily) },
+                label = { Text("نام مجموعه برگزارکننده", fontFamily = DanaFontFamily) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp)
@@ -226,32 +238,56 @@ fun AcademyProfileSetupScreen(
             OutlinedTextField(
                 value = state.description,
                 onValueChange = { viewModel.onDescriptionChange(it) },
-                label = { Text("توضیحات و آدرس (اختیاری)", fontFamily = VazirFontFamily) },
+                label = { Text("توضیحات و آدرس (اختیاری)", fontFamily = DanaFontFamily) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
                 shape = RoundedCornerShape(12.dp)
             )
 
-            // Dynamic Affiliations — hidden when INDEPENDENT
-            if (state.type != "INDEPENDENT") {
+            // Subsidiary for Academy and Research Center
+            if (state.type in listOf("ACADEMY", "RESEARCH_CENTER")) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().clickable { viewModel.onIsSubsidiaryChange(!state.isSubsidiary) }
+                ) {
+                    Checkbox(
+                        checked = state.isSubsidiary,
+                        onCheckedChange = { viewModel.onIsSubsidiaryChange(it) }
+                    )
+                    Text("زیرمجموعه هستم", fontFamily = DanaFontFamily, fontSize = 14.sp)
+                }
+                if (state.isSubsidiary) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = state.dependencyDescription,
+                        onValueChange = { viewModel.onDependencyDescriptionChange(it) },
+                        label = { Text("توضیح دهید وابسته به چه چیز هستید؟", fontFamily = DanaFontFamily) },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+            }
+
+            // Dynamic Affiliations — hidden when INDEPENDENT, ACADEMY, RESEARCH_CENTER
+            if (state.type !in listOf("INDEPENDENT", "ACADEMY", "RESEARCH_CENTER")) {
                 Spacer(modifier = Modifier.height(24.dp))
                 SectionHeader(title = "وابستگی‌های سازمانی", icon = Icons.Default.AccountBalance)
                 
-                // University — only for RESEARCH_CENTER
-                if (state.type == "RESEARCH_CENTER") {
-                    DynamicChipGroup(
-                        label = "نام دانشگاه(ها)",
-                        items = state.universities,
-                        suggestions = state.allUniversities,
-                        onAdd = { viewModel.addUniversity(it) },
-                        onRemove = { viewModel.removeUniversity(it) },
-                        placeholder = "جستجو یا وارد کردن نام دانشگاه"
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
+                // University — for all non-INDEPENDENT
+                DynamicChipGroup(
+                    label = "نام دانشگاه(ها)",
+                    items = state.universities,
+                    suggestions = state.allUniversities,
+                    onAdd = { viewModel.addUniversity(it) },
+                    onRemove = { viewModel.removeUniversity(it) },
+                    placeholder = "جستجو یا وارد کردن نام دانشگاه"
+                )
+                Spacer(modifier = Modifier.height(16.dp))
 
-                // Fields of Study — for SCIENTIFIC_ASSOCIATION, INSTITUTE, RESEARCH_CENTER
-                if (state.type in listOf("SCIENTIFIC_ASSOCIATION", "INSTITUTE", "RESEARCH_CENTER")) {
+                // Fields of Study — for SCIENTIFIC_ASSOCIATION
+                if (state.type in listOf("SCIENTIFIC_ASSOCIATION")) {
                     DynamicChipGroup(
                         label = "رشته(های) مرتبط",
                         items = state.associatedFieldOfStudyIds,
@@ -263,8 +299,8 @@ fun AcademyProfileSetupScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                // Clubs — for CLUB, INSTITUTE, RESEARCH_CENTER
-                if (state.type in listOf("CLUB", "INSTITUTE", "RESEARCH_CENTER")) {
+                // Clubs — for CLUB
+                if (state.type in listOf("CLUB")) {
                     DynamicChipGroup(
                         label = "کانون(های) مرتبط",
                         items = state.associatedClubIds,
@@ -276,8 +312,8 @@ fun AcademyProfileSetupScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                // Student Orgs — for STUDENT_ORG, RESEARCH_CENTER
-                if (state.type in listOf("STUDENT_ORG", "RESEARCH_CENTER")) {
+                // Student Orgs — for STUDENT_ORG
+                if (state.type in listOf("STUDENT_ORG")) {
                     DynamicChipGroup(
                         label = "نام تشکل(ها)",
                         items = state.associatedStudentOrgIds,
@@ -303,17 +339,75 @@ fun AcademyProfileSetupScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Instructors & Admins
-            SectionHeader(title = "مدیریت اعضا", icon = Icons.Default.People)
-            UserSelectionList(
-                title = "مدرسین",
-                users = state.instructors,
-                onAddClick = {
-                    searchTarget = SearchTarget.INSTRUCTOR
-                    showUserSearchDialog = true
-                },
-                onRemove = { viewModel.removeInstructor(it) }
-            )
+            // Instructors Section
+            var showInstructorAddMenu by remember { mutableStateOf(false) }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("مدرسین", fontFamily = DanaFontFamily, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { 
+                        searchTarget = SearchTarget.INSTRUCTOR
+                        showUserSearchDialog = true 
+                    }) {
+                        Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("جستجو کاربر", fontFamily = DanaFontFamily, fontSize = 12.sp)
+                    }
+                    TextButton(onClick = { showManualInstructorDialog = true }, colors = ButtonDefaults.textButtonColors(contentColor = MessageAppTheme.extendedColors.accent)) {
+                        Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("افزودن مدرس مهمان", fontFamily = DanaFontFamily, fontSize = 12.sp)
+                    }
+                }
+            }
+
+            if (state.instructors.isEmpty() && state.manualInstructors.isEmpty()) {
+                Text(
+                    "هیچ مدرسی اضافه نشده است",
+                    fontFamily = DanaFontFamily,
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            } else {
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(vertical = 8.dp)
+                ) {
+                    items(state.instructors) { user ->
+                        Box {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(70.dp)) {
+                                AvatarImage(imageUrl = user.avatarUrl, name = user.displayName, size = AvatarSize.MEDIUM, modifier = Modifier.size(56.dp).clip(CircleShape).border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape))
+                                Text(user.displayName, fontFamily = DanaFontFamily, fontSize = 10.sp, maxLines = 1, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
+                            }
+                            Box(modifier = Modifier.size(18.dp).align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp).background(MaterialTheme.colorScheme.error, CircleShape).border(1.dp, Color.White, CircleShape).clickable { viewModel.removeInstructor(user) }, contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Remove, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                            }
+                        }
+                    }
+                    items(state.manualInstructors) { instructor ->
+                        Box {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(70.dp)) {
+                                AvatarImage(
+                                    imageUrl = instructor.avatarUrl,
+                                    name = instructor.name,
+                                    size = AvatarSize.MEDIUM,
+                                    modifier = Modifier.size(56.dp).clip(CircleShape).border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                )
+                                Text(instructor.name, fontFamily = DanaFontFamily, fontSize = 10.sp, maxLines = 1, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
+                                Text("(دستی)", fontFamily = DanaFontFamily, fontSize = 8.sp, color = MaterialTheme.colorScheme.primary)
+                            }
+                            Box(modifier = Modifier.size(18.dp).align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp).background(MaterialTheme.colorScheme.error, CircleShape).border(1.dp, Color.White, CircleShape).clickable { viewModel.removeManualInstructor(instructor) }, contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Remove, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                            }
+                        }
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(16.dp))
             UserSelectionList(
                 title = "ادمین‌ها",
@@ -339,7 +433,7 @@ fun AcademyProfileSetupScreen(
                 Text(
                     state.error,
                     color = MaterialTheme.colorScheme.error,
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(top = 8.dp)
                 )
@@ -361,6 +455,17 @@ fun AcademyProfileSetupScreen(
             viewModel = viewModel
         )
     }
+
+    if (showManualInstructorDialog) {
+        ManualInstructorDialog(
+            onDismiss = { showManualInstructorDialog = false },
+            onInstructorAdded = { instructor ->
+                viewModel.addManualInstructor(instructor)
+                showManualInstructorDialog = false
+            },
+            viewModel = viewModel
+        )
+    }
 }
 
 enum class SearchTarget { INSTRUCTOR, ADMIN }
@@ -377,114 +482,11 @@ fun SectionHeader(title: String, icon: ImageVector) {
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             title,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp,
             color = MaterialTheme.colorScheme.onSurface
         )
-    }
-}
-
-@Composable
-fun DynamicChipGroup(
-    label: String,
-    items: List<String>,
-    suggestions: List<String> = emptyList(),
-    onAdd: (String) -> Unit,
-    onRemove: (String) -> Unit,
-    placeholder: String,
-    allowManualAdd: Boolean = false
-) {
-    var text by remember { mutableStateOf("") }
-    var expanded by remember { mutableStateOf(false) }
-    
-    val filteredSuggestions = remember(text, suggestions) {
-        if (text.isBlank()) emptyList()
-        else suggestions.filter { it.contains(text, ignoreCase = true) && it !in items }
-    }
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Box {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { 
-                    text = it
-                    expanded = filteredSuggestions.isNotEmpty()
-                },
-                label = { Text(label, fontFamily = VazirFontFamily) },
-                placeholder = { Text(placeholder, fontFamily = VazirFontFamily, fontSize = 12.sp) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                keyboardOptions = KeyboardOptions(imeAction = if (allowManualAdd) ImeAction.Done else ImeAction.Default),
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        if (allowManualAdd && text.isNotBlank() && text !in items) {
-                            onAdd(text.trim())
-                            text = ""
-                            expanded = false
-                        }
-                    }
-                ),
-                trailingIcon = if (allowManualAdd) {
-                    {
-                        IconButton(onClick = {
-                            if (text.isNotBlank() && text !in items) {
-                                onAdd(text.trim())
-                                text = ""
-                                expanded = false
-                            }
-                        }) {
-                            Icon(Icons.Default.Add, contentDescription = "افزودن")
-                        }
-                    }
-                } else null
-            )
-            
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.fillMaxWidth(0.9f),
-                properties = PopupProperties(focusable = false)
-            ) {
-                filteredSuggestions.forEach { suggestion ->
-                    DropdownMenuItem(
-                        text = { Text(suggestion, fontFamily = VazirFontFamily) },
-                        onClick = {
-                            onAdd(suggestion)
-                            text = ""
-                            expanded = false
-                        }
-                    )
-                }
-            }
-        }
-        
-        if (items.isNotEmpty()) {
-            FlowRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items.forEach { item ->
-                    AssistChip(
-                        onClick = { },
-                        label = { Text(item, fontFamily = VazirFontFamily, fontSize = 12.sp) },
-                        trailingIcon = {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = "Remove",
-                                modifier = Modifier
-                                    .size(16.dp)
-                                    .clickable { onRemove(item) }
-                            )
-                        },
-                        shape = RoundedCornerShape(16.dp)
-                    )
-                }
-            }
-        }
     }
 }
 
@@ -501,18 +503,18 @@ fun UserSelectionList(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(title, fontFamily = VazirFontFamily, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(title, fontFamily = DanaFontFamily, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             TextButton(onClick = onAddClick) {
                 Icon(Icons.Default.PersonSearch, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("افزودن بر اساس ID", fontFamily = VazirFontFamily, fontSize = 12.sp)
+                Text("افزودن بر اساس ID", fontFamily = DanaFontFamily, fontSize = 12.sp)
             }
         }
         
         if (users.isEmpty()) {
             Text(
                 "هیچ موردی اضافه نشده است",
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.padding(vertical = 4.dp)
@@ -540,7 +542,7 @@ fun UserSelectionList(
                             )
                             Text(
                                 user.displayName,
-                                fontFamily = VazirFontFamily,
+                                fontFamily = DanaFontFamily,
                                 fontSize = 10.sp,
                                 maxLines = 1,
                                 textAlign = TextAlign.Center,
@@ -591,7 +593,7 @@ fun UserSearchDialog(
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
                     "جستجوی کاربر",
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
                     modifier = Modifier.padding(bottom = 16.dp)
@@ -603,7 +605,7 @@ fun UserSearchDialog(
                         query = it
                         viewModel.searchUsers(it)
                     },
-                    label = { Text("شناسه یا نام کاربری", fontFamily = VazirFontFamily) },
+                    label = { Text("شناسه یا نام کاربری", fontFamily = DanaFontFamily) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
@@ -620,11 +622,11 @@ fun UserSearchDialog(
                 
                 if (query.length < 3) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("حداقل ۳ حرف وارد کنید", fontFamily = VazirFontFamily, fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
+                        Text("حداقل ۳ حرف وارد کنید", fontFamily = DanaFontFamily, fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
                     }
                 } else if (viewModel.state.searchResults.isEmpty() && !viewModel.state.isSearching) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("کاربری یافت نشد", fontFamily = VazirFontFamily, fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
+                        Text("کاربری یافت نشد", fontFamily = DanaFontFamily, fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
                     }
                 } else {
                     Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
@@ -644,8 +646,8 @@ fun UserSearchDialog(
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
-                                    Text(user.displayName, fontFamily = VazirFontFamily, fontWeight = FontWeight.Medium, fontSize = 14.sp)
-                                    Text("@${user.username}", fontFamily = VazirFontFamily, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(user.displayName, fontFamily = DanaFontFamily, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                                    Text("@${user.username}", fontFamily = DanaFontFamily, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                             HorizontalDivider(modifier = Modifier.padding(start = 52.dp), color = MaterialTheme.colorScheme.outlineVariant)
@@ -669,4 +671,129 @@ fun FlowRow(
         horizontalArrangement = horizontalArrangement,
         content = { content() }
     )
+}
+
+@Composable
+fun ManualInstructorDialog(
+    onDismiss: () -> Unit,
+    onInstructorAdded: (com.Kelasor.app.domain.model.ManualInstructor) -> Unit,
+    viewModel: AcademyProfileViewModel
+) {
+    var name by remember { mutableStateOf("") }
+    var resume by remember { mutableStateOf("") }
+    var avatarUrl by remember { mutableStateOf<String?>(null) }
+    var isUploading by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
+    
+    val avatarPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri: android.net.Uri? ->
+        uri?.let {
+            isUploading = true
+            scope.launch {
+                try {
+                    val inputStream = context.contentResolver.openInputStream(it)
+                    val tempFile = java.io.File.createTempFile("avatar_", ".jpg", context.cacheDir)
+                    inputStream?.use { input ->
+                        tempFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    val result = viewModel.uploadAvatar(tempFile)
+                    if (result.isSuccess) {
+                        avatarUrl = result.getOrThrow()
+                    }
+                    isUploading = false
+                    tempFile.delete()
+                } catch (e: Exception) {
+                    isUploading = false
+                }
+            }
+        }
+    }
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier.fillMaxWidth().heightIn(max = 500.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp).verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    "افزودن مدرس دستی",
+                    fontFamily = DanaFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    modifier = Modifier.padding(bottom = 16.dp).align(Alignment.Start)
+                )
+                
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable { avatarPicker.launch("image/*") },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (avatarUrl != null) {
+                        AsyncImage(
+                            model = com.Kelasor.app.util.UrlUtils.getFullUrl(avatarUrl),
+                            contentDescription = null,
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else if (isUploading) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(Icons.Default.AddAPhoto, contentDescription = "آپلود تصویر", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("نام و نام خانوادگی", fontFamily = DanaFontFamily) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = resume,
+                    onValueChange = { resume = it },
+                    label = { Text("رزومه / تخصص", fontFamily = DanaFontFamily) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    minLines = 3
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("انصراف", fontFamily = DanaFontFamily)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            if (name.isNotBlank()) {
+                                onInstructorAdded(com.Kelasor.app.domain.model.ManualInstructor(name, resume, avatarUrl))
+                            }
+                        },
+                        enabled = name.isNotBlank() && !isUploading
+                    ) {
+                        Text("افزودن", fontFamily = DanaFontFamily)
+                    }
+                }
+            }
+        }
+    }
 }

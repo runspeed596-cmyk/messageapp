@@ -17,15 +17,19 @@ class PanelAdminService(
 
     @PostConstruct
     fun seedDefaultSuperAdmin() {
-        if (!panelAdminRepository.existsByUsername("admin")) {
-            val superAdmin = PanelAdmin(
-                username = "admin",
-                passwordHash = passwordEncoder.encode("Admin@123"),
-                displayName = "مدیر اصلی",
-                isSuperAdmin = true
-            )
-            panelAdminRepository.save(superAdmin)
-            logger.info("Default super admin seeded: admin / Admin@123")
+        try {
+            if (!panelAdminRepository.existsByUsername("admin")) {
+                val superAdmin = PanelAdmin(
+                    username = "admin",
+                    passwordHash = passwordEncoder.encode("Admin@123"),
+                    displayName = "مدیر اصلی",
+                    isSuperAdmin = true
+                )
+                panelAdminRepository.save(superAdmin)
+                logger.info("Default super admin seeded: admin / Admin@123")
+            }
+        } catch (e: Exception) {
+            logger.warn("Could not seed default super admin (table may not exist yet): ${e.message}")
         }
     }
 
@@ -39,7 +43,7 @@ class PanelAdminService(
         return panelAdminRepository.findAll()
     }
 
-    fun createAdmin(username: String, password: String, displayName: String, isSuperAdmin: Boolean): PanelAdmin {
+    fun createAdmin(username: String, password: String, displayName: String, isSuperAdmin: Boolean, permissions: List<String> = emptyList()): PanelAdmin {
         if (panelAdminRepository.existsByUsername(username)) {
             throw IllegalArgumentException("نام کاربری '$username' قبلاً استفاده شده است")
         }
@@ -47,7 +51,8 @@ class PanelAdminService(
             username = username,
             passwordHash = passwordEncoder.encode(password),
             displayName = displayName,
-            isSuperAdmin = isSuperAdmin
+            isSuperAdmin = isSuperAdmin,
+            permissions = permissions.toMutableList()
         )
         return panelAdminRepository.save(admin)
     }
@@ -65,12 +70,13 @@ class PanelAdminService(
         panelAdminRepository.deleteById(id)
     }
 
-    fun updateAdmin(id: UUID, displayName: String?, isSuperAdmin: Boolean?, newPassword: String?): PanelAdmin {
+    fun updateAdmin(id: UUID, displayName: String?, isSuperAdmin: Boolean?, newPassword: String?, permissions: List<String>? = null): PanelAdmin {
         val admin = panelAdminRepository.findById(id).orElseThrow {
             IllegalArgumentException("ادمین با این شناسه یافت نشد")
         }
         if (displayName != null) admin.displayName = displayName
         if (isSuperAdmin != null) admin.isSuperAdmin = isSuperAdmin
+        if (permissions != null) admin.permissions = permissions.toMutableList()
         if (!newPassword.isNullOrBlank()) admin.passwordHash = passwordEncoder.encode(newPassword)
         return panelAdminRepository.save(admin)
     }

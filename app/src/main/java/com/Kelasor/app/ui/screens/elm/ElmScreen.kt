@@ -1,6 +1,7 @@
 package com.Kelasor.app.ui.screens.elm
 
 import android.graphics.PointF
+import android.webkit.WebView
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -33,28 +34,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import com.Kelasor.app.ui.viewmodel.ElmViewModel
-import com.mapbox.geojson.Point
-import com.mapbox.maps.CameraOptions
-import com.mapbox.maps.MapboxMap
-import com.mapbox.maps.plugin.animation.flyTo
-import com.mapbox.maps.plugin.animation.MapAnimationOptions
-import com.mapbox.maps.plugin.annotation.annotations
-import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager
-import com.mapbox.maps.plugin.annotation.generated.CircleAnnotationManager
-import com.mapbox.maps.plugin.annotation.generated.createCircleAnnotationManager
-import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
-import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
-import com.mapbox.maps.plugin.annotation.generated.CircleAnnotationOptions
-import com.mapbox.maps.extension.style.layers.getLayer
-import com.mapbox.maps.extension.style.sources.getSource
-import com.mapbox.maps.extension.style.layers.generated.LineLayer
-import com.mapbox.maps.extension.style.sources.generated.GeoJsonSource
-import com.mapbox.geojson.LineString
-import com.mapbox.maps.extension.style.layers.properties.generated.Visibility
-import com.google.gson.JsonPrimitive
 import kotlinx.coroutines.*
+import org.json.JSONArray
+import org.json.JSONObject
 
 enum class ElmDisplayMode {
     GLOBE_OVERVIEW,
@@ -76,77 +60,61 @@ fun ElmScreen(
     var showSubmissionForm by remember { mutableStateOf(false) }
     
     // Mapbox Controller
-    var mapboxMap by remember { mutableStateOf<MapboxMap?>(null) }
+    var webView by remember { mutableStateOf<WebView?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
     
     // Annotation Managers
-    var pointAnnotationManager by remember { mutableStateOf<PointAnnotationManager?>(null) }
-    var circleAnnotationManager by remember { mutableStateOf<CircleAnnotationManager?>(null) }
+    var pointAnnotationManager by remember { mutableStateOf<Any?>(null) }
+    var circleAnnotationManager by remember { mutableStateOf<Any?>(null) }
     var markerJob by remember { mutableStateOf<Job?>(null) }
 
-    // Helper to animate border drawing with cascading multi-layer reveal
-    fun animateBorderDrawing(points: List<Point>) {
-        mapboxMap?.getStyle { style ->
-            val source = style.getSource("highlight-source") as? GeoJsonSource
-            val lineString = LineString.fromLngLats(points)
-            source?.feature(com.mapbox.geojson.Feature.fromGeometry(lineString))
-            coroutineScope.launch {
-                // Animate all 4 layers with staggered timing for cascading neon reveal
-                val layerIds = listOf("highlight-outer-glow", "highlight-glow-layer", "highlight-line-layer", "highlight-inner-core")
-                layerIds.forEach { layerId ->
-                    style.getLayer(layerId)?.let { layer ->
-                        (layer as LineLayer).lineTrimOffset(listOf(1.0, 1.0)) // start hidden
-                    }
-                }
-                // Outer glow leads
-                launch {
-                    val anim = Animatable(0f)
-                    anim.animateTo(1f, tween(2500, easing = LinearOutSlowInEasing)) {
-                        val v = this.value.toDouble()
-                        style.getLayer("highlight-outer-glow")?.let { (it as LineLayer).lineTrimOffset(listOf(v, 1.0)) }
-                    }
-                }
-                // Mid glow follows slightly
-                launch {
-                    kotlinx.coroutines.delay(200)
-                    val anim = Animatable(0f)
-                    anim.animateTo(1f, tween(2200, easing = LinearOutSlowInEasing)) {
-                        val v = this.value.toDouble()
-                        style.getLayer("highlight-glow-layer")?.let { (it as LineLayer).lineTrimOffset(listOf(v, 1.0)) }
-                    }
-                }
-                // Core line follows
-                launch {
-                    kotlinx.coroutines.delay(350)
-                    val anim = Animatable(0f)
-                    anim.animateTo(1f, tween(2000, easing = LinearOutSlowInEasing)) {
-                        val v = this.value.toDouble()
-                        style.getLayer("highlight-line-layer")?.let { (it as LineLayer).lineTrimOffset(listOf(v, 1.0)) }
-                    }
-                }
-                // Inner white core last
-                launch {
-                    kotlinx.coroutines.delay(500)
-                    val anim = Animatable(0f)
-                    anim.animateTo(1f, tween(1800, easing = LinearOutSlowInEasing)) {
-                        val v = this.value.toDouble()
-                        style.getLayer("highlight-inner-core")?.let { (it as LineLayer).lineTrimOffset(listOf(v, 1.0)) }
-                    }
+    fun flyToLocation(lat: Double, lon: Double, zoomLevel: Double, name: String, isProvince: Boolean, isCity: Boolean, isUni: Boolean, batchUnis: List<University>? = null) {
+        webView?.post {
+            val js = "if(window.map) { map.flyTo({center: [$lon, $lat], zoom: $zoomLevel, speed: 1.2}); }"
+            webView?.evaluateJavascript(js, null)
+        }
+    }
+    
+    fun animateBorderDrawing(points: List<Coordinates>) {
+        val coords = points.joinToString(",") { "[${it.lon}, ${it.lat}]" }
+        val js = """
+            if(window.map) {
+                if (map.getSource('iran-border')) {
+                    map.getSource('iran-border').setData({
+                        "type": "Feature",
+                        "geometry": { "type": "LineString", "coordinates": [$coords] }
+                    });
+                } else {
+                    map.addSource('iran-border', {
+                        "type": "geojson",
+                        "data": {
+                            "type": "Feature",
+                            "geometry": { "type": "LineString", "coordinates": [$coords] }
+                        }
+                    });
+                    map.addLayer({
+                        "id": "iran-border-glow",
+                        "type": "line",
+                        "source": "iran-border",
+                        "paint": { "line-color": "#00E5FF", "line-width": 4, "line-blur": 2 }
+                    });
                 }
             }
+        """.trimIndent()
+        webView?.post {
+            webView?.evaluateJavascript(js, null)
         }
     }
 
-    // Helper to generate a smooth cyber ring (circle) around a point
-    fun getCyberRingPoints(center: Point, radiusKm: Double = 50.0): List<Point> {
-        val points = mutableListOf<Point>()
+    fun getCyberRingPoints(center: Coordinates, radiusKm: Double = 50.0): List<Coordinates> {
+        val points = mutableListOf<Coordinates>()
         val segments = 64
         for (i in 0..segments) {
             val angle = Math.toRadians((i * 360.0 / segments))
-            val lat = center.latitude() + (radiusKm / 111.0) * Math.sin(angle)
-            val lon = center.longitude() + (radiusKm / (111.0 * Math.cos(Math.toRadians(center.latitude())))) * Math.cos(angle)
-            points.add(Point.fromLngLat(lon, lat))
+            val lat = center.lat + (radiusKm / 111.0) * Math.sin(angle)
+            val lon = center.lon + (radiusKm / (111.0 * Math.cos(Math.toRadians(center.lat)))) * Math.cos(angle)
+            points.add(Coordinates(lat, lon))
         }
         return points
     }
@@ -154,87 +122,87 @@ fun ElmScreen(
     // Accurate Iran border coordinates (~90 points)
     val iranBorder = listOf(
         // Northwest: Turkey-Armenia-Azerbaijan border
-        Point.fromLngLat(44.79, 39.71), Point.fromLngLat(44.81, 39.65), Point.fromLngLat(44.77, 39.55),
-        Point.fromLngLat(44.59, 39.45), Point.fromLngLat(44.38, 39.42), Point.fromLngLat(44.28, 39.39),
-        Point.fromLngLat(44.03, 39.38), Point.fromLngLat(44.02, 39.36),
+        Coordinates(39.71, 44.79), Coordinates(39.65, 44.81), Coordinates(39.55, 44.77),
+        Coordinates(39.45, 44.59), Coordinates(39.42, 44.38), Coordinates(39.39, 44.28),
+        Coordinates(39.38, 44.03), Coordinates(39.36, 44.02),
         // Along Turkey border going south
-        Point.fromLngLat(44.17, 39.25), Point.fromLngLat(44.28, 39.10), Point.fromLngLat(44.38, 38.94),
-        Point.fromLngLat(44.30, 38.81), Point.fromLngLat(44.32, 38.45), Point.fromLngLat(44.45, 38.30),
-        Point.fromLngLat(44.56, 38.22), Point.fromLngLat(44.67, 38.06),
+        Coordinates(39.25, 44.17), Coordinates(39.10, 44.28), Coordinates(38.94, 44.38),
+        Coordinates(38.81, 44.30), Coordinates(38.45, 44.32), Coordinates(38.30, 44.45),
+        Coordinates(38.22, 44.56), Coordinates(38.06, 44.67),
         // Along Azerbaijan (Nakhchivan) and Turkey
-        Point.fromLngLat(44.78, 37.82), Point.fromLngLat(44.77, 37.59), Point.fromLngLat(44.60, 37.44),
-        Point.fromLngLat(44.56, 37.15), Point.fromLngLat(44.60, 36.82), Point.fromLngLat(44.75, 36.60),
-        Point.fromLngLat(44.83, 36.42), Point.fromLngLat(44.85, 36.18),
+        Coordinates(37.82, 44.78), Coordinates(37.59, 44.77), Coordinates(37.44, 44.60),
+        Coordinates(37.15, 44.56), Coordinates(36.82, 44.60), Coordinates(36.60, 44.75),
+        Coordinates(36.42, 44.83), Coordinates(36.18, 44.85),
         // Iraq border going south
-        Point.fromLngLat(44.97, 36.01), Point.fromLngLat(45.05, 35.82), Point.fromLngLat(45.16, 35.63),
-        Point.fromLngLat(45.36, 35.41), Point.fromLngLat(45.39, 35.16), Point.fromLngLat(45.44, 34.95),
-        Point.fromLngLat(45.56, 34.69), Point.fromLngLat(45.65, 34.47), Point.fromLngLat(45.70, 34.22),
-        Point.fromLngLat(45.78, 33.96), Point.fromLngLat(45.80, 33.72), Point.fromLngLat(45.85, 33.48),
-        Point.fromLngLat(45.96, 33.20), Point.fromLngLat(46.09, 32.96), Point.fromLngLat(46.17, 32.68),
-        Point.fromLngLat(46.28, 32.42), Point.fromLngLat(46.39, 32.18), Point.fromLngLat(46.56, 31.93),
-        Point.fromLngLat(47.06, 31.69), Point.fromLngLat(47.35, 31.41), Point.fromLngLat(47.68, 31.00),
-        Point.fromLngLat(47.85, 30.84), Point.fromLngLat(47.98, 30.62),
+        Coordinates(36.01, 44.97), Coordinates(35.82, 45.05), Coordinates(35.63, 45.16),
+        Coordinates(35.41, 45.36), Coordinates(35.16, 45.39), Coordinates(34.95, 45.44),
+        Coordinates(34.69, 45.56), Coordinates(34.47, 45.65), Coordinates(34.22, 45.70),
+        Coordinates(33.96, 45.78), Coordinates(33.72, 45.80), Coordinates(33.48, 45.85),
+        Coordinates(33.20, 45.96), Coordinates(32.96, 46.09), Coordinates(32.68, 46.17),
+        Coordinates(32.42, 46.28), Coordinates(32.18, 46.39), Coordinates(31.93, 46.56),
+        Coordinates(31.69, 47.06), Coordinates(31.41, 47.35), Coordinates(31.00, 47.68),
+        Coordinates(30.84, 47.85), Coordinates(30.62, 47.98),
         // Shatt al-Arab / Persian Gulf coast
-        Point.fromLngLat(48.02, 30.44), Point.fromLngLat(48.16, 30.32), Point.fromLngLat(48.42, 30.35),
-        Point.fromLngLat(48.85, 30.42), Point.fromLngLat(49.20, 30.38), Point.fromLngLat(49.55, 30.15),
-        Point.fromLngLat(49.80, 29.88), Point.fromLngLat(50.10, 29.60),
+        Coordinates(30.44, 48.02), Coordinates(30.32, 48.16), Coordinates(30.35, 48.42),
+        Coordinates(30.42, 48.85), Coordinates(30.38, 49.20), Coordinates(30.15, 49.55),
+        Coordinates(29.88, 49.80), Coordinates(29.60, 50.10),
         // Bushehr coast
-        Point.fromLngLat(50.35, 29.35), Point.fromLngLat(50.60, 29.10), Point.fromLngLat(50.84, 28.97),
-        Point.fromLngLat(51.10, 28.68), Point.fromLngLat(51.35, 28.30), Point.fromLngLat(51.58, 27.95),
+        Coordinates(29.35, 50.35), Coordinates(29.10, 50.60), Coordinates(28.97, 50.84),
+        Coordinates(28.68, 51.10), Coordinates(28.30, 51.35), Coordinates(27.95, 51.58),
         // Kangan / Assaluyeh coast
-        Point.fromLngLat(52.06, 27.84), Point.fromLngLat(52.62, 27.47), Point.fromLngLat(53.05, 27.18),
-        Point.fromLngLat(53.50, 26.98), Point.fromLngLat(53.95, 26.72), Point.fromLngLat(54.35, 26.55),
+        Coordinates(27.84, 52.06), Coordinates(27.47, 52.62), Coordinates(27.18, 53.05),
+        Coordinates(26.98, 53.50), Coordinates(26.72, 53.95), Coordinates(26.55, 54.35),
         // Bandar Lengeh / Qeshm
-        Point.fromLngLat(54.88, 26.56), Point.fromLngLat(55.35, 26.65), Point.fromLngLat(55.80, 26.80),
-        Point.fromLngLat(56.27, 27.18),
+        Coordinates(26.56, 54.88), Coordinates(26.65, 55.35), Coordinates(26.80, 55.80),
+        Coordinates(27.18, 56.27),
         // Strait of Hormuz / Bandar Abbas down to Jask
-        Point.fromLngLat(56.45, 27.06), Point.fromLngLat(56.80, 26.68), Point.fromLngLat(57.15, 26.30),
-        Point.fromLngLat(57.48, 25.95), Point.fromLngLat(57.77, 25.65),
+        Coordinates(27.06, 56.45), Coordinates(26.68, 56.80), Coordinates(26.30, 57.15),
+        Coordinates(25.95, 57.48), Coordinates(25.65, 57.77),
         // Makran / Gulf of Oman coast (Jask to Chabahar)
-        Point.fromLngLat(58.20, 25.48), Point.fromLngLat(58.65, 25.38), Point.fromLngLat(59.10, 25.35),
-        Point.fromLngLat(59.55, 25.32), Point.fromLngLat(60.02, 25.30), Point.fromLngLat(60.38, 25.35),
-        Point.fromLngLat(60.64, 25.29),
+        Coordinates(25.48, 58.20), Coordinates(25.38, 58.65), Coordinates(25.35, 59.10),
+        Coordinates(25.32, 59.55), Coordinates(25.30, 60.02), Coordinates(25.35, 60.38),
+        Coordinates(25.29, 60.64),
         // Gwatar Bay / Pakistan border
-        Point.fromLngLat(61.05, 25.20), Point.fromLngLat(61.38, 25.15), Point.fromLngLat(61.66, 25.13),
+        Coordinates(25.20, 61.05), Coordinates(25.15, 61.38), Coordinates(25.13, 61.66),
         // Pakistan border going north (stays along ~61.6°E)
-        Point.fromLngLat(61.62, 25.45), Point.fromLngLat(61.58, 25.80), Point.fromLngLat(61.55, 26.20),
-        Point.fromLngLat(61.58, 26.55), Point.fromLngLat(61.62, 26.95),
-        Point.fromLngLat(61.65, 27.40), Point.fromLngLat(61.68, 27.75), Point.fromLngLat(61.70, 28.10),
-        Point.fromLngLat(61.68, 28.45), Point.fromLngLat(61.65, 28.80),
+        Coordinates(25.45, 61.62), Coordinates(25.80, 61.58), Coordinates(26.20, 61.55),
+        Coordinates(26.55, 61.58), Coordinates(26.95, 61.62),
+        Coordinates(27.40, 61.65), Coordinates(27.75, 61.68), Coordinates(28.10, 61.70),
+        Coordinates(28.45, 61.68), Coordinates(28.80, 61.65),
         // Iran-Pakistan-Afghanistan tripoint
-        Point.fromLngLat(61.65, 29.04),
+        Coordinates(29.04, 61.65),
         // Afghanistan border (runs along ~60.5-61.5°E going north)
-        Point.fromLngLat(61.55, 29.40), Point.fromLngLat(61.40, 29.75), Point.fromLngLat(61.30, 30.10),
-        Point.fromLngLat(61.15, 30.50), Point.fromLngLat(61.05, 30.85), Point.fromLngLat(60.90, 31.15),
-        Point.fromLngLat(60.85, 31.40), Point.fromLngLat(60.77, 31.65),
-        Point.fromLngLat(60.68, 31.85), Point.fromLngLat(60.58, 32.20), Point.fromLngLat(60.52, 32.60),
-        Point.fromLngLat(60.48, 33.06), Point.fromLngLat(60.50, 33.52), Point.fromLngLat(60.48, 33.76),
-        Point.fromLngLat(60.45, 34.09), Point.fromLngLat(60.52, 34.32), Point.fromLngLat(60.58, 34.52),
-        Point.fromLngLat(60.72, 34.63), Point.fromLngLat(60.88, 35.27), Point.fromLngLat(61.05, 35.62),
+        Coordinates(29.40, 61.55), Coordinates(29.75, 61.40), Coordinates(30.10, 61.30),
+        Coordinates(30.50, 61.15), Coordinates(30.85, 61.05), Coordinates(31.15, 60.90),
+        Coordinates(31.40, 60.85), Coordinates(31.65, 60.77),
+        Coordinates(31.85, 60.68), Coordinates(32.20, 60.58), Coordinates(32.60, 60.52),
+        Coordinates(33.06, 60.48), Coordinates(33.52, 60.50), Coordinates(33.76, 60.48),
+        Coordinates(34.09, 60.45), Coordinates(34.32, 60.52), Coordinates(34.52, 60.58),
+        Coordinates(34.63, 60.72), Coordinates(35.27, 60.88), Coordinates(35.62, 61.05),
         // Turkmenistan border
-        Point.fromLngLat(61.15, 35.98), Point.fromLngLat(61.22, 36.18), Point.fromLngLat(61.12, 36.48),
-        Point.fromLngLat(60.65, 36.81), Point.fromLngLat(60.30, 36.95), Point.fromLngLat(59.92, 37.05),
-        Point.fromLngLat(59.50, 37.18), Point.fromLngLat(58.80, 37.52), Point.fromLngLat(58.42, 37.64),
-        Point.fromLngLat(57.90, 37.78), Point.fromLngLat(57.38, 37.95), Point.fromLngLat(56.88, 37.92),
-        Point.fromLngLat(56.40, 37.95), Point.fromLngLat(55.98, 37.93), Point.fromLngLat(55.58, 37.88),
-        Point.fromLngLat(55.07, 37.58), Point.fromLngLat(54.75, 37.48), Point.fromLngLat(54.38, 37.32),
-        Point.fromLngLat(54.06, 37.25),
+        Coordinates(35.98, 61.15), Coordinates(36.18, 61.22), Coordinates(36.48, 61.12),
+        Coordinates(36.81, 60.65), Coordinates(36.95, 60.30), Coordinates(37.05, 59.92),
+        Coordinates(37.18, 59.50), Coordinates(37.52, 58.80), Coordinates(37.64, 58.42),
+        Coordinates(37.78, 57.90), Coordinates(37.95, 57.38), Coordinates(37.92, 56.88),
+        Coordinates(37.95, 56.40), Coordinates(37.93, 55.98), Coordinates(37.88, 55.58),
+        Coordinates(37.58, 55.07), Coordinates(37.48, 54.75), Coordinates(37.32, 54.38),
+        Coordinates(37.25, 54.06),
         // Caspian Sea coast
-        Point.fromLngLat(53.80, 37.10), Point.fromLngLat(53.50, 36.86), Point.fromLngLat(53.15, 36.78),
-        Point.fromLngLat(52.62, 36.82), Point.fromLngLat(52.10, 36.88), Point.fromLngLat(51.55, 36.85),
-        Point.fromLngLat(51.15, 36.78), Point.fromLngLat(50.82, 36.68), Point.fromLngLat(50.42, 36.68),
-        Point.fromLngLat(50.05, 36.72), Point.fromLngLat(49.80, 36.82), Point.fromLngLat(49.45, 37.10),
-        Point.fromLngLat(49.10, 37.28), Point.fromLngLat(48.88, 37.60), Point.fromLngLat(48.73, 37.82),
-        Point.fromLngLat(48.60, 38.05), Point.fromLngLat(48.58, 38.22), Point.fromLngLat(48.35, 38.42),
+        Coordinates(37.10, 53.80), Coordinates(36.86, 53.50), Coordinates(36.78, 53.15),
+        Coordinates(36.82, 52.62), Coordinates(36.88, 52.10), Coordinates(36.85, 51.55),
+        Coordinates(36.78, 51.15), Coordinates(36.68, 50.82), Coordinates(36.68, 50.42),
+        Coordinates(36.72, 50.05), Coordinates(36.82, 49.80), Coordinates(37.10, 49.45),
+        Coordinates(37.28, 49.10), Coordinates(37.60, 48.88), Coordinates(37.82, 48.73),
+        Coordinates(38.05, 48.60), Coordinates(38.22, 48.58), Coordinates(38.42, 48.35),
         // Back up to Azerbaijan / Armenia
-        Point.fromLngLat(48.02, 38.85), Point.fromLngLat(47.98, 39.01), Point.fromLngLat(47.77, 39.10),
-        Point.fromLngLat(47.56, 39.18), Point.fromLngLat(46.55, 38.88), Point.fromLngLat(46.17, 38.82),
-        Point.fromLngLat(45.95, 38.88), Point.fromLngLat(45.62, 39.02), Point.fromLngLat(45.35, 39.18),
-        Point.fromLngLat(45.03, 39.34), Point.fromLngLat(44.79, 39.71) // Close loop
+        Coordinates(38.85, 48.02), Coordinates(39.01, 47.98), Coordinates(39.10, 47.77),
+        Coordinates(39.18, 47.56), Coordinates(38.88, 46.55), Coordinates(38.82, 46.17),
+        Coordinates(38.88, 45.95), Coordinates(39.02, 45.62), Coordinates(39.18, 45.35),
+        Coordinates(39.34, 45.03), Coordinates(39.71, 44.79) // Close loop
     )
 
-    LaunchedEffect(mapboxMap) {
-        if (mapboxMap != null) {
+    LaunchedEffect(webView) {
+        if (webView != null) {
             animateBorderDrawing(iranBorder)
         }
     }
@@ -310,108 +278,36 @@ fun ElmScreen(
         }
     }
 
-    fun flyToLocation(
-        lat: Double, 
-        lon: Double, 
-        zoomLevel: Double, 
-        name: String = "",
-        isCity: Boolean = false, 
-        isUni: Boolean = false,
-        isProvince: Boolean = false,
-        batchUnis: List<University> = emptyList()
-    ) {
-        mapboxMap?.let { map ->
-            map.getStyle { style ->
-                style.getLayer("settlement-label")?.let { layer ->
-                    layer.visibility(if (batchUnis.isNotEmpty()) Visibility.NONE else Visibility.VISIBLE)
-                }
-            }
-
-            val cameraOptions = CameraOptions.Builder()
-                .center(Point.fromLngLat(lon, lat))
-                .zoom(zoomLevel)
-                .pitch(if (zoomLevel > 11) 60.0 else 20.0) 
-                .build()
-                
-            val animationOptions = MapAnimationOptions.Builder().duration(2000).build()
-            map.flyTo(cameraOptions, animationOptions)
-            
-            val centerPoint = Point.fromLngLat(lon, lat)
-            when {
-                isProvince -> animateBorderDrawing(getCyberRingPoints(centerPoint, radiusKm = 120.0)) // Large for province coverage
-                isCity -> animateBorderDrawing(getCyberRingPoints(centerPoint, radiusKm = 25.0))     // Medium for city area
-                isUni -> animateBorderDrawing(getCyberRingPoints(centerPoint, radiusKm = 1.0))       // Small circle around campus
-                else -> animateBorderDrawing(iranBorder) 
-            }
-        }
-    }
-
     // Dedicated Reactive Marker Management
-    LaunchedEffect(
-        filteredUniversities, 
-        pointAnnotationManager, 
-        circleAnnotationManager, 
-        selectedProvince, 
-        selectedCity, 
-        selectedUniversity
-    ) {
-        val pManager = pointAnnotationManager
-        val cManager = circleAnnotationManager
-        
-        if (pManager == null || cManager == null) return@LaunchedEffect
-
-        markerJob?.cancel()
-        markerJob = launch {
-            pManager.deleteAll()
-            cManager.deleteAll()
-            
-            if (filteredUniversities.isEmpty()) return@launch
-
-            val isUniFocus = selectedUniversity != null || (filteredUniversities.size == 1 && (filterName.isNotEmpty() || filterFaculty.isNotEmpty() || filterMajor.isNotEmpty()))
-            
-            if (isUniFocus) {
-                val focusUni = selectedUniversity ?: filteredUniversities.first()
-                val opts = PointAnnotationOptions()
-                    .withPoint(Point.fromLngLat(focusUni.coordinates.lon, focusUni.coordinates.lat))
-                    .withIconImage("school-15") 
-                    .withIconSize(2.5)
-                    .withTextField(focusUni.name)
-                    .withTextSize(16.0)
-                    .withTextColor("#00E5FF")
-                    .withTextHaloColor("#000000")
-                    .withTextHaloWidth(2.0)
-                    .withTextOffset(listOf(0.0, 1.5))
-                
-                pManager.create(opts).setData(JsonPrimitive(focusUni.name))
-            } else {
-                // Show PointAnnotations for ALL. It's more reliable than circles for clicks.
-                filteredUniversities.forEachIndexed { index, uni ->
-                    val opts = PointAnnotationOptions()
-                        .withPoint(Point.fromLngLat(uni.coordinates.lon, uni.coordinates.lat))
-                        .withIconImage("school-15") 
-                        .withIconSize(if (filteredUniversities.size < 20) 1.5 else 1.0)
-                        .withTextField(if (filteredUniversities.size < 15) uni.name else "")
-                        .withTextSize(10.0)
-                        .withTextColor("#00E5FF")
-                        .withTextHaloColor("#000000")
-                        .withTextHaloWidth(1.0)
-                        .withTextOffset(listOf(0.0, 1.2))
-                    
-                    pManager.create(opts).setData(JsonPrimitive(uni.name))
-                    
-                    // Fallback Circle for visibility if icon fails
-                    val circleOptions = CircleAnnotationOptions()
-                        .withPoint(Point.fromLngLat(uni.coordinates.lon, uni.coordinates.lat))
-                        .withCircleRadius(6.0)
-                        .withCircleColor("#00E5FF")
-                        .withCircleStrokeWidth(1.5)
-                        .withCircleStrokeColor("#000000")
-                        .withCircleOpacity(0.8)
-                    cManager.create(circleOptions).setData(JsonPrimitive(uni.name))
-
-                    if (filteredUniversities.size > 100 && index % 20 == 0) yield()
-                }
+    LaunchedEffect(state.universities, webView) {
+        if (webView != null && state.universities.isNotEmpty()) {
+            val markersJs = JSONArray()
+            state.universities.forEach { uni ->
+                val obj = JSONObject()
+                obj.put("lon", uni.coordinates.lon)
+                obj.put("lat", uni.coordinates.lat)
+                obj.put("name", uni.name)
+                markersJs.put(obj)
             }
+            val js = """
+                if(window.map && !window.markersAdded) {
+                    window.markersAdded = true;
+                    var unis = $markersJs;
+                    unis.forEach(function(uni) {
+                        var el = document.createElement('div');
+                        el.style.width = '12px';
+                        el.style.height = '12px';
+                        el.style.backgroundColor = '#00E5FF';
+                        el.style.borderRadius = '50%';
+                        el.style.border = '2px solid #000000';
+                        el.style.cursor = 'pointer';
+                        new mapboxgl.Marker(el)
+                            .setLngLat([uni.lon, uni.lat])
+                            .addTo(map);
+                    });
+                }
+            """.trimIndent()
+            webView?.evaluateJavascript(js, null)
         }
     }
 
@@ -457,7 +353,14 @@ fun ElmScreen(
     val cardColor = if (isDark) Color.White.copy(alpha = 0.1f) else Color.White.copy(alpha = 0.6f)
     
     if (universityToDetail != null) {
-        UniversityDetailScreen(university = universityToDetail!!, onBack = { universityToDetail = null })
+        val uniCourses = state.publicCourses.filter { course ->
+            (course.organizerName != null && course.organizerName.contains(universityToDetail!!.name, ignoreCase = true))
+        }
+        UniversityDetailScreen(
+            university = universityToDetail!!,
+            courses = uniCourses,
+            onBack = { universityToDetail = null }
+        )
     } else {
         Scaffold(
             containerColor = Color.Transparent,
@@ -514,23 +417,22 @@ fun ElmScreen(
                             showAdvancedFilters = showAdvancedFilters,
                             textColor = textColor,
                             cardColor = cardColor,
-                            mapboxMap = mapboxMap,
                             onProvinceSelected = { province ->
                                 selectedProvince = province; selectedCity = null; selectedUniversity = null
                                 val allUnis = province.cities.flatMap { it.universities }
                                 val zoomLevel = if (province.name.contains("تهران")) 8.5 else 7.5
                                 province.cities.firstOrNull()?.coordinates?.let { coords ->
-                                    flyToLocation(coords.lat, coords.lon, zoomLevel, name = province.name, isProvince = true, batchUnis = allUnis)
+                                    flyToLocation(coords.lat, coords.lon, zoomLevel, name = province.name, isProvince = true, isCity = false, isUni = false, batchUnis = allUnis)
                                 }
                             },
                             onCitySelected = { city ->
                                 selectedCity = city; selectedUniversity = null
                                 val zoomLevel = if (city.name.contains("تهران")) 13.5 else 11.5
-                                flyToLocation(city.coordinates.lat, city.coordinates.lon, zoomLevel, name = city.name, isCity = true, batchUnis = city.universities)
+                                flyToLocation(city.coordinates.lat, city.coordinates.lon, zoomLevel, name = city.name, isProvince = false, isCity = true, isUni = false, batchUnis = city.universities)
                             },
                             onUniversitySelected = { uni ->
                                 selectedUniversity = uni
-                                flyToLocation(uni.coordinates.lat, uni.coordinates.lon, 16.0, name = uni.name, isUni = true)
+                                flyToLocation(uni.coordinates.lat, uni.coordinates.lon, 16.0, name = uni.name, isProvince = false, isCity = false, isUni = true)
                             },
                             onToggleAdvancedFilters = { showAdvancedFilters = !showAdvancedFilters },
                             onFilterNameChange = { filterName = it },
@@ -545,22 +447,7 @@ fun ElmScreen(
                             onFilterFacilityChange = { filterFacility = it },
                             onUniversityDetail = { universityToDetail = it },
                             dynamicProvinces = dynamicProvinces,
-                            onMapReady = { mapView ->
-                                mapboxMap = mapView.getMapboxMap()
-                                circleAnnotationManager = mapView.annotations.createCircleAnnotationManager()
-                                pointAnnotationManager = mapView.annotations.createPointAnnotationManager()
-                                
-                                pointAnnotationManager?.addClickListener { annotation ->
-                                    val uniName = annotation.getData()?.asString ?: ""
-                                    if (uniName.isNotEmpty()) state.universities.find { it.name == uniName }?.let { universityToDetail = it }
-                                    true
-                                }
-                                circleAnnotationManager?.addClickListener { annotation ->
-                                    val uniName = annotation.getData()?.asString ?: ""
-                                    if (uniName.isNotEmpty()) state.universities.find { it.name == uniName }?.let { universityToDetail = it }
-                                    true
-                                }
-                            },
+                            onMapReady = { webViewInstance -> webView = webViewInstance },
                             filterName = filterName,
                             filterMinistry = filterMinistry,
                             filterType = filterType,
@@ -620,7 +507,6 @@ fun ScienceWorldContent(
     showAdvancedFilters: Boolean,
     textColor: Color,
     cardColor: Color,
-    mapboxMap: MapboxMap?,
     onProvinceSelected: (Province) -> Unit,
     onCitySelected: (City) -> Unit,
     onUniversitySelected: (University) -> Unit,
@@ -636,7 +522,7 @@ fun ScienceWorldContent(
     onFilterMajorChange: (String) -> Unit,
     onFilterFacilityChange: (String) -> Unit,
     onUniversityDetail: (University) -> Unit,
-    onMapReady: (com.mapbox.maps.MapView) -> Unit,
+    onMapReady: (WebView) -> Unit,
     filterName: String,
     filterMinistry: String,
     filterType: String,

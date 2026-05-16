@@ -34,7 +34,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.Kelasor.app.ui.components.AvatarImage
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import com.Kelasor.app.ui.viewmodel.ProfileViewModel
 import com.Kelasor.app.ui.viewmodel.ReferenceDataViewModel
 import com.Kelasor.app.ui.viewmodel.ProfileEvent
@@ -100,8 +100,10 @@ fun EditProfileScreen(
     }
 
     // ── Form State ───────────────────────────────────────────────────────────
-    var firstName by remember(user) { mutableStateOf(user?.firstName ?: "") }
-    var lastName by remember(user) { mutableStateOf(user?.lastName ?: "") }
+    var fullName by remember(user) { mutableStateOf(user?.let { 
+        if (it.lastName.isNullOrBlank()) it.firstName ?: "" 
+        else "${it.firstName} ${it.lastName}" 
+    } ?: "") }
     var username by remember(user) { mutableStateOf(user?.username ?: "") }
     var bio by remember(user) { mutableStateOf(user?.bio ?: "") }
     var nationalCode by remember(user) { mutableStateOf(user?.nationalCode ?: "") }
@@ -132,7 +134,7 @@ fun EditProfileScreen(
     }
 
     // Validation
-    val isFormValid = username.isNotBlank() && firstName.isNotBlank() && lastName.isNotBlank()
+    val isFormValid = username.isNotBlank() && fullName.isNotBlank()
     
     // UI state for showing validation errors
     var showErrors by remember { mutableStateOf(false) }
@@ -175,7 +177,7 @@ fun EditProfileScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("ویرایش پروفایل", fontFamily = VazirFontFamily, fontWeight = FontWeight.Bold) },
+                title = { Text("ویرایش پروفایل", fontFamily = DanaFontFamily, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "برگشت")
@@ -194,9 +196,9 @@ fun EditProfileScreen(
                                 if (isFormValid) {
                                     profileViewModel.updateProfile(
                                         username = username.trim(),
-                                        displayName = "${firstName.trim()} ${lastName.trim()}",
-                                        firstName = firstName.trim(),
-                                        lastName = lastName.trim(),
+                                        displayName = fullName.trim(),
+                                        firstName = fullName.trim(),
+                                        lastName = "",
                                         nationalCode = if (nationalCode.isBlank()) null else nationalCode.trim(),
                                         bio = if (bio.isBlank()) null else bio.trim(),
                                         educationalRole = if (selectedRoleValueEn.isBlank()) null else selectedRoleValueEn,
@@ -270,7 +272,7 @@ fun EditProfileScreen(
                         } else {
                             AvatarImage(
                                 imageUrl = null,
-                                name = if (firstName.isNotBlank() || lastName.isNotBlank()) "$firstName $lastName" else "?",
+                                name = if (fullName.isNotBlank()) fullName else "?",
                                 size = com.Kelasor.app.ui.components.AvatarSize.XLARGE,
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -315,18 +317,11 @@ fun EditProfileScreen(
             item {
                 EditSectionHeader("اطلاعات هویتی", Icons.Default.Badge)
                 EditField(
-                    label = "نام (اجباری)",
-                    value = firstName,
-                    onValueChange = { firstName = it },
-                    placeholder = "نام خود را وارد کنید",
-                    isError = showErrors && firstName.isBlank()
-                )
-                EditField(
-                    label = "نام خانوادگی (اجباری)",
-                    value = lastName,
-                    onValueChange = { lastName = it },
-                    placeholder = "نام خانوادگی خود را وارد کنید",
-                    isError = showErrors && lastName.isBlank()
+                    label = "نام کامل (اجباری)",
+                    value = fullName,
+                    onValueChange = { fullName = it },
+                    placeholder = "نام و نام خانوادگی خود را وارد کنید",
+                    isError = showErrors && fullName.isBlank()
                 )
                 EditField(
                     label = "نام کاربری / ID (اجباری)",
@@ -353,7 +348,7 @@ fun EditProfileScreen(
                         text = "تاریخ تولد",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
                     Box(
@@ -364,7 +359,7 @@ fun EditProfileScreen(
                     ) {
                         Text(
                             text = if (birthDate.isBlank()) "انتخاب تاریخ تولد" else DateUtils.formatGregorianToJalali(birthDate),
-                            fontFamily = VazirFontFamily,
+                            fontFamily = DanaFontFamily,
                             color = if (birthDate.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -393,7 +388,7 @@ fun EditProfileScreen(
                             "نقش من در آموزش",
                             style = MaterialTheme.typography.labelMedium,
                             color = extendedColors.accent,
-                            fontFamily = VazirFontFamily
+                            fontFamily = DanaFontFamily
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         
@@ -490,7 +485,7 @@ fun EditProfileScreen(
                     "می‌توانید تا ۲ کانال را در پروفایل خود نمایش دهید",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                 )
                 
@@ -581,7 +576,7 @@ fun EditSectionHeader(title: String, icon: ImageVector) {
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             color = MessageAppTheme.extendedColors.accent,
-            fontFamily = VazirFontFamily
+            fontFamily = DanaFontFamily
         )
     }
 }
@@ -606,18 +601,18 @@ fun EditField(
             text = label,
             style = MaterialTheme.typography.labelMedium,
             color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             modifier = Modifier.padding(bottom = 4.dp)
         )
         TextField(
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text(placeholder, fontFamily = VazirFontFamily, fontSize = 14.sp) },
+            placeholder = { Text(placeholder, fontFamily = DanaFontFamily, fontSize = 14.sp) },
             singleLine = singleLine,
             maxLines = maxLines,
             keyboardOptions = keyboardOptions,
-            textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = VazirFontFamily),
+            textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = DanaFontFamily),
             isError = isError,
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
@@ -651,7 +646,7 @@ fun EditDropdownField(
             text = label,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             modifier = Modifier.padding(bottom = 4.dp)
         )
         
@@ -667,9 +662,9 @@ fun EditDropdownField(
                 modifier = Modifier
                     .fillMaxWidth()
                     .menuAnchor(),
-                placeholder = { Text("انتخاب کنید...", fontFamily = VazirFontFamily, fontSize = 14.sp) },
+                placeholder = { Text("انتخاب کنید...", fontFamily = DanaFontFamily, fontSize = 14.sp) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = VazirFontFamily),
+                textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = DanaFontFamily),
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
@@ -687,7 +682,7 @@ fun EditDropdownField(
                 ) {
                     options.forEach { option ->
                         DropdownMenuItem(
-                            text = { Text(option, fontFamily = VazirFontFamily) },
+                            text = { Text(option, fontFamily = DanaFontFamily) },
                             onClick = {
                                 onOptionSelected(option)
                                 expanded = false
@@ -725,7 +720,7 @@ fun RoleChip(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = label,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                 color = if (isSelected) extendedColors.accent else MaterialTheme.colorScheme.onSurface,
                 fontSize = 12.sp
@@ -753,7 +748,7 @@ fun ChannelSelectorItem(
             text = label,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             modifier = Modifier.padding(bottom = 4.dp)
         )
         
@@ -776,7 +771,7 @@ fun ChannelSelectorItem(
                     )
                     Text(
                         selectedChannel.name,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         style = MaterialTheme.typography.bodyLarge
                     )
                 } else {
@@ -791,7 +786,7 @@ fun ChannelSelectorItem(
                     }
                     Text(
                         "انتخاب کانال",
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -812,7 +807,7 @@ fun ChannelSelectorItem(
         ) {
             if (availableChannels.isEmpty()) {
                 DropdownMenuItem(
-                    text = { Text("کانالی یافت نشد", fontFamily = VazirFontFamily) },
+                    text = { Text("کانالی یافت نشد", fontFamily = DanaFontFamily) },
                     onClick = { expanded = false },
                     enabled = false
                 )
@@ -822,7 +817,7 @@ fun ChannelSelectorItem(
                         text = {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 AvatarImage(imageUrl = channel.avatarUrl, name = channel.name, size = com.Kelasor.app.ui.components.AvatarSize.SMALL, modifier = Modifier.size(24.dp))
-                                Text(channel.name, fontFamily = VazirFontFamily)
+                                Text(channel.name, fontFamily = DanaFontFamily)
                             }
                         },
                         onClick = {
@@ -878,7 +873,7 @@ fun JalaliDatePickerDialog(
         title = {
             Text(
                 "انتخاب تاریخ تولد",
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium
             )
@@ -901,7 +896,7 @@ fun JalaliDatePickerDialog(
                         text = "${DateUtils.toPersianDigits(selectedDay)} ${shamsiMonthNames[selectedMonth - 1]} ${DateUtils.toPersianDigits(selectedYear)}",
                         style = MaterialTheme.typography.titleLarge,
                         color = extendedColors.accent,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -918,7 +913,7 @@ fun JalaliDatePickerDialog(
                             .clip(RoundedCornerShape(8.dp))
                             .clickable { pickerMode = if (pickerMode == PickerMode.MONTHS) PickerMode.DAYS else PickerMode.MONTHS }
                             .padding(horizontal = 12.dp, vertical = 4.dp),
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.bodyLarge,
                         color = if (pickerMode == PickerMode.MONTHS) extendedColors.accent else MaterialTheme.colorScheme.onSurface
@@ -930,7 +925,7 @@ fun JalaliDatePickerDialog(
                             .clip(RoundedCornerShape(8.dp))
                             .clickable { pickerMode = if (pickerMode == PickerMode.YEARS) PickerMode.DAYS else PickerMode.YEARS }
                             .padding(horizontal = 12.dp, vertical = 4.dp),
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.bodyLarge,
                         color = if (pickerMode == PickerMode.YEARS) extendedColors.accent else MaterialTheme.colorScheme.onSurface
@@ -956,7 +951,7 @@ fun JalaliDatePickerDialog(
                                     
                                     Text(
                                         text = "${shamsiMonthNames[viewMonth - 1]} ${DateUtils.toPersianDigits(viewYear)}",
-                                        fontFamily = VazirFontFamily,
+                                        fontFamily = DanaFontFamily,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -973,7 +968,7 @@ fun JalaliDatePickerDialog(
                                 Row(modifier = Modifier.fillMaxWidth()) {
                                     persianDayHeaders.forEach { header ->
                                         Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                                            Text(header, fontFamily = VazirFontFamily, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            Text(header, fontFamily = DanaFontFamily, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         }
                                     }
                                 }
@@ -1002,7 +997,7 @@ fun JalaliDatePickerDialog(
                                                     if (day != null) {
                                                         Text(
                                                             text = DateUtils.toPersianDigits(day),
-                                                            fontFamily = VazirFontFamily,
+                                                            fontFamily = DanaFontFamily,
                                                             color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
                                                             style = MaterialTheme.typography.bodyMedium
                                                         )
@@ -1038,7 +1033,7 @@ fun JalaliDatePickerDialog(
                                     ) {
                                         Text(
                                             text = shamsiMonthNames[index],
-                                            fontFamily = VazirFontFamily,
+                                            fontFamily = DanaFontFamily,
                                             color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                         )
@@ -1075,7 +1070,7 @@ fun JalaliDatePickerDialog(
                                     ) {
                                         Text(
                                             text = DateUtils.toPersianDigits(year),
-                                            fontFamily = VazirFontFamily,
+                                            fontFamily = DanaFontFamily,
                                             color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                         )
@@ -1093,12 +1088,12 @@ fun JalaliDatePickerDialog(
                 val formatted = "$gy-${gm.toString().padStart(2, '0')}-${gd.toString().padStart(2, '0')}"
                 onConfirm(formatted)
             }) {
-                Text("تایید", fontFamily = VazirFontFamily, fontWeight = FontWeight.Bold)
+                Text("تایید", fontFamily = DanaFontFamily, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("لغو", fontFamily = VazirFontFamily)
+                Text("لغو", fontFamily = DanaFontFamily)
             }
         }
     )

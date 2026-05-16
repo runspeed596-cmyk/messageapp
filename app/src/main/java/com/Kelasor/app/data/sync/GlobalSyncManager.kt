@@ -202,6 +202,9 @@ class GlobalSyncManager @Inject constructor(
                 is WebSocketMessage.StoryEvent -> {
                     Log.d(TAG, "📸 Story event: ${message.event} by ${message.userId}")
                 }
+                is WebSocketMessage.CourseCapacityUpdate -> {
+                    Log.d(TAG, "📚 Course capacity update: ${message.courseId} capacity=${message.currentEnrollment}/${message.capacity}")
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error handling WebSocket message: ${e.message}", e)

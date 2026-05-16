@@ -80,7 +80,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.Kelasor.app.domain.model.Message
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import kotlinx.coroutines.delay
 
 /**
@@ -136,10 +136,10 @@ fun MessageActionsOverlay(
     if (showDeleteDialog && onDeleteClick != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("حذف پیام", fontFamily = VazirFontFamily) },
+            title = { Text("حذف پیام", fontFamily = DanaFontFamily) },
             text = {
                 Column {
-                    Text("آیا از حذف این پیام اطمینان دارید؟", fontFamily = VazirFontFamily)
+                    Text("آیا از حذف این پیام اطمینان دارید؟", fontFamily = DanaFontFamily)
                     if (showDeleteForEveryone) {
                         Spacer(modifier = Modifier.height(16.dp))
                         Row(
@@ -151,7 +151,7 @@ fun MessageActionsOverlay(
                                 onCheckedChange = { deleteForEveryone = it }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("حذف برای همه", fontFamily = VazirFontFamily)
+                            Text("حذف برای همه", fontFamily = DanaFontFamily)
                         }
                     }
                 }
@@ -164,12 +164,12 @@ fun MessageActionsOverlay(
                         onDismiss()
                     }
                 ) {
-                    Text("حذف", color = MaterialTheme.colorScheme.error, fontFamily = VazirFontFamily)
+                    Text("حذف", color = MaterialTheme.colorScheme.error, fontFamily = DanaFontFamily)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("انصراف", fontFamily = VazirFontFamily)
+                    Text("انصراف", fontFamily = DanaFontFamily)
                 }
             }
         )
@@ -254,7 +254,7 @@ fun MessageActionsOverlay(
                                 Text(
                                     text = "$reactionCount واکنش",
                                     style = MaterialTheme.typography.bodySmall,
-                                    fontFamily = VazirFontFamily,
+                                    fontFamily = DanaFontFamily,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -422,7 +422,7 @@ private fun EmojiReactionBar(
                                 FilterChip(
                                     selected = selectedCategory == category,
                                     onClick = { selectedCategory = category },
-                                    label = { Text(category, fontSize = 12.sp, fontFamily = VazirFontFamily) },
+                                    label = { Text(category, fontSize = 12.sp, fontFamily = DanaFontFamily) },
                                     modifier = Modifier.height(32.dp)
                                 )
                             }
@@ -610,7 +610,7 @@ private fun ActionMenuItem(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             color = textColor
         )
     }

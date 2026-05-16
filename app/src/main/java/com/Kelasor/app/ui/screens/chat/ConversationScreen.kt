@@ -1,5 +1,6 @@
 package com.Kelasor.app.ui.screens.chat
 
+import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -94,7 +95,7 @@ import com.Kelasor.app.ui.components.TypingIndicator
 import com.Kelasor.app.ui.theme.CardShapes
 import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.theme.MessageAppTypography
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import com.Kelasor.app.ui.viewmodel.ConversationViewModel
 import com.Kelasor.app.ui.screens.chat.MessageSelectionTopBar
 import com.Kelasor.app.ui.components.MessageInputBar
@@ -143,6 +144,7 @@ fun ConversationScreen(
     onNavigateBack: () -> Unit,
     onNavigateToProfile: (String) -> Unit,
     onNavigateToForward: (messageIds: String, sourceType: String, sourceId: String) -> Unit = { _, _, _ -> },
+    onNavigateToCourseDetail: ((String) -> Unit)? = null,
     viewModel: ConversationViewModel = hiltViewModel(),
     storyViewModel: com.Kelasor.app.ui.viewmodel.StoryViewModel = hiltViewModel()
 ) {
@@ -395,7 +397,8 @@ fun ConversationScreen(
                     myReaction = selectedMsgForOverlay.myReaction,
                     replyToMessage = selectedMsgForOverlay.replyToMessage,
                     isPinned = selectedMsgForOverlay.isPinned,
-                    forwardedFrom = selectedMsgForOverlay.forwardedFrom
+                    forwardedFrom = selectedMsgForOverlay.forwardedFrom,
+                    timerTargetAt = selectedMsgForOverlay.timerTargetAt?.toEpochMilli()
                 )
             }
         },
@@ -581,7 +584,7 @@ fun ConversationScreen(
                             androidx.compose.material3.FilterChip(
                                 selected = searchFilterIndex == index,
                                 onClick = { searchFilterIndex = index },
-                                label = { Text(filters[index], fontFamily = VazirFontFamily) },
+                                label = { Text(filters[index], fontFamily = DanaFontFamily) },
                                 trailingIcon = if (searchFilterIndex == index) {
                                     { Icon(Icons.Default.Close, null, modifier = Modifier.size(16.dp)) }
                                 } else null
@@ -634,7 +637,7 @@ fun ConversationScreen(
                                     text = chatName,
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
-                                    fontFamily = VazirFontFamily,
+                                    fontFamily = DanaFontFamily,
                                     color = MaterialTheme.colorScheme.onBackground,
                                     maxLines = 1,
                                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
@@ -647,7 +650,7 @@ fun ConversationScreen(
                                     Text(
                                         text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.typing),
                                         style = MaterialTheme.typography.labelSmall,
-                                        fontFamily = VazirFontFamily,
+                                        fontFamily = DanaFontFamily,
                                         color = extendedColors.accent,
                                         fontWeight = FontWeight.Medium
                                     )
@@ -660,7 +663,7 @@ fun ConversationScreen(
                                     Text(
                                         text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.online),
                                         style = MaterialTheme.typography.labelSmall,
-                                        fontFamily = VazirFontFamily,
+                                        fontFamily = DanaFontFamily,
                                         color = extendedColors.onlineIndicator,
                                         fontWeight = FontWeight.Medium
                                     )
@@ -920,8 +923,7 @@ fun ConversationScreen(
                                         onVote = { pollId, optionIds ->
                                             viewModel.votePoll(pollId, optionIds)
                                         },
-                                        isFromMe = isFromMe,
-                                        modifier = Modifier.padding(horizontal = 8.dp)
+                                        isFromMe = isFromMe
                                     )
                                 }
                                 // Voice message (recorded in-app)
@@ -938,7 +940,6 @@ fun ConversationScreen(
                                         amplitudes = message.amplitudes,
                                         time = message.createdAt.atZone(ZoneId.systemDefault()).format(MESSAGE_TIME_FORMATTER),
                                         status = message.status,
-                                        modifier = Modifier.padding(horizontal = 8.dp),
                                         reactions = message.reactions,
                                         myReaction = message.myReaction,
                                         onReactionClick = { emoji -> viewModel.reactToMessage(message.id, emoji) }
@@ -961,7 +962,6 @@ fun ConversationScreen(
                                         },
                                         caption = imageCaption,
                                         status = message.status,
-                                        modifier = Modifier.padding(horizontal = 8.dp),
                                         reactions = message.reactions,
                                         myReaction = message.myReaction,
                                         onReactionClick = { emoji -> viewModel.reactToMessage(message.id, emoji) }
@@ -984,7 +984,6 @@ fun ConversationScreen(
                                         },
                                         caption = videoCaption,
                                         status = message.status,
-                                        modifier = Modifier.padding(horizontal = 8.dp),
                                         reactions = message.reactions,
                                         myReaction = message.myReaction,
                                         onReactionClick = { emoji -> viewModel.reactToMessage(message.id, emoji) }
@@ -1002,7 +1001,6 @@ fun ConversationScreen(
                                         time = message.createdAt.atZone(ZoneId.systemDefault()).format(MESSAGE_TIME_FORMATTER),
                                         durationText = durationText,
                                         status = message.status,
-                                        modifier = Modifier.padding(horizontal = 8.dp),
                                         reactions = message.reactions,
                                         myReaction = message.myReaction,
                                         onReactionClick = { emoji -> viewModel.reactToMessage(message.id, emoji) }
@@ -1018,8 +1016,7 @@ fun ConversationScreen(
                                         isMyMessage = isFromMe,
                                         audioPlayerManager = viewModel.audioPlayerManager,
                                         time = message.createdAt.atZone(ZoneId.systemDefault()).format(MESSAGE_TIME_FORMATTER),
-                                        status = message.status,
-                                        modifier = Modifier.padding(horizontal = 8.dp)
+                                        status = message.status
                                     )
                                 }
                                 // Location message
@@ -1034,7 +1031,6 @@ fun ConversationScreen(
                                             isMyMessage = isFromMe,
                                             time = message.createdAt.atZone(ZoneId.systemDefault()).format(MESSAGE_TIME_FORMATTER),
                                             status = message.status,
-                                            modifier = Modifier.padding(horizontal = 8.dp),
                                             reactions = message.reactions,
                                             myReaction = message.myReaction,
                                             onReactionClick = { emoji -> viewModel.reactToMessage(message.id, emoji) }
@@ -1054,7 +1050,6 @@ fun ConversationScreen(
                                         isMyMessage = isFromMe,
                                         time = message.createdAt.atZone(ZoneId.systemDefault()).format(MESSAGE_TIME_FORMATTER),
                                         status = message.status,
-                                        modifier = Modifier.padding(horizontal = 8.dp),
                                         reactions = message.reactions,
                                         myReaction = message.myReaction,
                                         onReactionClick = { emoji -> viewModel.reactToMessage(message.id, emoji) }
@@ -1068,7 +1063,6 @@ fun ConversationScreen(
                                         isMyMessage = isFromMe,
                                         status = message.status,
                                         position = BubblePosition.SINGLE,
-                                        modifier = Modifier.padding(horizontal = 8.dp),
                                         reactions = message.reactions,
                                         myReaction = message.myReaction,
                                         replyToMessage = message.replyToMessage,
@@ -1095,6 +1089,20 @@ fun ConversationScreen(
                                         },
                                         onStoryReplyClick = { storyId ->
                                             storyViewModel.openStoryById(storyId)
+                                        },
+                                        actionLabel = message.actionLabel,
+                                        actionUrl = message.actionUrl,
+                                        timerTargetAt = message.timerTargetAt?.toEpochMilli(),
+                                        onActionClick = { url ->
+                                            if (url.startsWith("course_details/")) {
+                                                val cId = url.substringAfter("course_details/")
+                                                onNavigateToCourseDetail?.invoke(cId)
+                                            } else if (url.startsWith("http")) {
+                                                try {
+                                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                                    context.startActivity(intent)
+                                                } catch (e: Exception) { }
+                                            }
                                         }
                                     )
                                 }

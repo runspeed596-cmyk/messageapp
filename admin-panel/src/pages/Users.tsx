@@ -1,21 +1,30 @@
 import { useState, useEffect } from 'react';
 import { adminApi } from '../api/adminApi';
 import type { User } from '../api/adminApi';
+import Pagination from '../components/Pagination';
 import { Trash2, User as UserIcon, Calendar, Phone, Search, MoreVertical, Shield } from 'lucide-react';
 
 const Users = () => {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
+    const [currentPage, setCurrentPage] = useState<number>(0);
+    const [totalPages, setTotalPages] = useState<number>(0);
+    const [totalElements, setTotalElements] = useState<number>(0);
+    const PAGE_SIZE: number = 20;
 
     useEffect(() => {
-        fetchUsers();
+        fetchUsers(0);
     }, []);
 
-    const fetchUsers = async () => {
+    const fetchUsers = async (page: number = 0) => {
         try {
-            const response = await adminApi.getUsers();
+            const response = await adminApi.getUsers(page, PAGE_SIZE);
             if (response.data.success) {
-                setUsers(response.data.data);
+                const paginated = response.data.data;
+                setUsers(paginated.content);
+                setTotalPages(paginated.totalPages);
+                setTotalElements(paginated.totalElements);
+                setCurrentPage(paginated.number);
             }
         } catch (error) {
             console.error('Error fetching users:', error);
@@ -24,11 +33,15 @@ const Users = () => {
         }
     };
 
+    const handlePageChange = (page: number): void => {
+        fetchUsers(page);
+    };
+
     const handleDelete = async (id: string) => {
         if (window.confirm('آیا از حذف این کاربر اطمینان دارید؟ این عمل غیرقابل بازگشت است.')) {
             try {
                 await adminApi.deleteUser(id);
-                setUsers(users.filter(u => u.id !== id));
+                fetchUsers(currentPage);
             } catch (error) {
                 alert('خطا در حذف کاربر');
             }
@@ -62,8 +75,9 @@ const Users = () => {
             </div>
 
             <div className="glass rounded-[2rem] overflow-hidden border-white/5 shadow-2xl">
-                <table className="w-full text-right border-collapse">
-                    <thead>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-right border-collapse min-w-[800px]">
+                        <thead>
                         <tr className="border-b border-white/5">
                             <th className="p-6 text-xs font-black text-slate-400 uppercase tracking-widest">پروفایل کاربر</th>
                             <th className="p-6 text-xs font-black text-slate-400 uppercase tracking-widest">اطلاعات تماس</th>
@@ -136,7 +150,17 @@ const Users = () => {
                         <p className="text-slate-500">در حال حاضر کاربری برای نمایش وجود ندارد یا دیتابیس خالی است.</p>
                     </div>
                 )}
+                </div>
             </div>
+
+            {/* Pagination */}
+            <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalElements={totalElements}
+                pageSize={PAGE_SIZE}
+                onPageChange={handlePageChange}
+            />
         </div>
     );
 };

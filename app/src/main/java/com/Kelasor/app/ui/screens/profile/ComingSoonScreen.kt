@@ -9,7 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -20,7 +20,7 @@ fun ComingSoonScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(title, fontFamily = VazirFontFamily, fontWeight = FontWeight.Bold) },
+                title = { Text(title, fontFamily = DanaFontFamily, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -37,13 +37,13 @@ fun ComingSoonScreen(
                 Text(
                     text = "$title Coming Soon",
                     style = MaterialTheme.typography.headlineSmall,
-                    fontFamily = VazirFontFamily
+                    fontFamily = DanaFontFamily
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = "This feature is currently under development.",
                     style = MaterialTheme.typography.bodyMedium,
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

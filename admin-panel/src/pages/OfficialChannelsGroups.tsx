@@ -29,6 +29,9 @@ const CHANNEL_CATEGORIES: { value: OfficialChannelCategory; label: string }[] = 
     { value: 'ENTERTAINMENT', label: 'کانال تفریح و سرگرمی' },
     { value: 'APP_OFFICIAL', label: 'کانال رسمی اپلیکیشن کلاسور' },
     { value: 'LOTTERY_DISCOUNT', label: 'کانال رسمی قرعه‌کشی و تخفیفات' },
+    { value: 'TEACHERS', label: 'کانال دبیران' },
+    { value: 'QA_SCIENCE', label: 'کانال پرسش و پاسخ علمی' },
+    { value: 'COURSE_GROUP', label: 'گروه/کانال دوره آموزشی' },
 ];
 
 const GROUP_CATEGORIES: { value: OfficialGroupCategory; label: string }[] = [
@@ -39,6 +42,7 @@ const GROUP_CATEGORIES: { value: OfficialGroupCategory; label: string }[] = [
     { value: 'MY_UNION', label: 'گروه رسمی شورای صنفی من' },
     { value: 'TEACHERS', label: 'گروه دبیران' },
     { value: 'QA_SCIENCE', label: 'گروه پرسش و پاسخ علمی' },
+    { value: 'COURSE_GROUP', label: 'گروه دوره آموزشی' },
 ];
 
 const getCategoryLabel = (categoryValue: string, type: 'channel' | 'group'): string => {
@@ -100,8 +104,8 @@ const OfficialChannelsGroups: React.FC = () => {
                 adminApi.getOfficialChannels(),
                 adminApi.getOfficialGroups()
             ]);
-            setChannels(channelsRes.data.data || []);
-            setGroups(groupsRes.data.data || []);
+            setChannels((channelsRes.data.data || []).reverse());
+            setGroups((groupsRes.data.data || []).reverse());
         } catch (err) {
             console.error('Error loading data:', err);
         }
@@ -114,12 +118,12 @@ const OfficialChannelsGroups: React.FC = () => {
         try {
             const [provRes, uniRes, fosRes, elRes] = await Promise.all([
                 adminApi.getProvinces('ایران'),
-                adminApi.getUniversities(),
+                adminApi.getUniversities(0, 9999),
                 adminApi.getFieldsOfStudy(),
                 adminApi.getEducationLevels()
             ]);
             setProvinces(provRes.data.data || []);
-            setUniversities(uniRes.data.data || []);
+            setUniversities(uniRes.data.data?.content || []);
             setFieldsOfStudy(fosRes.data.data || []);
             setEducationLevels(elRes.data.data || []);
             setRefDataLoaded(true);
@@ -142,8 +146,9 @@ const OfficialChannelsGroups: React.FC = () => {
     const loadUsers = useCallback(async (): Promise<void> => {
         if (usersLoaded) return;
         try {
-            const res = await adminApi.getUsers();
-            const users: AdminUser[] = (res.data.data || []).map((u: any) => ({
+            const res = await adminApi.getUsers(0, 9999);
+            const rawUsers: any[] = res.data.data?.content || [];
+            const users: AdminUser[] = rawUsers.map((u: any) => ({
                 id: u.id,
                 username: u.username,
                 displayName: u.displayName,
@@ -462,6 +467,57 @@ const OfficialChannelsGroups: React.FC = () => {
         </div>
     );
 
+    const renderMultiSelect = (
+        label: string,
+        options: { value: string, label: string }[],
+        value: string | undefined,
+        onChange: (val: string | undefined) => void,
+        disabled = false,
+        disabledTooltip?: string
+    ) => {
+        const selectedList = value ? value.split(',').filter(Boolean) : [];
+        
+        return (
+            <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500">{label}</label>
+                {selectedList.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                        {selectedList.map(item => {
+                            const opt = options.find(o => o.value === item);
+                            return (
+                                <span key={item} className="bg-indigo-500/20 text-indigo-300 text-[10px] px-2 py-1 rounded-md flex items-center gap-1">
+                                    {opt ? opt.label : item}
+                                    <button type="button" onClick={() => {
+                                        const newList = selectedList.filter(i => i !== item);
+                                        onChange(newList.length > 0 ? newList.join(',') : undefined);
+                                    }} className="hover:text-white"><X size={10} /></button>
+                                </span>
+                            );
+                        })}
+                    </div>
+                )}
+                <select
+                    value=""
+                    onChange={(e) => {
+                        const val = e.target.value;
+                        if (!val) return;
+                        if (!selectedList.includes(val)) {
+                            onChange([...selectedList, val].join(','));
+                        }
+                    }}
+                    className="w-full glass bg-white/5 border-white/5 p-3 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                    disabled={disabled}
+                    title={disabled ? disabledTooltip : ''}
+                >
+                    <option value="" className="bg-slate-800">انتخاب کنید...</option>
+                    {options.filter(o => !selectedList.includes(o.value)).map(o => (
+                        <option key={o.value} value={o.value} className="bg-slate-800">{o.label}</option>
+                    ))}
+                </select>
+            </div>
+        );
+    };
+
     return (
         <div className="space-y-8 rtl font-[Vazirmatn]">
             {/* Header */}
@@ -579,74 +635,59 @@ const OfficialChannelsGroups: React.FC = () => {
                                 <div className="mb-4 p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/20 space-y-4">
                                     <p className="text-xs text-slate-400 flex items-center gap-2">
                                         <MapPin size={14} className="text-indigo-400" />
-                                        فیلترهای مخاطبین (همه اختیاری — هرچه کمتر پر کنید، عمومی‌تر خواهد بود)
+                                        فیلترهای مخاطبین — همه فیلدها اختیاری هستند و مستقل از هم عمل می‌کنند. هرچه کمتر پر کنید، عمومی‌تر خواهد بود
                                     </p>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {/* Province */}
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-bold text-slate-500">استان</label>
-                                            <select
-                                                value={channelForm.targetProvince || ''}
-                                                onChange={(e) => {
-                                                    const val = e.target.value || undefined;
-                                                    setChannelForm({ ...channelForm, targetProvince: val, targetCity: undefined });
-                                                    loadCities(e.target.value);
-                                                }}
-                                                className="w-full glass bg-white/5 border-white/5 p-3 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
-                                            >
-                                                <option value="" className="bg-slate-800">همه استان‌ها</option>
-                                                {provinces.map(p => <option key={p} value={p} className="bg-slate-800">{p}</option>)}
-                                            </select>
-                                        </div>
-                                        {/* City */}
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-bold text-slate-500">شهر</label>
-                                            <select
-                                                value={channelForm.targetCity || ''}
-                                                onChange={(e) => setChannelForm({ ...channelForm, targetCity: e.target.value || undefined })}
-                                                className="w-full glass bg-white/5 border-white/5 p-3 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
-                                                disabled={!channelForm.targetProvince}
-                                            >
-                                                <option value="" className="bg-slate-800">همه شهرها</option>
-                                                {cities.map(c => <option key={c} value={c} className="bg-slate-800">{c}</option>)}
-                                            </select>
-                                        </div>
-                                        {/* University */}
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-bold text-slate-500">دانشگاه</label>
-                                            <select
-                                                value={channelForm.targetUniversity || ''}
-                                                onChange={(e) => setChannelForm({ ...channelForm, targetUniversity: e.target.value || undefined })}
-                                                className="w-full glass bg-white/5 border-white/5 p-3 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
-                                            >
-                                                <option value="" className="bg-slate-800">همه دانشگاه‌ها</option>
-                                                {universities.map(u => <option key={u.id} value={u.name} className="bg-slate-800">{u.name}</option>)}
-                                            </select>
-                                        </div>
-                                        {/* Field of Study */}
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-bold text-slate-500">رشته تحصیلی</label>
-                                            <select
-                                                value={channelForm.targetFieldOfStudy || ''}
-                                                onChange={(e) => setChannelForm({ ...channelForm, targetFieldOfStudy: e.target.value || undefined })}
-                                                className="w-full glass bg-white/5 border-white/5 p-3 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
-                                            >
-                                                <option value="" className="bg-slate-800">همه رشته‌ها</option>
-                                                {fieldsOfStudy.map(f => <option key={f.id} value={f.name} className="bg-slate-800">{f.name}</option>)}
-                                            </select>
-                                        </div>
-                                        {/* Education Level */}
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-bold text-slate-500">مقطع تحصیلی</label>
-                                            <select
-                                                value={channelForm.targetEducationLevel || ''}
-                                                onChange={(e) => setChannelForm({ ...channelForm, targetEducationLevel: e.target.value || undefined })}
-                                                className="w-full glass bg-white/5 border-white/5 p-3 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
-                                            >
-                                                <option value="" className="bg-slate-800">همه مقاطع</option>
-                                                {educationLevels.map(el => <option key={el.id} value={el.name} className="bg-slate-800">{el.name}</option>)}
-                                            </select>
-                                        </div>
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {renderMultiSelect(
+                                            "استان",
+                                            provinces.map(p => ({ value: p, label: p })),
+                                            channelForm.targetProvince,
+                                            (val) => {
+                                                setChannelForm({ ...channelForm, targetProvince: val, targetCity: undefined });
+                                                if (val) {
+                                                    const arr = val.split(',');
+                                                    loadCities(arr[arr.length - 1]);
+                                                } else {
+                                                    loadCities("");
+                                                }
+                                            }
+                                        )}
+                                        {renderMultiSelect(
+                                            "شهر",
+                                            cities.map(c => ({ value: c, label: c })),
+                                            channelForm.targetCity,
+                                            (val) => setChannelForm({ ...channelForm, targetCity: val }),
+                                            !channelForm.targetProvince,
+                                            "ابتدا استان را انتخاب کنید"
+                                        )}
+                                        {renderMultiSelect(
+                                            "دانشگاه",
+                                            universities.map(u => ({ value: u.name, label: u.name })),
+                                            channelForm.targetUniversity,
+                                            (val) => setChannelForm({ ...channelForm, targetUniversity: val })
+                                        )}
+                                        {renderMultiSelect(
+                                            "وزارت مربوطه",
+                                            [
+                                                "وزارت علوم", "وزارت بهداشت", "پیام نور", "دانشگاه آزاد", "فنی حرفه ای",
+                                                "منابع طبیعی", "علمی کاربردی", "غیرانتفاعی", "ملی مهارت", "علوم قرآن و معارف",
+                                                "هنر", "موسسه آموزش عالی", "فرهنگیان", "علوم پزشکی"
+                                            ].map(m => ({ value: m, label: m })),
+                                            channelForm.targetMinistry,
+                                            (val) => setChannelForm({ ...channelForm, targetMinistry: val })
+                                        )}
+                                        {renderMultiSelect(
+                                            "رشته تحصیلی",
+                                            fieldsOfStudy.map(f => ({ value: f.name, label: f.name })),
+                                            channelForm.targetFieldOfStudy,
+                                            (val) => setChannelForm({ ...channelForm, targetFieldOfStudy: val })
+                                        )}
+                                        {renderMultiSelect(
+                                            "مقطع تحصیلی",
+                                            educationLevels.map(el => ({ value: el.name, label: el.name })),
+                                            channelForm.targetEducationLevel,
+                                            (val) => setChannelForm({ ...channelForm, targetEducationLevel: val })
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -825,74 +866,59 @@ const OfficialChannelsGroups: React.FC = () => {
                                 <div className="mb-4 p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/20 space-y-4">
                                     <p className="text-xs text-slate-400 flex items-center gap-2">
                                         <MapPin size={14} className="text-indigo-400" />
-                                        فیلترهای مخاطبین (همه اختیاری — هرچه کمتر پر کنید، عمومی‌تر خواهد بود)
+                                        فیلترهای مخاطبین — همه فیلدها اختیاری هستند و مستقل از هم عمل می‌کنند. هرچه کمتر پر کنید، عمومی‌تر خواهد بود
                                     </p>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {/* Province */}
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-bold text-slate-500">استان</label>
-                                            <select
-                                                value={groupForm.targetProvince || ''}
-                                                onChange={(e) => {
-                                                    const val = e.target.value || undefined;
-                                                    setGroupForm({ ...groupForm, targetProvince: val, targetCity: undefined });
-                                                    loadCities(e.target.value);
-                                                }}
-                                                className="w-full glass bg-white/5 border-white/5 p-3 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
-                                            >
-                                                <option value="" className="bg-slate-800">همه استان‌ها</option>
-                                                {provinces.map(p => <option key={p} value={p} className="bg-slate-800">{p}</option>)}
-                                            </select>
-                                        </div>
-                                        {/* City */}
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-bold text-slate-500">شهر</label>
-                                            <select
-                                                value={groupForm.targetCity || ''}
-                                                onChange={(e) => setGroupForm({ ...groupForm, targetCity: e.target.value || undefined })}
-                                                className="w-full glass bg-white/5 border-white/5 p-3 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
-                                                disabled={!groupForm.targetProvince}
-                                            >
-                                                <option value="" className="bg-slate-800">همه شهرها</option>
-                                                {cities.map(c => <option key={c} value={c} className="bg-slate-800">{c}</option>)}
-                                            </select>
-                                        </div>
-                                        {/* University */}
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-bold text-slate-500">دانشگاه</label>
-                                            <select
-                                                value={groupForm.targetUniversity || ''}
-                                                onChange={(e) => setGroupForm({ ...groupForm, targetUniversity: e.target.value || undefined })}
-                                                className="w-full glass bg-white/5 border-white/5 p-3 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
-                                            >
-                                                <option value="" className="bg-slate-800">همه دانشگاه‌ها</option>
-                                                {universities.map(u => <option key={u.id} value={u.name} className="bg-slate-800">{u.name}</option>)}
-                                            </select>
-                                        </div>
-                                        {/* Field of Study */}
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-bold text-slate-500">رشته تحصیلی</label>
-                                            <select
-                                                value={groupForm.targetFieldOfStudy || ''}
-                                                onChange={(e) => setGroupForm({ ...groupForm, targetFieldOfStudy: e.target.value || undefined })}
-                                                className="w-full glass bg-white/5 border-white/5 p-3 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
-                                            >
-                                                <option value="" className="bg-slate-800">همه رشته‌ها</option>
-                                                {fieldsOfStudy.map(f => <option key={f.id} value={f.name} className="bg-slate-800">{f.name}</option>)}
-                                            </select>
-                                        </div>
-                                        {/* Education Level */}
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-bold text-slate-500">مقطع تحصیلی</label>
-                                            <select
-                                                value={groupForm.targetEducationLevel || ''}
-                                                onChange={(e) => setGroupForm({ ...groupForm, targetEducationLevel: e.target.value || undefined })}
-                                                className="w-full glass bg-white/5 border-white/5 p-3 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
-                                            >
-                                                <option value="" className="bg-slate-800">همه مقاطع</option>
-                                                {educationLevels.map(el => <option key={el.id} value={el.name} className="bg-slate-800">{el.name}</option>)}
-                                            </select>
-                                        </div>
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {renderMultiSelect(
+                                            "استان",
+                                            provinces.map(p => ({ value: p, label: p })),
+                                            groupForm.targetProvince,
+                                            (val) => {
+                                                setGroupForm({ ...groupForm, targetProvince: val, targetCity: undefined });
+                                                if (val) {
+                                                    const arr = val.split(',');
+                                                    loadCities(arr[arr.length - 1]);
+                                                } else {
+                                                    loadCities("");
+                                                }
+                                            }
+                                        )}
+                                        {renderMultiSelect(
+                                            "شهر",
+                                            cities.map(c => ({ value: c, label: c })),
+                                            groupForm.targetCity,
+                                            (val) => setGroupForm({ ...groupForm, targetCity: val }),
+                                            !groupForm.targetProvince,
+                                            "ابتدا استان را انتخاب کنید"
+                                        )}
+                                        {renderMultiSelect(
+                                            "دانشگاه",
+                                            universities.map(u => ({ value: u.name, label: u.name })),
+                                            groupForm.targetUniversity,
+                                            (val) => setGroupForm({ ...groupForm, targetUniversity: val })
+                                        )}
+                                        {renderMultiSelect(
+                                            "وزارت مربوطه",
+                                            [
+                                                "وزارت علوم", "وزارت بهداشت", "پیام نور", "دانشگاه آزاد", "فنی حرفه ای",
+                                                "منابع طبیعی", "علمی کاربردی", "غیرانتفاعی", "ملی مهارت", "علوم قرآن و معارف",
+                                                "هنر", "موسسه آموزش عالی", "فرهنگیان", "علوم پزشکی"
+                                            ].map(m => ({ value: m, label: m })),
+                                            groupForm.targetMinistry,
+                                            (val) => setGroupForm({ ...groupForm, targetMinistry: val })
+                                        )}
+                                        {renderMultiSelect(
+                                            "رشته تحصیلی",
+                                            fieldsOfStudy.map(f => ({ value: f.name, label: f.name })),
+                                            groupForm.targetFieldOfStudy,
+                                            (val) => setGroupForm({ ...groupForm, targetFieldOfStudy: val })
+                                        )}
+                                        {renderMultiSelect(
+                                            "مقطع تحصیلی",
+                                            educationLevels.map(el => ({ value: el.name, label: el.name })),
+                                            groupForm.targetEducationLevel,
+                                            (val) => setGroupForm({ ...groupForm, targetEducationLevel: val })
+                                        )}
                                     </div>
                                 </div>
                             )}

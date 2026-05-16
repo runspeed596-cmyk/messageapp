@@ -30,8 +30,11 @@ class GroupService(
         val pageable = PageRequest.of(page, size)
         val groups = groupRepository.findByMemberId(userId, pageable)
         // Filter out official groups with SPECIAL or SUPPORT displayMode (they belong in Special Folder only)
+        // Also filter out COURSE_GROUP so they only show in Courses tab
         val filteredGroups = groups.content.filter { group ->
-            !group.isOfficial || group.displayMode == OfficialDisplayMode.TAB
+            val isHiddenOfficial = group.isOfficial && group.displayMode != OfficialDisplayMode.TAB
+            val isCourseGroup = group.officialCategory == OfficialGroupCategory.COURSE_GROUP
+            !isHiddenOfficial && !isCourseGroup
         }
         return GroupListResponse(
             groups = filteredGroups.map { group -> groupToDto(group, userId) },
@@ -620,9 +623,10 @@ class ChannelService(
     fun getChannelsForUser(userId: UUID, page: Int, size: Int): ChannelListResponse {
         val pageable = PageRequest.of(page, size)
         val channels = channelRepository.findBySubscriberId(userId, pageable)
-        // Filter out official channels with SPECIAL or SUPPORT displayMode (they belong in Special Folder only)
         val filteredChannels = channels.content.filter { channel ->
-            !channel.isOfficial || channel.displayMode == OfficialDisplayMode.TAB
+            val isHiddenOfficial = channel.isOfficial && channel.displayMode != OfficialDisplayMode.TAB
+            val isSmartFolderOnly = channel.classification == ChannelClassification.VERIFIED_TEACHER || channel.classification == ChannelClassification.COURSE_CHANNEL
+            !isHiddenOfficial && !isSmartFolderOnly
         }
         return ChannelListResponse(
             channels = filteredChannels.map { channel ->
@@ -902,8 +906,13 @@ class ChannelService(
     fun searchPublicChannels(query: String, page: Int, size: Int): ChannelListResponse {
         val pageable = PageRequest.of(page, size)
         val channels = channelRepository.searchByName(query, pageable)
+        val filteredChannels = channels.content.filter { channel ->
+            val isHiddenOfficial = channel.isOfficial && channel.displayMode != OfficialDisplayMode.TAB
+            val isSmartFolderOnly = channel.classification == ChannelClassification.VERIFIED_TEACHER || channel.classification == ChannelClassification.COURSE_CHANNEL
+            channel.isPublic && !isHiddenOfficial && !isSmartFolderOnly
+        }
         return ChannelListResponse(
-            channels = channels.content.filter { it.isPublic }.map { channel ->
+            channels = filteredChannels.map { channel ->
                 ChannelDto(
                     id = channel.id!!,
                     name = channel.name,

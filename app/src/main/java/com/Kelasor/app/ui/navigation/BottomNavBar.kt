@@ -66,8 +66,8 @@ sealed class BottomNavItem(
     data object Elm : BottomNavItem(
         route = Routes.MosbatElm.route,
         title = "علم+",
-        selectedIcon = R.drawable.ic_science,
-        unselectedIcon = R.drawable.ic_science
+        selectedIcon = R.drawable.ic_school,
+        unselectedIcon = R.drawable.ic_school
     )
 
     data object Home : BottomNavItem(

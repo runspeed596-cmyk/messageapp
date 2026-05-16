@@ -91,6 +91,14 @@ fun HomeScreen(
                     Icon(Icons.Filled.Notifications, contentDescription = "اعلان‌ها", tint = if (isDarkTheme) Color.White else Color(0xFF1A1A2E))
                 }
                 
+                // Settings Gear Icon
+                IconButton(
+                    onClick = { onNavigate(Routes.GlobalSettings.route) },
+                    modifier = Modifier.align(Alignment.CenterEnd).size(40.dp)
+                ) {
+                    Icon(Icons.Filled.Settings, contentDescription = "تنظیمات کلی", tint = if (isDarkTheme) Color.White else Color(0xFF1A1A2E))
+                }
+                
                 Box(modifier = Modifier.align(Alignment.Center)) {
                     ShimmerText(text = "کلاسور", isDarkTheme = isDarkTheme)
                 }

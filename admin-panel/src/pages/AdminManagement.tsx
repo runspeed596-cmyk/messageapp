@@ -3,8 +3,21 @@ import { adminApi } from '../api/adminApi';
 import type { PanelAdmin } from '../api/adminApi';
 import {
     ShieldCheck, ShieldAlert, Plus, Trash2, User, Lock, Eye, EyeOff,
-    Calendar, Loader2, X, Crown, UserPlus
+    Calendar, Loader2, X, Crown, UserPlus, CheckSquare
 } from 'lucide-react';
+
+const AVAILABLE_PERMISSIONS = [
+    { id: 'DASHBOARD', label: 'پیشخوان' },
+    { id: 'USERS', label: 'کاربران' },
+    { id: 'ADMINS', label: 'مدیریت ادمین‌ها' },
+    { id: 'MOSBAT_ELM', label: 'مثبت علم' },
+    { id: 'ENTERTAINMENT', label: 'تفریح و سرگرمی' },
+    { id: 'DISCOUNTS', label: 'تخفیف‌ها' },
+    { id: 'WORLD_OF_SCIENCE', label: 'دنیای علم (دانشگاه‌ها)' },
+    { id: 'OFFICIAL_CHANNELS', label: 'کانال‌های رسمی' },
+    { id: 'ADVERTISEMENTS', label: 'تبلیغات' },
+    { id: 'BANNERS', label: 'بنرها' }
+];
 
 const AdminManagement = () => {
     const [admins, setAdmins] = useState<PanelAdmin[]>([]);
@@ -14,6 +27,7 @@ const AdminManagement = () => {
     const [formPassword, setFormPassword] = useState<string>('');
     const [formDisplayName, setFormDisplayName] = useState<string>('');
     const [formIsSuperAdmin, setFormIsSuperAdmin] = useState<boolean>(false);
+    const [formPermissions, setFormPermissions] = useState<string[]>([]);
     const [formError, setFormError] = useState<string>('');
     const [formLoading, setFormLoading] = useState<boolean>(false);
     const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -71,7 +85,8 @@ const AdminManagement = () => {
                 username: formUsername.trim(),
                 password: formPassword,
                 displayName: formDisplayName.trim(),
-                isSuperAdmin: formIsSuperAdmin
+                isSuperAdmin: formIsSuperAdmin,
+                permissions: formIsSuperAdmin ? [] : formPermissions
             });
             if (response.data.success) {
                 setAdmins([...admins, response.data.data]);
@@ -92,6 +107,7 @@ const AdminManagement = () => {
         setFormPassword('');
         setFormDisplayName('');
         setFormIsSuperAdmin(false);
+        setFormPermissions([]);
         setFormError('');
         setShowPassword(false);
     };
@@ -147,11 +163,24 @@ const AdminManagement = () => {
 
                             <button
                                 onClick={() => handleDelete(admin.id, admin.username)}
-                                className="p-3 text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                                className="p-3 text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
                             >
                                 <Trash2 size={18} />
                             </button>
                         </div>
+
+                        {!admin.isSuperAdmin && admin.permissions && admin.permissions.length > 0 && (
+                            <div className="mt-4 flex flex-wrap gap-1">
+                                {admin.permissions.map(p => {
+                                    const label = AVAILABLE_PERMISSIONS.find(ap => ap.id === p)?.label || p;
+                                    return (
+                                        <span key={p} className="text-[9px] bg-white/5 border border-white/10 text-slate-300 px-2 py-0.5 rounded-full">
+                                            {label}
+                                        </span>
+                                    );
+                                })}
+                            </div>
+                        )}
 
                         <div className="mt-5 flex items-center justify-between">
                             <span className={`text-[10px] font-black px-3 py-1 rounded-full border ${admin.isSuperAdmin
@@ -271,6 +300,44 @@ const AdminManagement = () => {
                                     <div className={`w-5 h-5 bg-white rounded-full shadow-md mx-1 transition-all duration-300`}></div>
                                 </div>
                             </div>
+
+                            {/* Permissions Checklist */}
+                            {!formIsSuperAdmin && (
+                                <div className="space-y-3 bg-white/5 border border-white/10 p-4 rounded-xl">
+                                    <label className="text-sm font-bold text-white flex items-center gap-2 mb-2">
+                                        <CheckSquare size={16} className="text-indigo-400" /> دسترسی‌های ادمین
+                                    </label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {AVAILABLE_PERMISSIONS.map(perm => (
+                                            <label key={perm.id} className="flex items-center gap-2 cursor-pointer group">
+                                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${
+                                                    formPermissions.includes(perm.id) 
+                                                    ? 'bg-indigo-500 border-indigo-500' 
+                                                    : 'bg-white/5 border-white/20 group-hover:border-indigo-400'
+                                                }`}>
+                                                    {formPermissions.includes(perm.id) && <CheckSquare size={14} className="text-white" />}
+                                                </div>
+                                                <span className="text-xs text-slate-300 group-hover:text-white transition-colors">
+                                                    {perm.label}
+                                                </span>
+                                                {/* Hidden input to handle the actual change easily via onClick on label */}
+                                                <input 
+                                                    type="checkbox" 
+                                                    className="hidden"
+                                                    checked={formPermissions.includes(perm.id)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setFormPermissions([...formPermissions, perm.id]);
+                                                        } else {
+                                                            setFormPermissions(formPermissions.filter(id => id !== perm.id));
+                                                        }
+                                                    }}
+                                                />
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {formError && (
                                 <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-xl text-sm">

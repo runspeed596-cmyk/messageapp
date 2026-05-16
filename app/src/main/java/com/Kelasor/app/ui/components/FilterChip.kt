@@ -26,7 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🏷️ Premium Filter Chip — iOS-style pill with gradient selection
@@ -84,7 +84,7 @@ fun FilterChip(
         Text(
             text = label,
             style = MaterialTheme.typography.labelLarge,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
             color = textColor
         )

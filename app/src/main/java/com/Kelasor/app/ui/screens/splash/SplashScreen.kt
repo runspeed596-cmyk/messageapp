@@ -49,7 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.Kelasor.app.ui.theme.AppAnimations
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import com.Kelasor.app.ui.viewmodel.AuthViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -64,6 +64,7 @@ import kotlin.math.sin
 @Composable
 fun SplashScreen(
     onNavigateToLogin: () -> Unit,
+    onNavigateToUserInfo: () -> Unit,
     onNavigateToMain: () -> Unit,
     viewModel: AuthViewModel = hiltViewModel()
 ) {
@@ -189,7 +190,11 @@ fun SplashScreen(
             isExiting = true
             delay(500)
             if (authState.isLoggedIn == true) {
-                onNavigateToMain()
+                if (authState.isOnboardingComplete) {
+                    onNavigateToMain()
+                } else {
+                    onNavigateToUserInfo()
+                }
             } else {
                 onNavigateToLogin()
             }
@@ -344,7 +349,7 @@ fun SplashScreen(
             Text(
                 text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.splash_app_name),
                 style = MaterialTheme.typography.headlineLarge,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.graphicsLayer {
@@ -357,7 +362,7 @@ fun SplashScreen(
             Text(
                 text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.splash_tagline),
                 style = MaterialTheme.typography.bodyLarge,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 modifier = Modifier.graphicsLayer {
                     alpha = taglineAlpha.value

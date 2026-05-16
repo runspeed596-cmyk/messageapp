@@ -1,267 +1,295 @@
-# MessageApp Deployment Guide
+# Kelasor Deployment Guide (راهنمای دیپلوی کلاسور)
 
-Deploy API + Admin Panel on **194.5.175.30** with domain **kelasorapp.ir**
+Deploy API + Admin Panel on **185.116.162.68** (Iranian VPS)
 
----
-
-## 0. DNS Setup (Domain Provider)
-
-Set these DNS records at your domain registrar (nic.ir → Cloudflare):
-
-| Type | Name | Value          |
-|------|------|----------------|
-| A    | @    | 194.5.175.30   |
-| A    | www  | 194.5.175.30   |
+> [!IMPORTANT]
+> SSH Port: **3031** | Server IP: **185.116.162.68**
+> چون سرور در ایران است، تمام مخازن از **میرور داخلی ایران** استفاده می‌شوند.
 
 ---
 
-## 1. Server Setup
+## Architecture (معماری)
 
-### 1.1 Connect & Update
-
-```bash
-ssh root@194.5.175.30
-apt update && apt upgrade -y
 ```
-
-### 1.2 Install Docker
-
-```bash
-curl -fsSL https://get.docker.com -o get-docker.sh
-sh get-docker.sh
-systemctl enable docker && systemctl start docker
-docker --version && docker compose version
-```
-
-### 1.3 Install Utilities
-
-```bash
-apt install unzip ufw fail2ban -y
+Internet / App → 185.116.162.68
+                        │
+                  ┌─────▼──────┐
+                  │   Nginx    │ :80 (HTTP)
+                  │            │
+                  │  /api/* ───▶ Spring Boot :8080
+                  │  /ws/*  ───▶ WebSocket (STOMP)
+                  │  /ca978112ca/ ──▶ Admin Panel
+                  │  /uploads/* ──▶ Files
+                  │  / ────────▶ Placeholder
+                  └─────┬──────┘
+                        │
+                  ┌─────▼──────┐
+                  │ PostgreSQL │ (internal)
+                  │ Redis      │ (internal)
+                  │ MinIO      │ (internal)
+                  └────────────┘
 ```
 
 ---
 
-## 2. Security
+## Quick Deploy (دیپلوی سریع)
 
-### 2.1 Firewall
-
-```bash
-ufw allow 22/tcp
-ufw allow 80/tcp
-ufw allow 443/tcp
-ufw enable
-ufw status
-```
-
-### 2.2 Fail2Ban
-
-```bash
-cat > /etc/fail2ban/jail.local << 'EOF'
-[DEFAULT]
-bantime = 3600
-findtime = 600
-maxretry = 3
-
-[sshd]
-enabled = true
-port = 22
-logpath = /var/log/auth.log
-maxretry = 3
-EOF
-
-systemctl enable fail2ban && systemctl restart fail2ban
-```
-
----
-
-## 3. Deploy Code (ZIP + SCP)
-
-> GitHub is blocked on Iranian servers. Use ZIP archive method.
-
-### 3.1 Archive (Windows PowerShell)
+### From Windows (PowerShell):
 
 ```powershell
 cd E:\Learn\programming\ponisha\MessageApp2
-Compress-Archive -Path "SpringBoot","admin-panel","nginx","docker-compose.yml",".env.example",".gitignore" -DestinationPath "$env:USERPROFILE\Desktop\messageapp.zip" -Force
+.\deploy-server.ps1
 ```
 
-### 3.2 Upload to Server (Windows PowerShell)
+This single command will:
+1. Build the Spring Boot JAR locally
+2. Build the Admin Panel (npm run build) locally
+3. Create a minimal ZIP (~50-80MB)
+4. Upload via SCP (port 3031) to server
+5. Extract and rebuild Docker containers on server
+
+### Options:
 
 ```powershell
-scp "$env:USERPROFILE\Desktop\messageapp.zip" root@194.5.175.30:/opt/
+.\deploy-server.ps1 -SkipBuild    # Deploy without rebuilding JAR/Admin
+.\deploy-server.ps1 -SkipAdmin    # Skip admin panel rebuild only
 ```
 
-### 3.3 Extract on Server
+---
+
+## First-Time Server Setup (راه‌اندازی اولیه)
+
+### 0. Connect to Server
 
 ```bash
-cd /opt
-mkdir -p messageapp
-unzip messageapp.zip -d messageapp
-cd messageapp
+ssh -p 3031 root@185.116.162.68
+# Password: (enter the server password)
 ```
 
-### 3.4 Configure Environment
+### 1. Upload & Run Setup Script
+
+From Windows PowerShell:
+```powershell
+scp -P 3031 "E:\Learn\programming\ponisha\MessageApp2\scripts\server-setup.sh" root@185.116.162.68:/opt/
+ssh -p 3031 root@185.116.162.68 "chmod +x /opt/server-setup.sh && bash /opt/server-setup.sh"
+```
+
+This script will automatically:
+- Configure Iranian APT mirrors (ArvanCloud)
+- Install Docker + Docker Compose
+- Configure Docker to use Iranian registry mirrors
+- Setup UFW Firewall (ports 3031, 80, 443, 9090)
+- Configure Fail2Ban (SSH protection on port 3031)
+- Create project directory `/opt/messageapp`
+- Generate initial `.env` file
+
+### 2. Configure Environment
 
 ```bash
-cp .env.example .env
-nano .env
+nano /opt/messageapp/.env
 ```
 
-Set these values:
+Update these values:
 ```env
-APP_BASE_URL=https://kelasorapp.ir
+APP_BASE_URL=http://185.116.162.68
 POSTGRES_PASSWORD=YOUR_STRONG_PASSWORD
 JWT_SECRET=YOUR_JWT_SECRET
+MINIO_ROOT_PASSWORD=YOUR_MINIO_PASSWORD
+NAJVA_SMS_API_KEY=YOUR_REAL_API_KEY
 ```
 
-Generate secrets:
+Generate secure secrets:
 ```bash
-openssl rand -base64 32   # for password
+openssl rand -base64 32   # for passwords
 openssl rand -base64 64   # for JWT secret
 ```
 
----
+### 3. Deploy the Application
 
-## 4. First Deploy (HTTP Only)
-
-Use HTTP-only nginx config first to get SSL certificate:
-
-```bash
-cd /opt/messageapp
-cp nginx/nginx-http-only.conf nginx/nginx.conf
-docker compose up -d --build
-docker compose ps
+From Windows PowerShell:
+```powershell
+cd E:\Learn\programming\ponisha\MessageApp2
+.\deploy-server.ps1
 ```
 
-### Verify
+### 4. Verify Deployment
 
 ```bash
-curl http://194.5.175.30/api/health
-curl http://194.5.175.30/ca978112ca/
-```
+# From server:
+docker compose ps                     # Check container status
+curl http://localhost/api/health       # Test API
+curl http://localhost/ca978112ca/      # Test Admin Panel
 
----
-
-## 5. SSL Certificate
-
-### Option A: Cloudflare Proxy (Recommended)
-
-If using Cloudflare with **Proxied** (orange cloud ☁️):
-- SSL is handled by Cloudflare automatically
-- Keep `nginx-http-only.conf` — no need for Certbot
-- In Cloudflare: SSL/TLS → **Full (Strict)**
-
-### Option B: Let's Encrypt (without Cloudflare proxy)
-
-```bash
-docker compose stop nginx
-
-docker run --rm -p 80:80 -p 443:443 \
-  -v messageapp_certbot_etc:/etc/letsencrypt \
-  -v messageapp_certbot_var:/var/lib/letsencrypt \
-  certbot/certbot certonly \
-  --standalone \
-  -d kelasorapp.ir \
-  -d www.kelasorapp.ir \
-  --email your@email.com \
-  --agree-tos --no-eff-email
-
-# Switch to SSL nginx config
-cp nginx/nginx-ssl.conf nginx/nginx.conf
-docker compose up -d
-```
-
-Auto-renewal cron:
-```bash
-crontab -e
-# Add:
-0 3 * * * cd /opt/messageapp && docker compose run --rm certbot renew && docker compose exec nginx nginx -s reload
+# From anywhere:
+curl http://185.116.162.68/api/health
 ```
 
 ---
 
-## 6. Update Deployment
+## Access Points (نقاط دسترسی)
 
-### On Windows:
+| Service       | URL                                          |
+|---------------|----------------------------------------------|
+| Admin Panel   | http://185.116.162.68/ca978112ca/            |
+| API           | http://185.116.162.68/api/                   |
+| WebSocket     | ws://185.116.162.68/ws/                      |
+| Swagger       | http://185.116.162.68/swagger-ui.html        |
+| Health Check  | http://185.116.162.68/health                 |
+
+---
+
+## Android App Configuration
+
+The following files have been updated for production:
+
+| File | Value |
+|------|-------|
+| `Constants.kt` | `BASE_URL = "http://185.116.162.68/"` |
+| `WebSocketManager.kt` | `WS_BASE_URL = "ws://185.116.162.68/ws"` |
+| `adminApi.ts` | `BASE_URL = "http://185.116.162.68/api"` |
+
+---
+
+## Update Deployment (بروزرسانی)
+
+### Auto-Deploy (Recommended):
 
 ```powershell
 cd E:\Learn\programming\ponisha\MessageApp2
-Remove-Item "$env:USERPROFILE\Desktop\messageapp.zip" -ErrorAction SilentlyContinue
-Compress-Archive -Path "SpringBoot","admin-panel","nginx","docker-compose.yml",".env.example",".gitignore" -DestinationPath "$env:USERPROFILE\Desktop\messageapp.zip" -Force
-scp "$env:USERPROFILE\Desktop\messageapp.zip" root@194.5.175.30:/opt/
+.\deploy-server.ps1
+```
+
+### Manual Deploy:
+
+```powershell
+# Build JAR
+cd SpringBoot && .\gradlew.bat bootJar --no-daemon -q && cd ..
+
+# Build Admin Panel
+cd admin-panel && $env:VITE_API_URL="http://185.116.162.68/api"; npm run build && cd ..
+
+# ZIP deploy
+$TEMP = "$env:TEMP\messageapp-deploy"
+# ... (use deploy-server.ps1 instead)
+
+# Upload
+scp -P 3031 deploy.zip root@185.116.162.68:/opt/
 ```
 
 ### On Server:
 
 ```bash
-cd /opt
-rm -rf messageapp/SpringBoot messageapp/admin-panel messageapp/nginx messageapp/docker-compose.yml
-unzip -o messageapp.zip -d messageapp
-cd messageapp
+cd /opt/messageapp
+docker compose down
+# Update files...
 docker compose up -d --build
 ```
 
-> `.env` is preserved since it's not in the zip.
-
 ---
 
-## 7. Access Points
-
-| Service       | URL                                     |
-|---------------|-----------------------------------------|
-| Admin Panel   | https://kelasorapp.ir/ca978112ca/       |
-| API           | https://kelasorapp.ir/api/              |
-| WebSocket     | wss://kelasorapp.ir/ws/                 |
-| Swagger       | https://kelasorapp.ir/swagger-ui.html   |
-
----
-
-## 8. Android App URLs
-
-Update these files before building APK:
-
-| File | Value |
-|------|-------|
-| `Constants.kt` | `BASE_URL = "https://kelasorapp.ir/"` |
-| `NetworkModule.kt` | `BASE_URL = "https://kelasorapp.ir/"` |
-| `WebSocketManager.kt` | `WS_BASE_URL = "wss://kelasorapp.ir/ws"` |
-| `StoryMappers.kt` | `BASE_URL = "https://kelasorapp.ir"` |
-
----
-
-## 9. Management Commands
+## Management Commands (دستورات مدیریت)
 
 ```bash
+# SSH to server
+ssh -p 3031 root@185.116.162.68
+
+# Container management
+cd /opt/messageapp
 docker compose logs -f              # All logs
-docker compose logs -f api           # API logs
-docker compose restart               # Restart all
-docker compose ps                    # Status
+docker compose logs -f api          # API logs only
+docker compose logs -f nginx        # Nginx logs
+docker compose restart              # Restart all
+docker compose restart api          # Restart API only
+docker compose ps                   # Status
+docker compose down                 # Stop all
+docker compose up -d --build        # Rebuild & start
 
-# Database backup
+# Database management
 docker compose exec postgres pg_dump -U postgres messageapp > backup_$(date +%Y%m%d).sql
-
-# Database restore
 cat backup.sql | docker compose exec -T postgres psql -U postgres -d messageapp
+
+# Docker cleanup
+docker system prune -af --volumes   # ⚠️ Removes unused images/volumes
 ```
 
 ---
 
-## Architecture
+## Troubleshooting (عیب‌یابی)
+
+### API Not Starting
+
+```bash
+docker compose logs -f api
+# Common issues:
+# - PostgreSQL not ready yet → wait & retry
+# - Port 8080 already in use → check with: netstat -tlnp | grep 8080
+```
+
+### Can't Pull Docker Images
+
+```bash
+# Verify Iranian mirror is configured
+cat /etc/docker/daemon.json
+# Should contain: "https://docker.arvancloud.ir"
+
+# Restart Docker
+systemctl restart docker
+```
+
+### Admin Panel Shows Blank Page
+
+```bash
+# Check if admin-panel dist was built
+docker compose exec admin ls /usr/share/nginx/html/ca978112ca/
+# Should show: index.html, assets/, etc.
+
+# Rebuild admin
+docker compose build admin
+docker compose up -d admin
+```
+
+### WebSocket Connection Fails
+
+```bash
+# Check if port 9090 is open
+ufw status | grep 9090
+
+# Check API WebSocket logs
+docker compose logs api | grep -i websocket
+```
+
+---
+
+## SSL Setup (When Adding Domain)
+
+When you configure `kelasorapp.ir` to point to this server:
+
+1. Update DNS (A record → 185.116.162.68)
+2. Update `.env`: `APP_BASE_URL=https://kelasorapp.ir`
+3. Swap nginx config to include SSL
+4. Redeploy
+
+---
+
+## File Structure (ساختار فایل‌ها)
 
 ```
-Internet → Cloudflare (SSL) → 194.5.175.30
-                                    │
-                              ┌─────▼──────┐
-                              │   Nginx    │ :80/:443
-                              │            │
-                              │  /api/* ───▶ Spring Boot :8080
-                              │  /ws/*  ───▶ WebSocket
-                              │  /ca978112ca/ ──▶ Admin Panel
-                              │  /uploads/* ──▶ Files
-                              │  / ────────▶ Other Website
-                              └─────┬──────┘
-                                    │
-                              ┌─────▼──────┐
-                              │ PostgreSQL │ (internal)
-                              └────────────┘
+/opt/messageapp/                  ← Server directory
+├── .env                          ← Environment variables (NOT in Git)
+├── docker-compose.yml            ← Docker orchestration
+├── SpringBoot/                   ← Backend (pre-built JAR)
+│   ├── Dockerfile
+│   └── build/libs/*.jar
+├── admin-panel/                  ← Frontend (pre-built dist/)
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   └── dist/
+├── nginx/                        ← Reverse proxy configs
+│   ├── nginx.conf
+│   └── nginx-http-only.conf
+├── scripts/                      ← Server scripts
+│   ├── server-setup.sh
+│   ├── server-deploy.sh
+│   └── daemon.json
+└── ssl/                          ← SSL certificates (future)
 ```

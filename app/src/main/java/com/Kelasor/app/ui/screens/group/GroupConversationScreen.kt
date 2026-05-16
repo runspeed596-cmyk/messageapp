@@ -112,6 +112,7 @@ fun GroupConversationScreen(
     onNavigateToUserProfile: (String) -> Unit = {},
     onNavigateToForward: (messageIds: String, sourceType: String, sourceId: String) -> Unit = { _, _, _ -> },
     onNavigateToExamCreation: () -> Unit = {},
+    onNavigateToCourseDetail: ((String) -> Unit)? = null,
     viewModel: GroupConversationViewModel = hiltViewModel()
 ) {
     val extendedColors = MessageAppTheme.extendedColors
@@ -156,7 +157,7 @@ fun GroupConversationScreen(
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
     val scope = rememberCoroutineScope()
     // BackHandler: clear selection on back press instead of navigating away
     BackHandler(enabled = state.selectedMessageIds.isNotEmpty()) {
@@ -462,7 +463,8 @@ fun GroupConversationScreen(
                                     mediaPreviewUrl = url
                                     mediaPreviewType = type
                                 },
-                                timeFormatter = timeFormatter
+                                timeFormatter = timeFormatter,
+                                onNavigateToCourse = onNavigateToCourseDetail
                             )
                         }
                     }
@@ -490,7 +492,8 @@ fun GroupConversationScreen(
                             myReaction = selectedMsgForOverlay.myReaction,
                             replyToMessage = selectedMsgForOverlay.replyToMessage,
                             isPinned = selectedMsgForOverlay.isPinned,
-                            forwardedFrom = selectedMsgForOverlay.forwardedFrom
+                            forwardedFrom = selectedMsgForOverlay.forwardedFrom,
+                            timerTargetAt = selectedMsgForOverlay.timerTargetAt?.toEpochMilli()
                         )
                     }
                 },
@@ -888,9 +891,11 @@ private fun ChatBubbleWrapper(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onPreviewMedia: (String, com.Kelasor.app.ui.components.MediaType) -> Unit,
-    timeFormatter: DateTimeFormatter
+    timeFormatter: DateTimeFormatter,
+    onNavigateToCourse: ((String) -> Unit)? = null
 ) {
     val extendedColors = MessageAppTheme.extendedColors
+    val context = LocalContext.current
     val time = try { timeFormatter.format(message.createdAt) } catch(e: Exception) { "" }
     
     Box(
@@ -929,7 +934,10 @@ private fun ChatBubbleWrapper(
         }
 
         Box {
-            Column {
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl
+            ) {
+                Column {
             when {
                 message.poll != null -> {
                     com.Kelasor.app.ui.components.PollBubble(
@@ -1071,9 +1079,24 @@ private fun ChatBubbleWrapper(
                         onSenderClick = { onNavigateToUserProfile(message.senderId) },
                         isEdited = message.isEdited,
                         isPinned = message.isPinned,
-                        forwardedFrom = message.forwardedFrom
+                        forwardedFrom = message.forwardedFrom,
+                        actionLabel = message.actionLabel,
+                        actionUrl = message.actionUrl,
+                        timerTargetAt = message.timerTargetAt?.toEpochMilli(),
+                        onActionClick = { url ->
+                            if (url.startsWith("course_details/")) {
+                                val cId = url.substringAfter("course_details/")
+                                onNavigateToCourse?.invoke(cId)
+                            } else if (url.startsWith("http")) {
+                                try {
+                                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                                    context.startActivity(intent)
+                                } catch (e: Exception) { }
+                            }
+                        }
                     )
                 }
+            }
             }
             }
         }

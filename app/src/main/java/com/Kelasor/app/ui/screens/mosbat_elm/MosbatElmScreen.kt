@@ -4,12 +4,15 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.automirrored.rounded.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -17,6 +20,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -28,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
+import coil3.request.crossfade
 import com.Kelasor.app.R
 import com.Kelasor.app.domain.model.Course
 import com.Kelasor.app.domain.model.Institution
@@ -36,12 +42,13 @@ import com.Kelasor.app.ui.components.AppConnectionState
 import com.Kelasor.app.ui.components.AvatarImage
 import com.Kelasor.app.ui.components.AvatarSize
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import kotlinx.coroutines.delay
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.rememberLottieComposition
+import com.Kelasor.app.util.toPersianDateTime
 import com.Kelasor.app.util.toPersianNumbers
 import com.Kelasor.app.util.toPersianPrice
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -58,6 +65,7 @@ fun MosbatElmScreen(
     onNavigateToCourseDetail: (String) -> Unit = {},
     onNavigateToInstitution: (String) -> Unit = {},
     onNavigateToUserProfile: (String) -> Unit = {},
+    onNavigateToTeacherProfile: (String) -> Unit = {},
     onNavigateToNotifications: () -> Unit = {},
     onNavigateToCategory: (String) -> Unit = {},
     viewModel: MosbatElmScreenViewModel = hiltViewModel()
@@ -69,6 +77,23 @@ fun MosbatElmScreen(
         if (appConnectionState == AppConnectionState.CONNECTED && state.publicCourses.isEmpty() && !state.isLoading) {
             viewModel.loadData()
         }
+    }
+
+    // Search filter state (must be outside LazyColumn for BottomSheet to work)
+    var searchPriceType by remember { mutableStateOf("همه") }
+    var searchMinRating by remember { mutableFloatStateOf(0f) }
+    var searchDuration by remember { mutableStateOf("همه") }
+    var searchStatus by remember { mutableStateOf("همه") }
+    var searchSortOrder by remember { mutableStateOf("جدیدترین") }
+    var showSearchFilter by remember { mutableStateOf(false) }
+    val searchActiveFilterCount: Int = remember(searchPriceType, searchMinRating, searchDuration, searchStatus, searchSortOrder) {
+        var c = 0
+        if (searchPriceType != "همه") c++
+        if (searchMinRating > 0f) c++
+        if (searchDuration != "همه") c++
+        if (searchStatus != "همه") c++
+        if (searchSortOrder != "جدیدترین") c++
+        c
     }
 
     Box(
@@ -97,14 +122,88 @@ fun MosbatElmScreen(
             }
             
             if (state.isSearchActive) {
-                val filteredCourses = state.publicCourses.filter {
-                    it.title.contains(state.searchQuery, ignoreCase = true)
+                val filteredCourses: List<Course> = state.publicCourses.filter {
+                    it.title.contains(state.searchQuery, ignoreCase = true) ||
+                    it.organizerName?.contains(state.searchQuery, ignoreCase = true) == true ||
+                    it.slogan?.contains(state.searchQuery, ignoreCase = true) == true
+                }.filter { course ->
+                    val matchPrice = when (searchPriceType) {
+                        "رایگان" -> course.isFree || course.priceRials == 0L
+                        "نقدی" -> !course.isFree && course.priceRials > 0L
+                        else -> true
+                    }
+                    val matchRating = course.rating >= searchMinRating
+                    val matchDuration = when (searchDuration) {
+                        "زیر ۲ ساعت" -> (course.durationMinutes ?: 0) < 120
+                        "۲ تا ۱۰ ساعت" -> (course.durationMinutes ?: 0) in 120..600
+                        "بالای ۱۰ ساعت" -> (course.durationMinutes ?: 0) > 600
+                        else -> true
+                    }
+                    val matchStatus = when (searchStatus) {
+                        "در حال برگزاری" -> course.startsAt?.isBefore(java.time.Instant.now()) == true
+                        "به‌زودی" -> course.startsAt?.isAfter(java.time.Instant.now()) == true
+                        "به اتمام رسیده" -> course.endsAt?.isBefore(java.time.Instant.now()) == true
+                        else -> true
+                    }
+                    matchPrice && matchRating && matchDuration && matchStatus
+                }.let { filtered ->
+                    when (searchSortOrder) {
+                        "جدیدترین" -> filtered.sortedByDescending { it.createdAt }
+                        "محبوب‌ترین" -> filtered.sortedByDescending { it.enrolledCount }
+                        "بالاترین امتیاز" -> filtered.sortedByDescending { it.rating }
+                        "ارزان‌ترین" -> filtered.sortedBy { it.priceRials }
+                        "گران‌ترین" -> filtered.sortedByDescending { it.priceRials }
+                        else -> filtered
+                    }
                 }
-                
+
+                // Filter Bar
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "${filteredCourses.size.toString().toPersianNumbers()} نتیجه",
+                            fontFamily = DanaFontFamily,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Box {
+                            Row(
+                                modifier = Modifier
+                                    .height(40.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (searchActiveFilterCount > 0) extendedColors.accent.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                    .clickable { showSearchFilter = true }
+                                    .padding(horizontal = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Filled.FilterList, contentDescription = "فیلتر", tint = if (searchActiveFilterCount > 0) extendedColors.accent else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("فیلتر", fontFamily = DanaFontFamily, fontSize = 13.sp, color = if (searchActiveFilterCount > 0) extendedColors.accent else MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            if (searchActiveFilterCount > 0) {
+                                Badge(
+                                    modifier = Modifier.align(Alignment.TopEnd).padding(2.dp),
+                                    containerColor = extendedColors.accent,
+                                    contentColor = Color.White
+                                ) {
+                                    Text(searchActiveFilterCount.toString().toPersianNumbers(), fontFamily = DanaFontFamily, fontSize = 10.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if (filteredCourses.isEmpty() && state.searchQuery.isNotEmpty()) {
                     item {
                         Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                            Text("دوره‌ای یافت نشد", fontFamily = VazirFontFamily, color = MaterialTheme.colorScheme.onBackground)
+                            Text("دوره‌ای یافت نشد", fontFamily = DanaFontFamily, color = MaterialTheme.colorScheme.onBackground)
                         }
                     }
                 } else {
@@ -114,7 +213,7 @@ fun MosbatElmScreen(
                             contentPadding = PaddingValues(16.dp),
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp),
-                            modifier = Modifier.height(600.dp) // Constrain grid height inside LazyColumn
+                            modifier = Modifier.height(1200.dp)
                         ) {
                             items(filteredCourses) { course ->
                                 CourseCard(
@@ -125,27 +224,9 @@ fun MosbatElmScreen(
                         }
                     }
                 }
-            } else {
 
-            // My Courses (Management) - Only for organizers
-            if (state.isOrganizer && state.myCourses.isNotEmpty()) {
-                item {
-                    SectionTitle(title = "دوره‌های من (مدیریت)", icon = Icons.Rounded.ManageAccounts)
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(state.myCourses) { course ->
-                            CourseCard(
-                                course = course,
-                                onClick = { onNavigateToCourseDetail(course.id) },
-                                modifier = Modifier.width(200.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-            }
+                // Search filter bottom sheet - rendered outside LazyColumn
+            } else {
 
             // Slider / Carousel
             item {
@@ -154,7 +235,16 @@ fun MosbatElmScreen(
 
             // 3D Categories
             item {
-                MosbatElmCategories(categoriesFromApi = state.categories, onCategoryClick = onNavigateToCategory)
+                MosbatElmCategories(
+                    categoriesFromApi = state.categories,
+                    onCategoryClick = { categoryName ->
+                        if (categoryName == "دانشگاه‌ها") {
+                            onNavigateToElm()
+                        } else {
+                            onNavigateToCategory(categoryName)
+                        }
+                    }
+                )
             }
 
             // Featured Courses (Special Section)
@@ -177,56 +267,30 @@ fun MosbatElmScreen(
                     SectionTitle(
                         title = "ویژه مثبت علم", 
                         icon = Icons.Rounded.WorkspacePremium,
-                        textColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        textColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        iconSize = 44.dp,
+                        onViewAllClick = { onNavigateToCategory("ویژه") }
                     )
                     
-                    if (state.featuredCourses.isNotEmpty()) {
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            items(state.featuredCourses) { course ->
-                                CourseCard(
-                                    course = course,
-                                    onClick = { onNavigateToCourseDetail(course.id) },
-                                    modifier = Modifier.width(200.dp)
-                                )
-                            }
-                        }
-                    } else {
-                        // Placeholder for mock data if empty (as user allowed mock for special)
-                        Text(
-                            "در حال بارگذاری دوره‌های ویژه...",
-                            color = Color.White.copy(alpha = 0.7f),
-                            fontFamily = VazirFontFamily,
-                            modifier = Modifier.padding(horizontal = 32.dp, vertical = 16.dp)
-                        )
-                    }
-                }
-            }
-
-            // Top Institutions
-            if (state.topInstitutions.isNotEmpty()) {
-                item {
-                    SectionTitle(title = "برگزارکنندگان محبوب", icon = Icons.Rounded.Business)
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        items(state.topInstitutions) { institution ->
-                            InstitutionCard(
-                                institution = institution,
-                                onClick = { onNavigateToInstitution(institution.id) }
-                            )
-                        }
-                    }
+                    // Fixed message as requested: "فعلا روش نوشته بشه هیچ دوره ای وجود ندارد"
+                    Text(
+                        "هیچ دوره‌ای وجود ندارد",
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontFamily = DanaFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 32.dp, vertical = 24.dp)
+                    )
                 }
             }
 
             // New Courses
             if (state.newCourses.isNotEmpty()) {
                 item {
-                    SectionTitle(title = "جدیدترین دوره‌ها", icon = Icons.Rounded.FiberNew)
+                    SectionTitle(
+                        title = "جدیدترین دوره‌ها", 
+                        icon = Icons.Rounded.FiberNew,
+                        onViewAllClick = { onNavigateToCategory("همه دسته‌ها") }
+                    )
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -235,30 +299,14 @@ fun MosbatElmScreen(
                             CourseCard(
                                 course = course,
                                 onClick = { onNavigateToCourseDetail(course.id) },
-                                modifier = Modifier.width(200.dp)
+                                modifier = Modifier.width(220.dp)
                             )
                         }
                     }
                 }
             }
 
-            // Top Instructors
-            if (state.topInstructors.isNotEmpty()) {
-                item {
-                    SectionTitle(title = "مدرسین محبوب", icon = Icons.Rounded.People)
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        items(state.topInstructors) { instructor ->
-                            InstructorCard(
-                                instructor = instructor,
-                                onClick = { onNavigateToUserProfile(instructor.id) }
-                            )
-                        }
-                    }
-                }
-            }
+            // Top Instructors - MOVED TO END
 
             // Discounted Courses
             if (state.discountedCourses.isNotEmpty()) {
@@ -271,27 +319,27 @@ fun MosbatElmScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "تخفیف‌دار!",
+                                fontFamily = DanaFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
                             val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.fire))
                             LottieAnimation(
                                 composition = composition,
                                 iterations = LottieConstants.IterateForever,
                                 modifier = Modifier.size(32.dp)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "تخفیف‌دار!",
-                                fontFamily = VazirFontFamily,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
                         }
                         Text(
                             text = "مشاهده همه",
-                            fontFamily = VazirFontFamily,
+                            fontFamily = DanaFontFamily,
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.clickable { }
+                            modifier = Modifier.clickable { onNavigateToCategory("تخفیف‌دار!") }
                         )
                     }
                     LazyRow(
@@ -302,7 +350,7 @@ fun MosbatElmScreen(
                             CourseCard(
                                 course = course,
                                 onClick = { onNavigateToCourseDetail(course.id) },
-                                modifier = Modifier.width(200.dp)
+                                modifier = Modifier.width(220.dp)
                             )
                         }
                     }
@@ -312,7 +360,11 @@ fun MosbatElmScreen(
             // Institute Courses
             if (state.instituteCourses.isNotEmpty()) {
                 item {
-                    SectionTitle(title = "موسسات و آکادمی‌ها", icon = Icons.Rounded.Business)
+                    SectionTitle(
+                        title = "آکادمی و موسسات", 
+                        icon = Icons.Rounded.Business,
+                        onViewAllClick = { onNavigateToCategory("آکادمی و موسسات") }
+                    )
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -321,7 +373,7 @@ fun MosbatElmScreen(
                             CourseCard(
                                 course = course,
                                 onClick = { onNavigateToCourseDetail(course.id) },
-                                modifier = Modifier.width(200.dp)
+                                modifier = Modifier.width(220.dp)
                             )
                         }
                     }
@@ -331,7 +383,11 @@ fun MosbatElmScreen(
             // Club Courses
             if (state.clubCourses.isNotEmpty()) {
                 item {
-                    SectionTitle(title = "کانون‌ها", icon = Icons.Rounded.Diversity3)
+                    SectionTitle(
+                        title = "کانون‌ها", 
+                        icon = Icons.Rounded.School,
+                        onViewAllClick = { onNavigateToCategory("کانون‌ها") }
+                    )
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -340,7 +396,7 @@ fun MosbatElmScreen(
                             CourseCard(
                                 course = course,
                                 onClick = { onNavigateToCourseDetail(course.id) },
-                                modifier = Modifier.width(200.dp)
+                                modifier = Modifier.width(220.dp)
                             )
                         }
                     }
@@ -350,7 +406,11 @@ fun MosbatElmScreen(
             // Association Courses
             if (state.associationCourses.isNotEmpty()) {
                 item {
-                    SectionTitle(title = "انجمن‌های علمی دانشجویی", icon = Icons.Rounded.Science)
+                    SectionTitle(
+                        title = "انجمن‌های علمی دانشجویی", 
+                        icon = Icons.Rounded.Science,
+                        onViewAllClick = { onNavigateToCategory("انجمن‌های علمی دانشجویی") }
+                    )
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -359,7 +419,53 @@ fun MosbatElmScreen(
                             CourseCard(
                                 course = course,
                                 onClick = { onNavigateToCourseDetail(course.id) },
-                                modifier = Modifier.width(200.dp)
+                                modifier = Modifier.width(220.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Student Org Courses
+            if (state.studentOrgCourses.isNotEmpty()) {
+                item {
+                    SectionTitle(
+                        title = "تشکل‌های دانشجویی", 
+                        icon = Icons.Rounded.Groups,
+                        onViewAllClick = { onNavigateToCategory("تشکل‌های دانشجویی") }
+                    )
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(state.studentOrgCourses) { course ->
+                            CourseCard(
+                                course = course,
+                                onClick = { onNavigateToCourseDetail(course.id) },
+                                modifier = Modifier.width(220.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Research Center Courses
+            if (state.researchCenterCourses.isNotEmpty()) {
+                item {
+                    SectionTitle(
+                        title = "دانشگاه‌ها و مراکز تحقیقاتی", 
+                        icon = Icons.Rounded.AccountBalance,
+                        onViewAllClick = { onNavigateToElm() }
+                    )
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(state.researchCenterCourses) { course ->
+                            CourseCard(
+                                course = course,
+                                onClick = { onNavigateToCourseDetail(course.id) },
+                                modifier = Modifier.width(220.dp)
                             )
                         }
                     }
@@ -369,7 +475,11 @@ fun MosbatElmScreen(
             // All Public Courses (now horizontal)
             if (state.publicCourses.isNotEmpty()) {
                 item {
-                    SectionTitle(title = "همه دوره‌ها", icon = Icons.Rounded.School)
+                    SectionTitle(
+                        title = "همه دوره‌ها", 
+                        icon = Icons.Rounded.School,
+                        onViewAllClick = { onNavigateToCategory("همه دسته‌ها") }
+                    )
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -378,13 +488,81 @@ fun MosbatElmScreen(
                             CourseCard(
                                 course = course,
                                 onClick = { onNavigateToCourseDetail(course.id) },
-                                modifier = Modifier.width(200.dp)
+                                modifier = Modifier.width(220.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Popular Organizers
+            if (state.popularInstitutions.isNotEmpty()) {
+                item {
+                    SectionTitle(
+                        title = "برگزارکنندگان محبوب", 
+                        icon = Icons.Rounded.Stars,
+                        onViewAllClick = { onNavigateToCategory("برگزارکنندگان محبوب") }
+                    )
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(state.popularInstitutions) { institution ->
+                            InstitutionCard(
+                                institution = institution,
+                                onClick = { onNavigateToInstitution(institution.id) }
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+
+
+
+            // Top Instructors (Popular Teachers)
+            if (state.topInstructors.isNotEmpty()) {
+                item {
+                    SectionTitle(
+                        title = "اساتید محبوب", 
+                        icon = Icons.Rounded.People,
+                        onViewAllClick = { onNavigateToCategory("مدرسین محبوب") }
+                    )
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(state.topInstructors) { instructor ->
+                            InstructorCard(
+                                instructor = instructor,
+                                onClick = { onNavigateToTeacherProfile(instructor.id) }
                             )
                         }
                     }
                 }
             }
             }
+        }
+        // Search Filter BottomSheet — must be outside LazyColumn
+        if (showSearchFilter) {
+            FilterBottomSheet(
+                currentState = CategoryState(
+                    selectedPriceType = searchPriceType,
+                    minRating = searchMinRating,
+                    durationFilter = searchDuration,
+                    statusFilter = searchStatus,
+                    sortOrder = searchSortOrder
+                ),
+                onDismiss = { showSearchFilter = false },
+                onApply = { price, rating, duration, status, sort ->
+                    searchPriceType = price
+                    searchMinRating = rating
+                    searchDuration = duration
+                    searchStatus = status
+                    searchSortOrder = sort
+                    showSearchFilter = false
+                }
+            )
         }
     }
 }
@@ -419,7 +597,7 @@ fun MosbatElmHeader(
             ) {
                 Text(
                     text = "مثبت علم",
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.onBackground,
@@ -437,7 +615,7 @@ fun MosbatElmHeader(
                     ) {
                         Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("ایجاد دوره", fontFamily = VazirFontFamily, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text("ایجاد دوره", fontFamily = DanaFontFamily, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     }
                 } else {
                     Button(
@@ -451,7 +629,7 @@ fun MosbatElmHeader(
                     ) {
                         Icon(Icons.Rounded.Business, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("برگزارکننده هستم", fontFamily = VazirFontFamily, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text("برگزارکننده هستم", fontFamily = DanaFontFamily, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     }
                 }
                 IconButton(
@@ -487,7 +665,7 @@ fun MosbatElmHeader(
             ) {
                 Icon(Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("جستجو در دوره‌ها...", fontFamily = VazirFontFamily, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("جستجو در مثبت علم...", fontFamily = DanaFontFamily, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
             // Real Search Bar
@@ -498,12 +676,12 @@ fun MosbatElmHeader(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = { onToggleSearch(false); onSearchQueryChange("") }) {
-                    Icon(Icons.Default.ArrowForward, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
+                    Icon(Icons.AutoMirrored.Default.ArrowForward, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
                 }
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = onSearchQueryChange,
-                    placeholder = { Text("جستجو در دوره‌ها...", fontFamily = VazirFontFamily) },
+                    placeholder = { Text("جستجو در مثبت علم...", fontFamily = DanaFontFamily) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(21.dp),
                     singleLine = true,
@@ -578,9 +756,9 @@ fun MosbatElmCarousel(banners: List<com.Kelasor.app.data.remote.dto.BannerDto>) 
                     Text(
                         text = banner.title,
                         color = Color.White,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
+                        fontSize = 20.sp,
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(20.dp)
@@ -620,10 +798,10 @@ fun MosbatElmCategories(categoriesFromApi: List<String>, onCategoryClick: (Strin
     // Standard categories as requested
     val defaultCategories = listOf(
         Pair("انجمن‌های علمی دانشجویی", R.drawable.ic3d_student),
-        Pair("کانون‌ها", R.drawable.ic3d_target),
+        Pair("کانون‌ها", R.drawable.ic3d_center),
         Pair("دانشگاه‌ها", R.drawable.ic3d_school),
-        Pair("موسسات و آکادمی‌ها", R.drawable.ic3d_setting),
-        Pair("عمومی", R.drawable.ic3d_shield),
+        Pair("آکادمی و موسسات", R.drawable.ic3d_academy),
+        Pair("عمومی", R.drawable.ic3d_public),
         Pair("ویژه", R.drawable.ic3d_special),
         Pair("تخفیف‌دار!", R.drawable.ic3d_price),
         Pair("همه دسته‌ها", R.drawable.ic3d_all)
@@ -641,23 +819,45 @@ fun MosbatElmCategories(categoriesFromApi: List<String>, onCategoryClick: (Strin
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             defaultCategories.take(4).forEach { (title, iconRes) ->
-                CategoryItem(title = title, iconRes = iconRes, modifier = Modifier.weight(1f), onClick = { onCategoryClick(title) })
+                CategoryItem(
+                    title = title, 
+                    iconRes = iconRes, 
+                    modifier = Modifier.weight(1f), 
+                    onClick = { onCategoryClick(title) }
+                )
             }
         }
+        
         // Row 2
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             defaultCategories.drop(4).forEach { (title, iconRes) ->
-                CategoryItem(title = title, iconRes = iconRes, modifier = Modifier.weight(1f), onClick = { onCategoryClick(title) })
+                val isLarge = title.contains("ویژه") || title.contains("تخفیف")
+                val iconSize = if (isLarge) 110.dp else 48.dp
+                CategoryItem(
+                    title = title, 
+                    iconRes = iconRes, 
+                    modifier = Modifier.weight(1f), 
+                    iconSize = iconSize,
+                    showBackground = !isLarge,
+                    onClick = { onCategoryClick(title) }
+                )
             }
         }
     }
 }
 
 @Composable
-private fun CategoryItem(title: String, iconRes: Int, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
+private fun CategoryItem(
+    title: String, 
+    iconRes: Int, 
+    modifier: Modifier = Modifier, 
+    iconSize: androidx.compose.ui.unit.Dp = 48.dp, 
+    showBackground: Boolean = true,
+    onClick: () -> Unit = {}
+) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
@@ -669,23 +869,27 @@ private fun CategoryItem(title: String, iconRes: Int, modifier: Modifier = Modif
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .background(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                    shape = RoundedCornerShape(16.dp)
+                .then(
+                    if (showBackground) {
+                        Modifier.background(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                    } else Modifier
                 ),
             contentAlignment = Alignment.Center
         ) {
             Image(
                 painter = painterResource(id = iconRes),
                 contentDescription = title,
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier.size(iconSize),
                 contentScale = ContentScale.Fit
             )
         }
         Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = title,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             fontSize = 10.sp,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurface,
@@ -696,11 +900,12 @@ private fun CategoryItem(title: String, iconRes: Int, modifier: Modifier = Modif
     }
 }
 
-@Composable
+ @Composable
 fun SectionTitle(
     title: String, 
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     textColor: Color = MaterialTheme.colorScheme.onBackground,
+    iconSize: androidx.compose.ui.unit.Dp = 20.dp,
     onViewAllClick: () -> Unit = {}
 ) {
     Row(
@@ -711,32 +916,32 @@ fun SectionTitle(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = title,
+                fontFamily = DanaFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                color = textColor
+            )
+            Spacer(modifier = Modifier.width(8.dp))
             Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(iconSize + 10.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    modifier = Modifier.size(iconSize),
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = title,
-                fontFamily = VazirFontFamily,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                color = textColor
-            )
         }
         Text(
             text = "مشاهده همه",
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             fontSize = 13.sp,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.clickable { onViewAllClick() }
@@ -744,295 +949,410 @@ fun SectionTitle(
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🎨 Premium CourseCard — World-Class Design
+// ═══════════════════════════════════════════════════════════════════════════════
+
+private val chipColors: List<Color> = listOf(
+    Color(0xFFFF6B6B), Color(0xFF4ECDC4), Color(0xFF45B7D1),
+    Color(0xFF96CEB4), Color(0xFFF0A500), Color(0xFFDDA0DD),
+    Color(0xFF98D8C8), Color(0xFFF7DC6F)
+)
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CourseCard(
     course: Course,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val discountPct: Int = course.discountPercentage
+    val price: Long = course.priceRials / 10
+    val hasDiscount: Boolean = !course.isFree && discountPct > 0 && price > 0
     Card(
         modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
+            .width(180.dp)
+            .height(420.dp)
+            .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     ) {
-        Column {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // ── Top: Highly Portrait Poster ──
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(0.85f)
+                    .height(140.dp)
+                    .clip(RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
             ) {
+                // Background image (blurred and stretched)
                 AsyncImage(
-                    model = com.Kelasor.app.util.UrlUtils.getFullUrl(course.posterUrl) ?: "https://ui-avatars.com/api/?name=${course.title}&background=random",
-                    contentDescription = course.title,
+                    model = com.Kelasor.app.util.UrlUtils.getFullUrl(course.posterUrl)
+                        ?: "https://ui-avatars.com/api/?name=${course.title}&background=random",
+                    contentDescription = null,
                     contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .blur(20.dp)
+                )
+                Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)))
+                
+                // Foreground image (fitted)
+                AsyncImage(
+                    model = com.Kelasor.app.util.UrlUtils.getFullUrl(course.posterUrl)
+                        ?: "https://ui-avatars.com/api/?name=${course.title}&background=random",
+                    contentDescription = course.title,
+                    contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxSize()
                 )
-                
-                if (course.status != "APPROVED") {
+                // Gradient overlay
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)),
+                                startY = 140f - 60f
+                            )
+                        )
+                )
+                // Top Right: Popular badge
+                if (course.enrolledCount > 30) {
                     Box(
                         modifier = Modifier
-                            .padding(8.dp)
+                            .padding(3.dp)
                             .align(Alignment.TopEnd)
-                            .background(
-                                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .background(Color(0xFFE67E22), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 3.dp, vertical = 1.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.Star, null, Modifier.size(7.dp), tint = Color.White)
+                            Spacer(Modifier.width(1.dp))
+                            Text("محبوب", color = Color.White, fontFamily = DanaFontFamily, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+                
+                // Top Left: Capacity Badge
+                if (course.capacity != null && course.capacity > 0) {
+                    val isFull = course.enrolledCount >= course.capacity
+                    val capacityText = if (isFull) "تکمیل" else "ظرفیت: ${course.capacity.toString().toPersianNumbers()}"
+                    val bgColor = if (isFull) MaterialTheme.colorScheme.error else Color(0xFFFF66B2)
+                    Box(
+                        modifier = Modifier
+                            .padding(3.dp)
+                            .align(Alignment.TopStart)
+                            .background(bgColor, RoundedCornerShape(4.dp))
+                            .padding(horizontal = 3.dp, vertical = 1.dp)
                     ) {
                         Text(
-                            text = if (course.status == "PENDING") "در انتظار تأیید" else "رد شده",
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            fontFamily = VazirFontFamily,
-                            fontSize = 10.sp,
+                            text = capacityText,
+                            color = if (isFull) Color.White else Color.Black,
+                            fontFamily = DanaFontFamily,
+                            fontSize = 8.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
-
-                if (course.capacity != null && course.capacity > 0) {
-                    Box(
-                        modifier = Modifier
-                            .padding(8.dp)
-                            .align(Alignment.TopStart)
-                            .background(
-                                color = Color(0xFFE91E63).copy(alpha = 0.9f),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "ظرفیت\n ${course.capacity.toString().toPersianNumbers()} نفر",
-                            color = Color.White,
-                            fontFamily = VazirFontFamily,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
                 
-                if (course.rating > 4.5) {
-                    Box(
-                        modifier = Modifier
-                            .padding(8.dp)
-                            .align(if (course.status != "APPROVED") Alignment.TopStart else Alignment.TopEnd)
-                            .background(
-                                color = Color(0xFFE65100).copy(alpha = 0.9f),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "محبوب",
-                                color = Color.White,
-                                fontFamily = VazirFontFamily,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.width(2.dp))
-                            Icon(Icons.Rounded.Star, contentDescription = null, tint = Color.White, modifier = Modifier.size(10.dp))
-                        }
+                // Bottom Right: Discount Badge
+                if (hasDiscount && discountPct in 5..100) {
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    val discountResName = "discount_$discountPct"
+                    val discountResId = remember(discountPct) {
+                        context.resources.getIdentifier(discountResName, "drawable", context.packageName)
                     }
-                }
-
-                val discountPct = course.discountPercentage ?: 0
-                if (discountPct > 0) {
-                    val resId = context.resources.getIdentifier("discount_$discountPct", "drawable", context.packageName)
-                    if (resId != 0) {
+                    if (discountResId != 0) {
                         Image(
-                            painter = androidx.compose.ui.res.painterResource(id = resId),
+                            painter = painterResource(id = discountResId),
                             contentDescription = "تخفیف $discountPct درصد",
                             modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .size(60.dp)
-                                .offset(x = 8.dp, y = 8.dp),
-                            contentScale = ContentScale.Fit
+                                .align(Alignment.BottomStart)
+                                .offset(x = (-45).dp, y = 53.dp)
+                                .size(140.dp)
                         )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .padding(8.dp)
-                                .align(Alignment.BottomEnd)
-                                .background(Color.Red, RoundedCornerShape(12.dp))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text("${discountPct.toString().toPersianNumbers()}% تخفیف", color = Color.White, fontFamily = VazirFontFamily, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
                     }
                 }
             }
-            
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(
-                    text = course.title,
-                    fontFamily = VazirFontFamily,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 14.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "${course.durationMinutes / 60} ساعت".toPersianNumbers(),
-                        fontFamily = VazirFontFamily,
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(Icons.Rounded.Schedule, contentDescription = null, modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    
-                    Spacer(modifier = Modifier.weight(1f))
-                    
-                    Text(
-                        text = course.instructors.firstOrNull()?.displayName ?: course.organizerName ?: "ناشناس",
-                        fontFamily = VazirFontFamily,
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    AvatarImage(
-                        imageUrl = course.instructors.firstOrNull()?.displayAvatarUrl ?: course.organizerAvatarUrl,
-                        name = course.instructors.firstOrNull()?.displayName ?: course.organizerName ?: "M",
-                        size = AvatarSize.SMALL,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
 
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                if (!course.fieldOfStudy.isNullOrEmpty() || course.tags.isNotEmpty()) {
-                    val fields = mutableListOf<String>()
-                    if (!course.fieldOfStudy.isNullOrEmpty()) fields.add(course.fieldOfStudy.replace("مخصوص", "").replace("(", "").replace(")", "").trim())
-                    fields.addAll(course.tags.map { it.replace("مخصوص", "").replace("(", "").replace(")", "").trim() })
-                    val displayFields = fields.filter { it.isNotEmpty() }.distinct().take(3)
-                    
+            // ── Body ──
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp)
+            ) {
+                // Title
+                Text(
+                    text = course.title.toPersianNumbers(),
+                    fontFamily = DanaFontFamily,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 18.sp,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    lineHeight = 20.sp
+                )
+                Spacer(Modifier.height(6.dp))
+
+                // Instructor & Organizer
+                val instructor = course.instructors.firstOrNull()
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    // Instructor (Individual)
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        displayFields.forEach { fieldText ->
-                            Box(
-                                modifier = Modifier
-                                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha=0.6f), RoundedCornerShape(4.dp))
-                                    .padding(vertical = 2.dp, horizontal = 6.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
+                        AvatarImage(
+                            imageUrl = instructor?.displayAvatarUrl,
+                            name = instructor?.displayName ?: "ناشناس",
+                            size = AvatarSize.EXTRA_SMALL
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "مدرس: ${(instructor?.displayName ?: "ثبت نشده").toPersianNumbers()}",
+                            fontFamily = DanaFontFamily,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    
+                    // Organizer (Academy/Institution)
+                    if (!course.organizerName.isNullOrEmpty()) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            AvatarImage(
+                                imageUrl = course.organizerAvatarUrl,
+                                name = course.organizerName,
+                                size = AvatarSize.EXTRA_SMALL
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "برگزارکننده: ${course.organizerName.toPersianNumbers()}",
+                                fontFamily = DanaFontFamily,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.primary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+
+                // Tags (Simplified for tiny card)
+                val fieldsToDisplay = mutableListOf<String>()
+                if (course.suitableFor.isNotEmpty()) {
+                    fieldsToDisplay.addAll(course.suitableFor)
+                } else {
+                    if (!course.fieldOfStudy.isNullOrEmpty()) fieldsToDisplay.add(course.fieldOfStudy)
+                    fieldsToDisplay.addAll(course.tags)
+                }
+                val displayFields = fieldsToDisplay.map { it.replace("مخصوص", "").replace("(", "").replace(")", "").trim() }.filter { it.isNotEmpty() }.distinct().take(3)
+                
+                Box(modifier = Modifier.height(20.dp)) {
+                    if (displayFields.isNotEmpty()) {
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            displayFields.forEach { fieldText ->
+                                Box(
+                                    modifier = Modifier
+                                        .background(Color(0xFFFFD54F), RoundedCornerShape(4.dp))
+                                        .padding(horizontal = 2.dp, vertical = 0.dp)
+                                ) {
+                                    Text(
+                                        text = fieldText,
+                                        color = Color.Black,
+                                        fontFamily = DanaFontFamily,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), thickness = 0.5.dp)
+                Spacer(Modifier.height(2.dp))
+
+                // Price Section
+                // Price Section
+                Box(modifier = Modifier.fillMaxWidth().height(48.dp), contentAlignment = Alignment.Center) {
+                    CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
+                        if (course.isFree || price == 0L) {
+                            Text(
+                                text = "رایگان",
+                                fontFamily = DanaFontFamily,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFF4CAF50),
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center
+                            )
+                        } else if (hasDiscount) {
+                            val discountedPrice: Long = price - (price * discountPct / 100)
+                            Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                                 Text(
-                                    text = fieldText,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    fontFamily = VazirFontFamily,
-                                    fontSize = 9.sp,
+                                    text = price.toPersianPrice(),
+                                    fontFamily = DanaFontFamily,
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = "${discountedPrice.toPersianPrice()} تومان",
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontFamily = DanaFontFamily, 
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.ExtraBold,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-                
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.People, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(12.dp))
-                        Spacer(modifier = Modifier.width(2.dp))
-                        Text(course.enrolledCount.toString().toPersianNumbers(), fontFamily = VazirFontFamily, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        
-                        Spacer(modifier = Modifier.width(8.dp))
-                        
-                        val now = java.time.Instant.now()
-                        val startsAt = course.startsAt
-                        val daysToStart = if (startsAt != null) java.time.Duration.between(now, startsAt).toDays() else null
-                        if (daysToStart != null && daysToStart > 0) {
-                            Icon(Icons.Rounded.DateRange, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(12.dp))
-                            Spacer(modifier = Modifier.width(2.dp))
-                            Text("$daysToStart روز تا شروع".toPersianNumbers(), fontFamily = VazirFontFamily, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        } else if (daysToStart == 0L) {
-                            Text("امروز", fontFamily = VazirFontFamily, fontSize = 10.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                        } else if (startsAt != null) {
-                            Text("در حال برگزاری", fontFamily = VazirFontFamily, fontSize = 10.sp, color = MaterialTheme.colorScheme.primary)
-                        }
-                    }
-                    
-                    val price = course.priceRials / 10
-                    val formattedPrice = if (price > 0) price.toPersianPrice() else "۰"
-                    val discountPct = course.discountPercentage ?: 0
-                    
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (course.isFree || price == 0L) {
-                            Text(
-                                text = "رایگان",
-                                color = MaterialTheme.colorScheme.primary,
-                                fontFamily = VazirFontFamily,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Icon(Icons.Rounded.LocalFireDepartment, contentDescription = null, tint = Color(0xFFFF9800), modifier = Modifier.size(14.dp))
-                        } else if (discountPct > 0) {
-                            val discountedPrice = price - (price * discountPct / 100)
-                            val formattedDiscounted = discountedPrice.toPersianPrice()
-                            
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text(
-                                    text = formattedPrice,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontFamily = VazirFontFamily,
-                                    fontSize = 10.sp,
-                                    textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
-                                )
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = formattedDiscounted,
-                                        color = MaterialTheme.colorScheme.error,
-                                        fontFamily = VazirFontFamily,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Spacer(modifier = Modifier.width(2.dp))
-                                    Text(
-                                        text = "تومان",
-                                        color = MaterialTheme.colorScheme.error,
-                                        fontFamily = VazirFontFamily,
-                                        fontSize = 9.sp
-                                    )
-                                }
-                            }
                         } else {
                             Text(
-                                text = formattedPrice,
-                                color = MaterialTheme.colorScheme.error,
-                                fontFamily = VazirFontFamily,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.width(2.dp))
-                            Text(
-                                text = "تومان",
-                                color = MaterialTheme.colorScheme.error,
-                                fontFamily = VazirFontFamily,
-                                fontSize = 9.sp
+                                text = "${price.toPersianPrice()} تومان",
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontFamily = DanaFontFamily, 
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
+                    }
+                }
+
+                // No spacer here for ultra-tight layout
+
+                // Time and Users
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if ((course.durationMinutes ?: 0) > 0) {
+                            val hours = course.durationMinutes!! / 60
+                            val mins = course.durationMinutes % 60
+                            val durationText = if (hours > 0 && mins > 0) "$hours ساعت و $mins" else if (hours > 0) "$hours ساعت" else "$mins دقیقه"
+                            Icon(Icons.Rounded.AccessTime, null, Modifier.size(10.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.width(2.dp))
+                            Text(
+                                text = durationText.toPersianNumbers(),
+                                fontFamily = DanaFontFamily,
+                                fontSize = 9.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Icon(Icons.Rounded.PeopleOutline, null, Modifier.size(11.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.width(2.dp))
+                        Text(
+                            text = course.enrolledCount.toString().toPersianNumbers(),
+                            fontFamily = DanaFontFamily,
+                            fontSize = 9.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    CourseTimeStatus(course = course)
+                }
+                Spacer(Modifier.height(4.dp))
+                // Register Button
+                val isFull = course.capacity != null && course.enrolledCount >= course.capacity
+
+                Button(
+                    onClick = onClick,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(32.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isFull) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary,
+                        contentColor = if (isFull) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onPrimary
+                    ),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                    enabled = !isFull
+                ) {
+                    if (isFull) {
+                        Icon(Icons.Rounded.Block, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = "تکمیل",
+                            fontFamily = DanaFontFamily,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    } else {
+                        Icon(Icons.Rounded.HowToReg, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = "ثبت نام",
+                            fontFamily = DanaFontFamily,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun CourseTimeStatus(course: Course) {
+    val now = java.time.Instant.now()
+    if (course.chapters.isEmpty()) return // No chapters -> Hide timer completely
+    
+    val nextChapter = course.chapters.firstOrNull { chapter ->
+        val start = chapter.sessionStartTime
+        start != null && now.isBefore(start.plus(java.time.Duration.ofHours(2)))
+    }
+    
+    if (nextChapter == null) return
+    val startsAt = nextChapter.sessionStartTime ?: return
+    
+    val duration: java.time.Duration = java.time.Duration.between(now, startsAt)
+    if (duration.isNegative) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(6.dp).background(Color(0xFF4CAF50), CircleShape))
+            Spacer(Modifier.width(4.dp))
+            Text("در حال برگزاری", fontFamily = DanaFontFamily, fontSize = 9.sp,
+                color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold)
+        }
+        return
+    }
+    var tick: Long by remember { mutableStateOf(0L) }
+    LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(1000); tick++ } }
+    val remaining: java.time.Duration = java.time.Duration.between(java.time.Instant.now(), startsAt)
+    val days: Long = remaining.toDays()
+    val hours: Long = remaining.toHours() % 24
+    val mins: Long = remaining.toMinutes() % 60
+    val secs: Long = remaining.seconds % 60
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Rounded.Timer, null, Modifier.size(12.dp), tint = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.width(3.dp))
+        val timeText: String = if (days > 0) "$days روز ${String.format(java.util.Locale.US, "%02d:%02d:%02d", hours, mins, secs)}"
+        else String.format(java.util.Locale.US, "%02d:%02d:%02d", hours, mins, secs)
+        Text(timeText.toPersianNumbers(), fontFamily = DanaFontFamily, fontSize = 9.sp,
+            color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -1081,12 +1401,13 @@ fun InstitutionCard(
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
+            val ratingText = if (institution.averageRating > 0.0) String.format(java.util.Locale.US, "%.1f", institution.averageRating) else "جدید"
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.Star, contentDescription = "Rating", tint = Color(0xFFFFC107), modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = if (institution.rating > 0) String.format("%.1f", institution.rating) else "جدید",
-                    fontFamily = VazirFontFamily,
+                    text = ratingText.toPersianNumbers(),
+                    fontFamily = DanaFontFamily,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1095,7 +1416,7 @@ fun InstitutionCard(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = institution.name,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
                 maxLines = 1,
@@ -1105,7 +1426,7 @@ fun InstitutionCard(
             )
             Text(
                 text = "${institution.courseCount} دوره",
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center,
@@ -1120,39 +1441,90 @@ fun InstructorCard(
     instructor: User,
     onClick: () -> Unit
 ) {
-    Column(
+    Card(
         modifier = Modifier
-            .width(100.dp)
+            .width(140.dp)
+            .clip(RoundedCornerShape(20.dp))
             .clickable(onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        AvatarImage(
-            imageUrl = instructor.avatarUrl,
-            name = instructor.displayName,
-            size = AvatarSize.LARGE
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = instructor.displayName,
-            fontFamily = VazirFontFamily,
-            fontWeight = FontWeight.Medium,
-            fontSize = 13.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onBackground
-        )
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(CircleShape)
+                    .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                    .padding(4.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                val fullUrl = com.Kelasor.app.util.UrlUtils.getFullUrl(instructor.avatarUrl)
+                if (!fullUrl.isNullOrEmpty()) {
+                    AsyncImage(
+                        model = fullUrl,
+                        contentDescription = instructor.displayName,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                    )
+                } else {
+                    Box(Modifier.fillMaxSize().clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Person, null, Modifier.size(32.dp), tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            val ratingText = if (instructor.averageRating > 0.0) String.format(java.util.Locale.US, "%.1f", instructor.averageRating) else "جدید"
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Star, contentDescription = "Rating", tint = Color(0xFFFFC107), modifier = Modifier.size(14.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = ratingText.toPersianNumbers(),
+                    fontFamily = DanaFontFamily,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = instructor.displayName,
+                fontFamily = DanaFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            // Note: Since User currently doesn't expose courseCount directly on the User model in MosbatElmScreen, we might omit the course count text or show role.
+            Text(
+                text = "استاد",
+                fontFamily = DanaFontFamily,
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
     }
 }
 
 @Composable
 fun MyCourseItem(
     course: Course,
+    modifier: Modifier = Modifier.width(280.dp),
     onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier
-            .width(280.dp)
+        modifier = modifier
             .clip(RoundedCornerShape(20.dp))
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -1165,7 +1537,7 @@ fun MyCourseItem(
                     .height(160.dp)
             ) {
                 AsyncImage(
-                    model = course.posterUrl ?: "https://ui-avatars.com/api/?name=${course.title}&background=random",
+                    model = com.Kelasor.app.util.UrlUtils.getFullUrl(course.posterUrl) ?: "https://ui-avatars.com/api/?name=${course.title}&background=random",
                     contentDescription = course.title,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
@@ -1192,7 +1564,7 @@ fun MyCourseItem(
                     Text(
                         text = statusText,
                         color = Color.White,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -1200,7 +1572,7 @@ fun MyCourseItem(
 
                 // Discount or Price badge
                 val price = course.priceRials / 10
-                val formattedPrice = if (price > 0) String.format(java.util.Locale("en", "US"), "%,d", price) else "0"
+                val formattedPrice = if (price > 0) "${price.toPersianPrice()} تومان" else "رایگان"
                 val discountPct = course.discountPercentage ?: 0
                 
                 Box(
@@ -1218,13 +1590,13 @@ fun MyCourseItem(
                             Text(
                                 text = "رایگان",
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                fontFamily = VazirFontFamily,
+                                fontFamily = DanaFontFamily,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         } else if (discountPct > 0) {
                             val discountedPrice = price - (price * discountPct / 100)
-                            val formattedDiscounted = String.format(java.util.Locale("en", "US"), "%,d", discountedPrice)
+                            val formattedDiscounted = discountedPrice.toPersianPrice()
                             
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
@@ -1234,9 +1606,9 @@ fun MyCourseItem(
                                         .padding(horizontal = 4.dp, vertical = 2.dp)
                                 ) {
                                     Text(
-                                        text = "%$discountPct",
+                                        text = "%${discountPct.toString().toPersianNumbers()}",
                                         color = Color.White,
-                                        fontFamily = VazirFontFamily,
+                                        fontFamily = DanaFontFamily,
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -1246,14 +1618,14 @@ fun MyCourseItem(
                                     Text(
                                         text = formattedPrice,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        fontFamily = VazirFontFamily,
+                                        fontFamily = DanaFontFamily,
                                         fontSize = 9.sp,
                                         textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
                                     )
                                     Text(
                                         text = "$formattedDiscounted تومان",
                                         color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        fontFamily = VazirFontFamily,
+                                        fontFamily = DanaFontFamily,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -1263,7 +1635,7 @@ fun MyCourseItem(
                             Text(
                                 text = "$formattedPrice تومان",
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                fontFamily = VazirFontFamily,
+                                fontFamily = DanaFontFamily,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -1287,9 +1659,9 @@ fun MyCourseItem(
                             Icon(Icons.Rounded.People, contentDescription = null, modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.primary)
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "ظرفیت: ${course.capacity}",
+                                text = "ظرفیت: ${course.capacity.toString().toPersianNumbers()}",
                                 color = MaterialTheme.colorScheme.onSurface,
-                                fontFamily = VazirFontFamily,
+                                fontFamily = DanaFontFamily,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -1300,8 +1672,8 @@ fun MyCourseItem(
             
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
-                    text = course.title,
-                    fontFamily = VazirFontFamily,
+                    text = course.title.toPersianNumbers(),
+                    fontFamily = DanaFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
                     maxLines = 2,
@@ -1325,8 +1697,8 @@ fun MyCourseItem(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = displayName,
-                        fontFamily = VazirFontFamily,
+                        text = displayName.toPersianNumbers(),
+                        fontFamily = DanaFontFamily,
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -1336,7 +1708,7 @@ fun MyCourseItem(
                 }
                 
                 Spacer(modifier = Modifier.height(8.dp))
-                androidx.compose.material3.Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 // Time / Date info
@@ -1349,8 +1721,8 @@ fun MyCourseItem(
                         Icon(Icons.Rounded.Event, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = course.startsAt?.toString()?.take(10) ?: "تاریخ نامشخص",
-                            fontFamily = VazirFontFamily,
+                            text = course.startsAt?.toString()?.toPersianDateTime() ?: "تاریخ نامشخص",
+                            fontFamily = DanaFontFamily,
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1360,8 +1732,8 @@ fun MyCourseItem(
                         Icon(Icons.Rounded.Schedule, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = course.syllabusDuration ?: "نامشخص",
-                            fontFamily = VazirFontFamily,
+                            text = (course.syllabusDuration ?: "نامشخص").toPersianNumbers(),
+                            fontFamily = DanaFontFamily,
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1377,6 +1749,10 @@ fun CourseListItem(
     course: Course,
     onClick: () -> Unit
 ) {
+    val price = course.priceRials / 10
+    val discountPct = course.discountPercentage
+    val hasDiscount: Boolean = !course.isFree && discountPct > 0 && price > 0
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1385,45 +1761,124 @@ fun CourseListItem(
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AsyncImage(
-            model = course.posterUrl ?: "https://ui-avatars.com/api/?name=${course.title}&background=random",
-            contentDescription = course.title,
-            contentScale = ContentScale.Crop,
+        Box(
             modifier = Modifier
-                .size(90.dp)
-                .clip(RoundedCornerShape(16.dp))
-        )
+                .size(95.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            AsyncImage(
+                model = coil3.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                    .data(com.Kelasor.app.util.UrlUtils.getFullUrl(course.posterUrl))
+                    .crossfade(true)
+                    .build(),
+                contentDescription = course.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            
+            if (hasDiscount) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .background(
+                            color = MaterialTheme.colorScheme.error,
+                            shape = RoundedCornerShape(bottomEnd = 8.dp)
+                        )
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "%${discountPct.toString().toPersianNumbers()}",
+                        color = Color.White,
+                        fontFamily = DanaFontFamily,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+        
         Spacer(modifier = Modifier.width(16.dp))
+        
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = course.title,
-                fontFamily = VazirFontFamily,
+                text = course.title.toPersianNumbers(),
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
+                fontSize = 15.sp,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurface
             )
+            Spacer(modifier = Modifier.height(4.dp))
+            
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Event, contentDescription = null, modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = course.startsAt?.toString()?.toPersianDateTime() ?: "تاریخ نامشخص",
+                    fontFamily = DanaFontFamily,
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            
             Spacer(modifier = Modifier.height(8.dp))
+            
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Bottom
             ) {
+                val instructorName = course.instructors.firstOrNull()?.displayName 
+                    ?: course.manualInstructors.firstOrNull()?.name 
+                    ?: course.organizerName 
+                    ?: "ناشناس"
                 Text(
-                    text = course.instructors.firstOrNull()?.displayName ?: course.organizerName ?: "ناشناس",
-                    fontFamily = VazirFontFamily,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.primary
+                    text = instructorName.toPersianNumbers(),
+                    fontFamily = DanaFontFamily,
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
                 
-                Text(
-                    text = if (course.isFree) "رایگان" else "${course.priceRials / 10} تومان",
-                    fontFamily = VazirFontFamily,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                Column(horizontalAlignment = Alignment.End) {
+                    if (course.isFree || price == 0L) {
+                        Text(
+                            text = "رایگان",
+                            fontFamily = DanaFontFamily,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF4CAF50)
+                        )
+                    } else if (hasDiscount) {
+                        val discountedPrice = price - (price * discountPct / 100)
+                        Text(
+                            text = price.toPersianPrice(),
+                            fontFamily = DanaFontFamily,
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
+                        )
+                        Text(
+                            text = "${discountedPrice.toPersianPrice()} تومان",
+                            fontFamily = DanaFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    } else {
+                        Text(
+                            text = "${price.toPersianPrice()} تومان",
+                            fontFamily = DanaFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
             }
         }
     }
@@ -1447,14 +1902,14 @@ fun EmptyStateView() {
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "موردی یافت نشد",
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
             text = "در حال حاضر دوره‌ای برای نمایش وجود ندارد.",
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             fontSize = 14.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
             textAlign = TextAlign.Center,

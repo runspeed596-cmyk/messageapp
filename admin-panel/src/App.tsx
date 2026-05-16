@@ -15,6 +15,7 @@ import Advertisements from './pages/Advertisements';
 import WorldOfScienceSettings from './pages/WorldOfScienceSettings';
 import AdminManagement from './pages/AdminManagement';
 import CourseModeration from './pages/CourseModeration';
+import FeedbackManagement from './pages/FeedbackManagement';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -109,6 +110,12 @@ function AppContent() {
       <Route path="/admin-management" element={
         <ProtectedRoute>
           <AdminLayout><AdminManagement /></AdminLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/feedbacks" element={
+        <ProtectedRoute>
+          <AdminLayout><FeedbackManagement /></AdminLayout>
         </ProtectedRoute>
       } />
 

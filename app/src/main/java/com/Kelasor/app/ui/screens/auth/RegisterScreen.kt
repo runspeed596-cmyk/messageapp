@@ -48,7 +48,7 @@ import androidx.compose.ui.unit.dp
 import com.Kelasor.app.ui.components.PrimaryButton
 import com.Kelasor.app.ui.theme.CardShapes
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 📝 Register Screen
@@ -87,7 +87,7 @@ fun RegisterScreen(
                 title = {
                     Text(
                         text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.register_title),
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -130,7 +130,7 @@ fun RegisterScreen(
                 Text(
                     text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.add_profile_picture),
                     style = MaterialTheme.typography.bodySmall,
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     color = extendedColors.accent
                 )
                 Spacer(modifier = Modifier.height(32.dp))
@@ -142,7 +142,7 @@ fun RegisterScreen(
                     label = {
                         Text(
                             text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.full_name),
-                            fontFamily = VazirFontFamily
+                            fontFamily = DanaFontFamily
                         )
                     },
                     leadingIcon = {
@@ -174,7 +174,7 @@ fun RegisterScreen(
                         label = {
                             Text(
                                 text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.username),
-                                fontFamily = VazirFontFamily
+                                fontFamily = DanaFontFamily
                             )
                         },
                         prefix = { Text("@") },
@@ -201,7 +201,7 @@ fun RegisterScreen(
                         label = {
                             Text(
                                 text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.mobile_number),
-                                fontFamily = VazirFontFamily
+                                fontFamily = DanaFontFamily
                             )
                         },
                         placeholder = { Text(androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.phone_placeholder)) },
@@ -239,7 +239,7 @@ fun RegisterScreen(
                 Text(
                     text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.register_terms),
                     style = MaterialTheme.typography.bodySmall,
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                     textAlign = TextAlign.Center
                 )

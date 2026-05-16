@@ -64,6 +64,24 @@ class CourseController(
         return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = result))
     }
 
+    @GetMapping("/{id}/join-class")
+    fun getJoinClassUrl(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: UUID
+    ): ResponseEntity<ApiResponse<Map<String, String>>> {
+        val url = courseService.getJoinClassUrl(id, principal.id, principal.name ?: "User")
+        return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = mapOf("url" to url)))
+    }
+
+    @PostMapping("/{id}/kelasor-online")
+    fun createKelasorOnline(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @PathVariable id: UUID
+    ): ResponseEntity<ApiResponse<CourseResponse>> {
+        val result: CourseResponse = courseService.createKelasorOnline(id, principal.id)
+        return ResponseEntity.ok(ApiResponse(success = true, message = "کلاسور آنلاین ایجاد شد", data = result))
+    }
+
     @GetMapping("/my")
     fun getMyCourses(
         @AuthenticationPrincipal principal: UserPrincipal,
@@ -118,10 +136,12 @@ class CourseController(
     @PostMapping("/{id}/enroll")
     fun enroll(
         @AuthenticationPrincipal principal: UserPrincipal,
-        @PathVariable id: UUID
+        @PathVariable id: UUID,
+        @RequestBody(required = false) request: EnrollmentRequest?
     ): ResponseEntity<ApiResponse<EnrollmentResponse>> {
-        val result: EnrollmentResponse = courseService.enroll(id, principal.id)
-        return ResponseEntity.ok(ApiResponse(success = true, message = "Enrolled successfully", data = result))
+        val paymentType = request?.paymentType ?: "WALLET"
+        val result: EnrollmentResponse = courseService.enroll(id, principal.id, paymentType)
+        return ResponseEntity.ok(ApiResponse(success = true, message = "Enrolled successfully via $paymentType", data = result))
     }
 
     @PostMapping("/{id}/unenroll")
@@ -157,6 +177,14 @@ class CourseController(
         @PathVariable id: UUID
     ): ResponseEntity<ApiResponse<Boolean>> {
         val result: Boolean = courseService.isFavorite(id, principal.id)
+        return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = result))
+    }
+
+    @GetMapping("/favorites")
+    fun getFavorites(
+        @AuthenticationPrincipal principal: UserPrincipal
+    ): ResponseEntity<ApiResponse<List<CourseResponse>>> {
+        val result = courseService.getFavoriteCourses(principal.id)
         return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = result))
     }
 

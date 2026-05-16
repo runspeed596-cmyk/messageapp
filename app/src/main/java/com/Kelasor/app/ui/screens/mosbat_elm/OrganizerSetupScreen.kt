@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.Kelasor.app.ui.components.PrimaryButton
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import com.Kelasor.app.ui.viewmodel.ProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,26 +31,23 @@ fun OrganizerSetupScreen(
     val currentUser = state.user
     
     // Check what is missing
-    val initialFirstName = currentUser?.firstName ?: ""
-    val initialLastName = currentUser?.lastName ?: ""
+    val initialManagerName = currentUser?.firstName ?: ""
     val initialNationalCode = currentUser?.nationalCode ?: ""
     
-    var firstName by remember(initialFirstName) { mutableStateOf(initialFirstName) }
-    var lastName by remember(initialLastName) { mutableStateOf(initialLastName) }
+    var managerName by remember(initialManagerName) { mutableStateOf(initialManagerName) }
     var nationalCode by remember(initialNationalCode) { mutableStateOf(initialNationalCode) }
     
-    val needsFirstName = initialFirstName.isBlank()
-    val needsLastName = initialLastName.isBlank()
+    val needsManagerName = initialManagerName.isBlank()
     val needsNationalCode = initialNationalCode.isBlank()
     
-    val isFormComplete = firstName.isNotBlank() && lastName.isNotBlank() && nationalCode.isNotBlank() && nationalCode.length == 10
+    val isFormComplete = managerName.isNotBlank() && nationalCode.isNotBlank() && nationalCode.length == 10
 
     // If completely filled already from backend perspective, normally we'd bypass. 
     // But maybe we want them to review. We'll show the form if anything is missing.
     // Assuming if nothing is missing, we wouldn't show this or we'd just have a "Continue" button.
     
-    LaunchedEffect(needsFirstName, needsLastName, needsNationalCode) {
-        if (!needsFirstName && !needsLastName && !needsNationalCode) {
+    LaunchedEffect(needsManagerName, needsNationalCode) {
+        if (!needsManagerName && !needsNationalCode) {
             // Already has everything? The caller logic in the navigation might bypass this,
             // but if we are here, we can just allow them to proceed.
         }
@@ -59,7 +56,7 @@ fun OrganizerSetupScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("ثبت به عنوان برگزارکننده", fontFamily = VazirFontFamily, fontWeight = FontWeight.Bold) },
+                title = { Text("ثبت به عنوان برگزارکننده", fontFamily = DanaFontFamily, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "بازگشت")
@@ -82,25 +79,17 @@ fun OrganizerSetupScreen(
         ) {
             Text(
                 "برای ایجاد دوره، لطفا اطلاعات هویتی زیر را تکمیل کنید:",
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontSize = 15.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 24.dp)
             )
 
-            if (needsFirstName || needsLastName) {
+            if (needsManagerName) {
                 OutlinedTextField(
-                    value = firstName,
-                    onValueChange = { firstName = it },
-                    label = { Text("نام", fontFamily = VazirFontFamily) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(
-                    value = lastName,
-                    onValueChange = { lastName = it },
-                    label = { Text("نام خانوادگی", fontFamily = VazirFontFamily) },
+                    value = managerName,
+                    onValueChange = { managerName = it },
+                    label = { Text("نام و نام خانوادگی مدیر آکادمی", fontFamily = DanaFontFamily) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
@@ -108,9 +97,9 @@ fun OrganizerSetupScreen(
             } else {
                 // Readonly display of name
                 OutlinedTextField(
-                    value = "$initialFirstName $initialLastName",
+                    value = initialManagerName,
                     onValueChange = { },
-                    label = { Text("نام و نام خانوادگی", fontFamily = VazirFontFamily) },
+                    label = { Text("نام و نام خانوادگی مدیر آکادمی", fontFamily = DanaFontFamily) },
                     modifier = Modifier.fillMaxWidth(),
                     readOnly = true,
                     enabled = false
@@ -122,8 +111,8 @@ fun OrganizerSetupScreen(
                 OutlinedTextField(
                     value = nationalCode,
                     onValueChange = { if (it.length <= 10 && it.all { char -> char.isDigit() }) nationalCode = it },
-                    label = { Text("کد ملی", fontFamily = VazirFontFamily) },
-                    placeholder = { Text("کد ملی ۱۰ رقمی خود را وارد کنید", fontFamily = VazirFontFamily) },
+                    label = { Text("کد ملی", fontFamily = DanaFontFamily) },
+                    placeholder = { Text("کد ملی ۱۰ رقمی خود را وارد کنید", fontFamily = DanaFontFamily) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done)
@@ -132,7 +121,7 @@ fun OrganizerSetupScreen(
                 OutlinedTextField(
                     value = initialNationalCode,
                     onValueChange = { },
-                    label = { Text("کد ملی", fontFamily = VazirFontFamily) },
+                    label = { Text("کد ملی", fontFamily = DanaFontFamily) },
                     modifier = Modifier.fillMaxWidth(),
                     readOnly = true,
                     enabled = false
@@ -144,12 +133,12 @@ fun OrganizerSetupScreen(
             PrimaryButton(
                 text = "تایید و ادامه",
                 onClick = {
-                    if (needsFirstName || needsLastName || needsNationalCode) {
+                    if (needsManagerName || needsNationalCode) {
                         viewModel.updateProfile(
                             username = currentUser?.username ?: "",
-                            displayName = "$firstName $lastName",
-                            firstName = firstName,
-                            lastName = lastName,
+                            displayName = managerName,
+                            firstName = managerName,
+                            lastName = "",
                             nationalCode = nationalCode,
                             bio = currentUser?.bio
                         )

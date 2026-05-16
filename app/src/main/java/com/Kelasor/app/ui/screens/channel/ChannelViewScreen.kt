@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -67,6 +68,7 @@ fun ChannelViewScreen(
     onNavigateBack: () -> Unit,
     onNavigateToChannelSettings: () -> Unit = {},
     onNavigateToExamCreation: () -> Unit = {},
+    onNavigateToCourseDetail: ((String) -> Unit)? = null,
     viewModel: ChannelViewViewModel = hiltViewModel()
 ) {
     val extendedColors = MessageAppTheme.extendedColors
@@ -237,10 +239,10 @@ fun ChannelViewScreen(
                                 tint = if (isMuted) extendedColors.accent else MaterialTheme.colorScheme.onSurface
                             )
                         }
-                        IconButton(onClick = onNavigateToChannelSettings) {
+                        IconButton(onClick = if (state.canPost) onNavigateToChannelSettings else { { /* TODO: Show Channel Info */ } }) {
                             Icon(
-                                 imageVector = Icons.Filled.Settings,
-                                 contentDescription = "Settings"
+                                 imageVector = if (state.canPost) Icons.Default.Settings else Icons.Filled.Info,
+                                 contentDescription = if (state.canPost) "Settings" else "About Channel"
                             )
                         }
                     }
@@ -347,7 +349,7 @@ fun ChannelViewScreen(
             }
             // Posts List
             Box(modifier = Modifier.weight(1f)) {
-                 if (state.isLoading && state.posts.isEmpty()) {
+                  if (state.isLoading && state.posts.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = extendedColors.accent)
                     }
@@ -393,7 +395,8 @@ fun ChannelViewScreen(
                                     mediaPreviewUrl = url
                                     mediaPreviewType = type
                                 },
-                                timeFormatter = timeFormatter
+                                timeFormatter = timeFormatter,
+                                onNavigateToCourse = onNavigateToCourseDetail
                             )
                         }
                     }
@@ -432,7 +435,8 @@ fun ChannelViewScreen(
                             isMyMessage = false,
                             status = MessageStatus.SENT,
                             position = BubblePosition.SINGLE,
-                            reactions = selectedPost.reactions
+                            reactions = selectedPost.reactions,
+                            timerTargetAt = selectedPost.timerTargetAt?.toEpochMilli()
                         )
                     }
                 },
@@ -615,11 +619,7 @@ fun ChannelViewScreen(
                         }
                     }
                 }
-
-                }
             }
-            
-
         }
 
         // Overlay Menus
@@ -700,6 +700,7 @@ fun ChannelViewScreen(
             )
         }
     }
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -712,13 +713,15 @@ private fun ChannelPostItemWrapper(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onPreviewMedia: (String, MediaType) -> Unit,
-    timeFormatter: DateTimeFormatter
+    timeFormatter: DateTimeFormatter,
+    onNavigateToCourse: ((String) -> Unit)? = null
 ) {
     val extendedColors = MessageAppTheme.extendedColors
     val timeString = try {
         val dateStr = timeFormatter.format(post.createdAt)
         "$dateStr • ${post.viewCount} بازدید"
     } catch (e: Exception) { "" }
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     // Entire row is clickable for better UX
     Box(
@@ -877,7 +880,15 @@ private fun ChannelPostItemWrapper(
                                 status = MessageStatus.SENT,
                                 position = BubblePosition.SINGLE,
                                 senderName = null,
-                                reactions = post.reactions
+                                actionLabel = post.actionLabel,
+                                actionUrl = post.actionUrl,
+                                timerTargetAt = post.timerTargetAt?.toEpochMilli(),
+                                onActionClick = { url ->
+                                    if (url.startsWith("course_details/")) {
+                                        val cId = url.substringAfter("course_details/")
+                                        onNavigateToCourse?.invoke(cId)
+                                    }
+                                }
                             )
                         }
                     }
@@ -887,48 +898,13 @@ private fun ChannelPostItemWrapper(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun ChannelPostItem(
-    post: ChannelPost,
-    timeFormatter: DateTimeFormatter,
-    onLongClick: () -> Unit
-) {
-    val timeString = try {
-        val dateStr = timeFormatter.format(post.createdAt)
-        "$dateStr • ${post.viewCount} بازدید"
-    } catch(e: Exception) {
-        ""
+private fun formatFileSize(size: Long): String {
+    val units = listOf("B", "KB", "MB", "GB", "TB")
+    var value = size.toDouble()
+    var index = 0
+    while (value >= 1024 && index < units.size - 1) {
+        value /= 1024
+        index++
     }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = {},
-                onLongClick = onLongClick
-            )
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.Start
-    ) {
-        ChatBubble(
-            message = post.content,
-            time = timeString,
-            isMyMessage = false,
-            status = MessageStatus.SENT,
-            position = BubblePosition.SINGLE,
-            senderName = null,
-            reactions = post.reactions
-        )
-    }
-}
-
-private fun formatFileSize(bytes: Long): String {
-    val kb = bytes / 1024.0
-    val mb = kb / 1024.0
-    return when {
-        mb >= 1.0 -> String.format("%.1f MB", mb)
-        kb >= 1.0 -> String.format("%.1f KB", kb)
-        else -> "$bytes B"
-    }
+    return "%.1f %s".format(value, units[index])
 }

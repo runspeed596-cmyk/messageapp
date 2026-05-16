@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.Kelasor.app.ui.theme.CardShapes
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 
 /**
  * Dialog for editing a message.
@@ -44,7 +44,7 @@ fun EditMessageDialog(
         title = {
             Text(
                 text = "ویرایش پیام",
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.Bold
             )
         },
@@ -52,7 +52,7 @@ fun EditMessageDialog(
             Column {
                 Text(
                     text = "پیام جدید را وارد کنید:",
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp
                 )
@@ -65,7 +65,7 @@ fun EditMessageDialog(
                         .clip(CardShapes.inputField)
                         .padding(12.dp),
                     textStyle = TextStyle(
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontSize = 16.sp,
                         color = MaterialTheme.colorScheme.onSurface
                     ),
@@ -74,7 +74,7 @@ fun EditMessageDialog(
                         if (editedContent.isEmpty()) {
                             Text(
                                 text = "پیام...",
-                                fontFamily = VazirFontFamily,
+                                fontFamily = DanaFontFamily,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                 fontSize = 16.sp
                             )
@@ -95,7 +95,7 @@ fun EditMessageDialog(
             ) {
                 Text(
                     text = "ذخیره",
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     color = if (editedContent.isNotBlank() && editedContent != originalMessage) 
                         extendedColors.accent 
                     else 
@@ -107,7 +107,7 @@ fun EditMessageDialog(
             TextButton(onClick = onDismiss) {
                 Text(
                     text = "انصراف",
-                    fontFamily = VazirFontFamily
+                    fontFamily = DanaFontFamily
                 )
             }
         }

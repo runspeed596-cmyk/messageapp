@@ -35,7 +35,9 @@ sealed class Routes(val route: String) {
     data object ChatList : Routes("chatList")
     data object Groups : Routes("groups")
     data object Channels : Routes("channels")
-    data object Profile : Routes("profile")
+    data object Profile : Routes("profile?initialTab={initialTab}") {
+        fun createRoute(initialTab: Int = 0): String = "profile?initialTab=$initialTab"
+    }
     
     // ─────────────────────────────────────────────────────────────────────────────
     // Home Ecosystem Screens
@@ -95,6 +97,9 @@ sealed class Routes(val route: String) {
     data object AcademyProfile : Routes("academyProfile/{institutionId}") {
         fun createRoute(institutionId: String): String = "academyProfile/$institutionId"
     }
+    data object TeacherPublicProfile : Routes("teacherPublicProfile/{teacherId}") {
+        fun createRoute(teacherId: String): String = "teacherPublicProfile/$teacherId"
+    }
     data object ChannelView : Routes("channelView/{channelId}") {
         fun createRoute(channelId: String, messageId: String? = null): String {
             return if (messageId != null) "channelView/$channelId?messageId=$messageId" else "channelView/$channelId"
@@ -107,17 +112,27 @@ sealed class Routes(val route: String) {
     // Profile Screens
     // ─────────────────────────────────────────────────────────────────────────────
     data object EditProfile : Routes("editProfile")
-    data object Settings : Routes("settings")
-    data object SettingsAccount : Routes("settings_account")
+    data object GlobalSettings : Routes("global_settings")
+    data object Feedback : Routes("feedback")
+    data object MessengerSettings : Routes("messenger_settings")
+    data object MosbatElmSettings : Routes("mosbat_elm_settings")
+    data object MyCourses : Routes("myCourses")
+    data object LikedPosts : Routes("likedPosts")
+    data object BlockedUsers : Routes("blocked_users")
+    data object PrivacyExceptions : Routes("privacy_exceptions/{type}") {
+        fun createRoute(type: String) = "privacy_exceptions/$type"
+    }
+
     data object SettingsChat : Routes("settings_chat")
     data object SettingsPrivacy : Routes("settings_privacy")
     data object SettingsNotifications : Routes("settings_notifications")
     data object SettingsDataStorage : Routes("settings_data_storage")
-    data object SettingsFolders : Routes("settings_folders")
     data object SettingsDevices : Routes("settings_devices")
     data object SettingsLanguage : Routes("settings_language")
     data object Wallet : Routes("wallet")
     data object ArchivedChats : Routes("archivedChats")
+    data object MosbatElmNotifications : Routes("mosbat_elm_notifications")
+    data object Collaborations : Routes("collaborations")
     data    object UserProfile : Routes("user_profile") {
         fun createRoute(userId: String, fromChat: Boolean = false) = "$route/$userId?fromChat=$fromChat"
     }
@@ -165,6 +180,9 @@ sealed class Routes(val route: String) {
     // ─────────────────────────────────────────────────────────────────────────────
     // Forward Target Selection
     // ─────────────────────────────────────────────────────────────────────────────
+    data object ComingSoon : Routes("coming_soon/{feature}") {
+        fun createRoute(feature: String) = "coming_soon/${java.net.URLEncoder.encode(feature, "UTF-8")}"
+    }
     data object ForwardTarget : Routes("forwardTarget/{messageIds}/{sourceType}/{sourceId}") {
         fun createRoute(messageIds: String, sourceType: String = "CHAT", sourceId: String = ""): String =
             "forwardTarget/$messageIds/$sourceType/$sourceId"

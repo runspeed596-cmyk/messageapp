@@ -54,6 +54,7 @@ interface RiddleOptionRepository : JpaRepository<RiddleOption, UUID>
 @Repository
 interface AiBotRepository : JpaRepository<AiBot, UUID> {
     fun findAllByIsActiveTrueOrderByDisplayOrderAsc(): List<AiBot>
+    fun findByBotType(botType: String): AiBot?
 }
 
 @Repository

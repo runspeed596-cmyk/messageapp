@@ -19,13 +19,15 @@ data class ElmViewState(
     val startups: List<ElmEventDto> = emptyList(),
     val congresses: List<ElmEventDto> = emptyList(),
     val universities: List<com.Kelasor.app.data.University> = emptyList(),
+    val publicCourses: List<com.Kelasor.app.domain.model.Course> = emptyList(),
     val error: String? = null,
     val submissionMessage: String? = null
 )
 
 @HiltViewModel
 class ElmViewModel @Inject constructor(
-    private val apiService: ElmApiService
+    private val apiService: ElmApiService,
+    private val courseRepository: com.Kelasor.app.data.repository.CourseRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ElmViewState())
@@ -53,7 +55,8 @@ class ElmViewModel @Inject constructor(
                         competitions = response.competitions,
                         startups = response.startups,
                         congresses = response.congresses,
-                        universities = domainsUnis
+                        universities = domainsUnis,
+                        publicCourses = try { courseRepository.getPublicCourses() } catch (e: Exception) { emptyList() }
                     )
                 }
             } catch (e: Exception) {

@@ -24,6 +24,19 @@ interface UserRepository : JpaRepository<User, UUID> {
     fun existsByNationalCode(nationalCode: String): Boolean
     @Query("SELECT u FROM User u WHERE LOWER(u.displayName) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(u.username) LIKE LOWER(CONCAT('%', :query, '%'))")
     fun searchByNameOrUsername(@Param("query") query: String, pageable: Pageable): Page<User>
+    @Query("SELECT DISTINCT u FROM User u LEFT JOIN u.profileDetails pd LEFT JOIN Course c ON u MEMBER OF c.teachers WHERE u.role = com.iliyadev.springboot.models.UserRole.TEACHER OR pd.isTeacher = true OR c.id IS NOT NULL ORDER BY u.averageRating DESC, u.createdAt DESC")
+    fun findPopularTeachers(pageable: Pageable): Page<User>
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📱 User Session Repository
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@Repository
+interface UserSessionRepository : JpaRepository<UserSession, UUID> {
+    fun findByUserIdAndIsActiveTrue(userId: UUID): List<UserSession>
+    fun findByUserIdAndId(userId: UUID, sessionId: UUID): UserSession?
+    fun findByUserIdAndIsActiveTrueAndIdNot(userId: UUID, sessionId: UUID): List<UserSession>
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -257,6 +270,8 @@ interface InstitutionRepository : JpaRepository<Institution, UUID> {
     fun existsByRegistrationNumber(registrationNumber: String): Boolean
     fun countByIsActiveTrue(): Long
     fun countByVerificationStatus(status: VerificationStatus): Long
+    @Query("SELECT i FROM Institution i WHERE i.isActive = true ORDER BY i.averageRating DESC, i.createdAt DESC")
+    fun findPopularInstitutions(pageable: Pageable): Page<Institution>
 }
 
 
@@ -315,10 +330,23 @@ interface CourseRepository : JpaRepository<Course, UUID> {
     fun findByStatus(status: CourseStatus, pageable: Pageable): Page<Course>
     fun findByStatusAndIsPublicTrue(status: CourseStatus, pageable: Pageable): Page<Course>
     fun findByInstitutionId(institutionId: UUID, pageable: Pageable): Page<Course>
+    @Query("SELECT c FROM Course c LEFT JOIN c.teachers t WHERE t.id = :teacherId OR c.organizer.id = :organizerId ORDER BY c.createdAt DESC")
+    fun findByTeachersIdOrOrganizerId(@Param("teacherId") teacherId: UUID, @Param("organizerId") organizerId: UUID, pageable: Pageable): Page<Course>
+    @Query("SELECT c FROM Course c WHERE c.institutionId = :institutionId OR c.organizer.id = :ownerId ORDER BY c.createdAt DESC")
+    fun findByInstitutionIdOrOrganizerId(@Param("institutionId") institutionId: UUID, @Param("ownerId") ownerId: UUID, pageable: Pageable): Page<Course>
     @Query("SELECT c FROM Course c WHERE c.status = 'APPROVED' AND c.startsAt > :now ORDER BY c.startsAt ASC")
     fun findUpcomingCourses(@Param("now") now: Instant, pageable: Pageable): Page<Course>
     @Query("SELECT c FROM Course c WHERE c.status = 'APPROVED' AND c.id != :courseId AND (c.fieldOfStudy = :fieldOfStudy OR EXISTS (SELECT t FROM c.tags t WHERE t IN :tags)) ORDER BY c.createdAt DESC")
     fun findSimilarCourses(@Param("courseId") courseId: UUID, @Param("fieldOfStudy") fieldOfStudy: String?, @Param("tags") tags: List<String>, pageable: Pageable): Page<Course>
+    
+    @Query("SELECT AVG(c.averageRating) FROM Course c WHERE c.institutionId = :institutionId AND c.averageRating > 0")
+    fun calculateAverageRatingForInstitution(@Param("institutionId") institutionId: UUID): Double?
+    
+    @Query("SELECT COALESCE(SUM(c.reviewCount), 0) FROM Course c WHERE c.institutionId = :institutionId")
+    fun countTotalReviewsForInstitution(@Param("institutionId") institutionId: UUID): Int
+    
+    @Query("SELECT COUNT(c) FROM Course c WHERE c.institutionId = :institutionId AND c.status = 'APPROVED'")
+    fun countApprovedCoursesForInstitution(@Param("institutionId") institutionId: UUID): Long
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -331,7 +359,14 @@ interface CourseEnrollmentRepository : JpaRepository<CourseEnrollment, UUID> {
     fun existsByCourseIdAndUserId(courseId: UUID, userId: UUID): Boolean
     fun countByCourseIdAndIsActiveTrue(courseId: UUID): Long
     fun findByUserIdAndIsActiveTrue(userId: UUID, pageable: Pageable): Page<CourseEnrollment>
+    
+    @Query("SELECT ce FROM CourseEnrollment ce JOIN ce.course c WHERE c.startsAt > :now AND c.startsAt < :limit AND ce.isActive = true")
+    fun findEnrollmentsForSoonStartingCourses(@Param("now") now: Instant, @Param("limit") limit: Instant): List<CourseEnrollment>
+
     fun deleteByCourseId(courseId: UUID)
+    
+    @Query("SELECT COUNT(ce) FROM CourseEnrollment ce JOIN ce.course c WHERE c.institutionId = :institutionId AND ce.isActive = true")
+    fun countTotalEnrollmentsForInstitution(@Param("institutionId") institutionId: UUID): Long
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

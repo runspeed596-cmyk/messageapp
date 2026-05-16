@@ -23,7 +23,11 @@ data class SmartFolderChannelResponse(
     val subscriberCount: Long,
     val isVerifiedTeacher: Boolean,
     val classification: ChannelClassification,
-    val isSubscribed: Boolean
+    val isSubscribed: Boolean,
+    val chatType: String = "CHANNEL",
+    val lastMessage: String? = null,
+    val unreadCount: Int = 0,
+    val createdAt: java.time.Instant? = null
 )
 
 @Service
@@ -33,7 +37,11 @@ class SmartFolderEngineService(
     private val channelSubscriberRepository: ChannelSubscriberRepository,
     private val userRepository: UserRepository,
     private val userProfileDetailsRepository: UserProfileDetailsRepository,
-    private val institutionRepository: InstitutionRepository
+    private val institutionRepository: InstitutionRepository,
+    private val groupRepository: GroupRepository,
+    private val groupMemberRepository: GroupMemberRepository,
+    private val channelPostRepository: ChannelPostRepository,
+    private val groupMessageRepository: GroupMessageRepository
 ) {
     /**
      * Compute smart folders dynamically for the given user.
@@ -81,11 +89,19 @@ class SmartFolderEngineService(
         val courseChannels: List<Channel> = findChannelsByClassifications(
             listOf(ChannelClassification.COURSE_CHANNEL), userId
         )
+        // Fetch official groups for courses
+        val courseGroups: List<Group> = groupRepository.findByIsOfficialTrue()
+            .filter { group ->
+                group.officialCategory == com.iliyadev.springboot.models.OfficialGroupCategory.COURSE_GROUP &&
+                (group.isPublic || groupMemberRepository.existsByGroupIdAndUserId(group.id!!, userId))
+            }
+        
         result.add(SmartFolderResponse(
             folderType = FolderType.COURSES,
             labelFa = "دوره‌ها",
             iconName = "menu_book",
-            channels = courseChannels.map { mapChannelToResponse(it, userId) }
+            channels = courseChannels.map { mapChannelToResponse(it, userId) } + 
+                       courseGroups.map { mapGroupToResponse(it) }
         ))
         return result
     }
@@ -95,12 +111,21 @@ class SmartFolderEngineService(
         userId: UUID
     ): List<Channel> {
         return channelRepository.findByClassificationIn(classifications)
-            .filter { it.isPublic }
+            .filter { channel ->
+                val isSubscribed = channelSubscriberRepository.existsByChannelIdAndUserId(channel.id!!, userId)
+                if (channel.classification == ChannelClassification.VERIFIED_TEACHER) {
+                    isSubscribed
+                } else {
+                    channel.isPublic || isSubscribed
+                }
+            }
     }
 
     private fun mapChannelToResponse(channel: Channel, userId: UUID): SmartFolderChannelResponse {
         val subscriberCount: Long = channelSubscriberRepository.countByChannelId(channel.id!!)
         val isSubscribed: Boolean = channelSubscriberRepository.existsByChannelIdAndUserId(channel.id!!, userId)
+        val lastPost = channelPostRepository.findTopByChannelIdOrderByCreatedAtDesc(channel.id!!)
+        val lastMessageContent = lastPost?.content
         return SmartFolderChannelResponse(
             id = channel.id!!,
             name = channel.name,
@@ -108,8 +133,29 @@ class SmartFolderEngineService(
             subscriberCount = subscriberCount,
             isVerifiedTeacher = channel.isVerifiedTeacher,
             classification = channel.classification,
-            isSubscribed = isSubscribed
+            isSubscribed = isSubscribed,
+            chatType = "CHANNEL",
+            lastMessage = lastMessageContent,
+            unreadCount = 0,
+            createdAt = channel.createdAt
+        )
+    }
+
+    private fun mapGroupToResponse(group: Group): SmartFolderChannelResponse {
+        val lastMessage = groupMessageRepository.findTopByGroupIdOrderByCreatedAtDesc(group.id!!)
+        val lastMessageContent = lastMessage?.content
+        return SmartFolderChannelResponse(
+            id = group.id!!,
+            name = group.name,
+            avatarUrl = group.avatarUrl,
+            subscriberCount = 0,
+            isVerifiedTeacher = false,
+            classification = ChannelClassification.COURSE_CHANNEL,
+            isSubscribed = true,
+            chatType = "GROUP",
+            lastMessage = lastMessageContent,
+            unreadCount = 0,
+            createdAt = group.createdAt
         )
     }
 }
-

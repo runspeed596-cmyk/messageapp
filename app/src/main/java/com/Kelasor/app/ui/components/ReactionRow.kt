@@ -19,7 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 
 /**
  * Reusable reaction row for all bubble types (voice, image, video, file, location, poll).
@@ -58,7 +58,7 @@ fun ReactionRow(
                     text = "$emoji $count",
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontSize = 11.sp,
-                        fontFamily = VazirFontFamily
+                        fontFamily = DanaFontFamily
                     ),
                     color = if (isMyMessage) extendedColors.myBubbleText else extendedColors.otherBubbleText
                 )

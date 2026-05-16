@@ -19,6 +19,8 @@ const LoginPage = () => {
             if (response.data.success) {
                 if (response.data.data.adminId) {
                     localStorage.setItem('admin_id', response.data.data.adminId);
+                    localStorage.setItem('isSuperAdmin', String(response.data.data.isSuperAdmin));
+                    localStorage.setItem('permissions', JSON.stringify(response.data.data.permissions || []));
                 }
                 login(response.data.data.token);
             } else {

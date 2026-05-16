@@ -3,6 +3,7 @@ package com.iliyadev.springboot.controllers
 import com.iliyadev.springboot.models.*
 import com.iliyadev.springboot.repositories.*
 import com.iliyadev.springboot.services.*
+import org.springframework.data.domain.PageRequest
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import java.util.UUID
@@ -28,9 +29,21 @@ class AdminManagementController(
 
     // 👤 User Management
     @GetMapping("/users")
-    fun getAllUsers(): ResponseEntity<ApiResponse<List<UserDto>>> {
-        val users = userRepository.findAll().map { it.toDto() }
-        return ResponseEntity.ok(ApiResponse(true, "Success", users))
+    fun getAllUsers(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int
+    ): ResponseEntity<ApiResponse<Map<String, Any>>> {
+        val pageable = PageRequest.of(page, size)
+        val pageResult = userRepository.findAll(pageable)
+        val users = pageResult.content.map { it.toDto() }
+        val data = mapOf(
+            "content" to users,
+            "totalElements" to pageResult.totalElements,
+            "totalPages" to pageResult.totalPages,
+            "number" to pageResult.number,
+            "size" to pageResult.size
+        )
+        return ResponseEntity.ok(ApiResponse(true, "Success", data))
     }
 
     @GetMapping("/users/{id}")
@@ -56,6 +69,7 @@ class AdminManagementController(
             username = it.username,
             displayName = it.displayName,
             isSuperAdmin = it.isSuperAdmin,
+            permissions = it.permissions,
             createdAt = it.createdAt.toString()
         )}
         return ResponseEntity.ok(ApiResponse(true, "Success", admins))
@@ -68,13 +82,15 @@ class AdminManagementController(
                 username = request.username,
                 password = request.password,
                 displayName = request.displayName,
-                isSuperAdmin = request.isSuperAdmin
+                isSuperAdmin = request.isSuperAdmin,
+                permissions = request.permissions
             )
             val dto = PanelAdminDto(
                 id = admin.id.toString(),
                 username = admin.username,
                 displayName = admin.displayName,
                 isSuperAdmin = admin.isSuperAdmin,
+                permissions = admin.permissions,
                 createdAt = admin.createdAt.toString()
             )
             ResponseEntity.ok(ApiResponse(true, "ادمین با موفقیت ایجاد شد", dto))
@@ -110,8 +126,21 @@ class AdminManagementController(
 
     // 🎓 University Management
     @GetMapping("/universities")
-    fun getUniversities(): ResponseEntity<ApiResponse<List<University>>> = 
-        ResponseEntity.ok(ApiResponse(true, "Success", universityRepository.findAll()))
+    fun getUniversities(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int
+    ): ResponseEntity<ApiResponse<Map<String, Any>>> {
+        val pageable = PageRequest.of(page, size)
+        val pageResult = universityRepository.findAll(pageable)
+        val data = mapOf(
+            "content" to pageResult.content,
+            "totalElements" to pageResult.totalElements,
+            "totalPages" to pageResult.totalPages,
+            "number" to pageResult.number,
+            "size" to pageResult.size
+        )
+        return ResponseEntity.ok(ApiResponse(true, "Success", data))
+    }
 
     @PostMapping("/universities")
     fun createUniversity(@RequestBody university: University): ResponseEntity<ApiResponse<University>> {
@@ -323,6 +352,7 @@ data class PanelAdminDto(
     val username: String,
     val displayName: String,
     val isSuperAdmin: Boolean,
+    val permissions: List<String>,
     val createdAt: String
 )
 
@@ -330,6 +360,7 @@ data class CreatePanelAdminRequest(
     val username: String,
     val password: String,
     val displayName: String,
-    val isSuperAdmin: Boolean = false
+    val isSuperAdmin: Boolean = false,
+    val permissions: List<String> = emptyList()
 )
 

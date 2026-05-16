@@ -22,7 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 
 /**
  * Reusable delete confirmation dialog with "delete for everyone" option.
@@ -49,7 +49,7 @@ fun DeleteConfirmationDialog(
                 text = titleText,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                fontFamily = VazirFontFamily
+                fontFamily = DanaFontFamily
             )
         },
         text = {
@@ -57,7 +57,7 @@ fun DeleteConfirmationDialog(
                 Text(
                     text = bodyText,
                     style = MaterialTheme.typography.bodyMedium,
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(12.dp))
@@ -76,7 +76,7 @@ fun DeleteConfirmationDialog(
                     Text(
                         text = "حذف برای همه",
                         style = MaterialTheme.typography.bodyMedium,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(start = 4.dp)
                     )
@@ -89,7 +89,7 @@ fun DeleteConfirmationDialog(
                     text = "حذف",
                     color = MaterialTheme.colorScheme.error,
                     fontWeight = FontWeight.Bold,
-                    fontFamily = VazirFontFamily
+                    fontFamily = DanaFontFamily
                 )
             }
         },
@@ -98,7 +98,7 @@ fun DeleteConfirmationDialog(
                 Text(
                     text = "انصراف",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontFamily = VazirFontFamily
+                    fontFamily = DanaFontFamily
                 )
             }
         },

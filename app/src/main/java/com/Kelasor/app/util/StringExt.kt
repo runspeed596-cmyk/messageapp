@@ -1,5 +1,9 @@
 package com.Kelasor.app.util
 
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+
 /**
  * Converts standard English digits (0-9) to Persian digits (۰-۹).
  */
@@ -23,4 +27,44 @@ fun String.toPersianNumbers(): String {
 fun Number.toPersianPrice(): String {
     val formatted = String.format(java.util.Locale("en", "US"), "%,d", this.toLong())
     return formatted.toPersianNumbers()
+}
+
+/**
+ * Formats an Instant to a readable Persian Date Time string.
+ */
+fun Instant.toPersianDateTime(): String {
+    return try {
+        val zdt = this.atZone(ZoneId.systemDefault())
+        val now = java.time.ZonedDateTime.now(ZoneId.systemDefault())
+        
+        val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+        val timeStr = zdt.format(timeFormatter)
+        
+        if (zdt.toLocalDate() == now.toLocalDate()) {
+            "امروز، ساعت $timeStr".toPersianNumbers()
+        } else if (zdt.toLocalDate() == now.toLocalDate().minusDays(1)) {
+            "دیروز، ساعت $timeStr".toPersianNumbers()
+        } else {
+            val (jy, jm, jd) = DateUtils.gregorianToJalali(zdt.year, zdt.monthValue, zdt.dayOfMonth)
+            val monthNames = arrayOf("فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند")
+            val monthName = monthNames.getOrNull(jm - 1) ?: jm.toString()
+            "$jd $monthName $jy، ساعت $timeStr".toPersianNumbers()
+        }
+    } catch (e: Exception) {
+        this.toString()
+    }
+}
+
+/**
+ * Formats an ISO 8601 date string (e.g. 2023-10-12T14:30:00Z) to a readable Persian Date Time string.
+ */
+fun String.toPersianDateTime(): String {
+    if (this.isBlank() || this == "Unknown") return this
+    return try {
+        val instant = Instant.parse(this)
+        instant.toPersianDateTime()
+    } catch (e: Exception) {
+        // Fallback if not standard ISO string
+        this
+    }
 }

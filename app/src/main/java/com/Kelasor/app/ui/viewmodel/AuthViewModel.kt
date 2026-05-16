@@ -16,6 +16,7 @@ data class AuthState(
     val isLoading: Boolean = false,
     val isLoggedIn: Boolean? = null, // Null means checking, False means not logged in, True means logged in
     val isAuthCheckComplete: Boolean = false, // True when DataStore has been read
+    val isOnboardingComplete: Boolean = false,
     val currentUser: User? = null,
     val error: String? = null,
     val otpSent: Boolean = false,
@@ -40,12 +41,20 @@ class AuthViewModel @Inject constructor(
     private val _events = MutableSharedFlow<AuthEvent>()
     val events: SharedFlow<AuthEvent> = _events.asSharedFlow()
     
+    val savedAccounts = authRepository.savedAccounts
+    
     init {
         android.util.Log.d("AuthViewModel", "🚀 AuthViewModel initialized")
         viewModelScope.launch {
             authRepository.isLoggedIn.collect { isLoggedIn ->
                 android.util.Log.d("AuthViewModel", "🔄 isLoggedIn changed to: $isLoggedIn")
                 _state.update { it.copy(isLoggedIn = isLoggedIn, isAuthCheckComplete = true) }
+            }
+        }
+        viewModelScope.launch {
+            authRepository.isOnboardingComplete.collect { complete ->
+                android.util.Log.d("AuthViewModel", "🔄 isOnboardingComplete changed to: $complete")
+                _state.update { it.copy(isOnboardingComplete = complete) }
             }
         }
     }
@@ -78,7 +87,16 @@ class AuthViewModel @Inject constructor(
 
     fun verifyOtp(phoneNumber: String, code: String) {
         viewModelScope.launch {
-            authRepository.verifyOtp(phoneNumber, code).collect { result ->
+            val deviceName = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
+            val osVersion = "Android ${android.os.Build.VERSION.RELEASE}"
+            authRepository.verifyOtp(
+                phoneNumber = phoneNumber,
+                code = code,
+                deviceName = deviceName,
+                platform = "Android",
+                osVersion = osVersion,
+                appVersion = "1.0.0"
+            ).collect { result ->
                 when (result) {
                     is AuthResult.Loading -> {
                         _state.update { it.copy(isLoading = true, error = null) }
@@ -103,20 +121,41 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun logout() {
+    fun switchAccount(userId: String) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
-            val success = authRepository.logout()
-            _state.update { AuthState() } // Reset state, isLoggedIn will become null/false eventually via flow? 
-            // Better to force it to false or null, but the repo flow should update it.
-            // For safety in UI immediate reaction:
-             _state.update { AuthState(isLoggedIn = false, isAuthCheckComplete = true) }
-            _events.emit(AuthEvent.LogoutSuccess)
+            val success = authRepository.switchAccount(userId)
+            if (success) {
+                _state.update { it.copy(isLoading = false) }
+            } else {
+                _state.update { it.copy(isLoading = false, error = "خطا در جابجایی حساب کاربری") }
+            }
+        }
+    }
+
+    fun logout(userId: String? = null) {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true) }
+            val success = authRepository.logout(userId)
+            if (userId == null || userId == state.value.currentUser?.id) {
+                // We logged out the active account. Let state reset based on flow.
+                // The flow will emit isLoggedIn = false if no accounts are left.
+                _state.update { AuthState(isLoggedIn = false, isAuthCheckComplete = true) }
+                _events.emit(AuthEvent.LogoutSuccess)
+            } else {
+                _state.update { it.copy(isLoading = false) }
+            }
         }
     }
 
     fun clearError() {
         _state.update { it.copy(error = null) }
+    }
+
+    fun setOnboardingComplete(complete: Boolean) {
+        viewModelScope.launch {
+            authRepository.setOnboardingComplete(complete)
+        }
     }
 
     fun updateProfile(
@@ -131,6 +170,9 @@ class AuthViewModel @Inject constructor(
         avatarFile: java.io.File? = null,
         university: String? = null,
         fieldOfStudy: String? = null,
+        universities: List<String>? = null,
+        fieldsOfStudy: List<String>? = null,
+        isGraduated: Boolean? = null,
         education: String? = null,
         skills: String? = null,
         interests: String? = null,
@@ -150,7 +192,7 @@ class AuthViewModel @Inject constructor(
                  }
             }
 
-            val displayName = "$firstName $lastName"
+            val displayName = if (lastName.isBlank()) firstName else "$firstName $lastName"
             userRepository.updateProfile(
                 username = username,
                 displayName = displayName,
@@ -163,6 +205,9 @@ class AuthViewModel @Inject constructor(
                 bio = bio,
                 university = university, 
                 fieldOfStudy = fieldOfStudy, 
+                universities = universities,
+                fieldsOfStudy = fieldsOfStudy,
+                isGraduated = isGraduated,
                 education = education, 
                 skills = skills, 
                 interests = interests, 

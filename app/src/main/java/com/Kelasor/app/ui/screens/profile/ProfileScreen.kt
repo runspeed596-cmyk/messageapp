@@ -76,7 +76,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.Kelasor.app.ui.components.AvatarImage
 import com.Kelasor.app.ui.components.AvatarSize
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import com.Kelasor.app.ui.viewmodel.AuthViewModel
 import com.Kelasor.app.ui.viewmodel.ProfileViewModel
 import kotlinx.coroutines.delay
@@ -302,7 +302,7 @@ fun ProfileScreen(
                 Text(
                     text = "کاربر یافت نشد",
                     style = MaterialTheme.typography.bodyLarge,
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                 )
             }
@@ -405,7 +405,7 @@ private fun ProfileHeader(
         Text(
             text = displayName,
             style = MaterialTheme.typography.headlineMedium,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
         )
@@ -413,7 +413,7 @@ private fun ProfileHeader(
         Text(
             text = "@$username",
             style = MaterialTheme.typography.bodyMedium,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             color = extendedColors.accent
         )
         // Bio
@@ -421,7 +421,7 @@ private fun ProfileHeader(
             Text(
                 text = bio,
                 style = MaterialTheme.typography.bodyMedium,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center,
                 maxLines = 3,
@@ -534,7 +534,7 @@ private fun QuickActionCard(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.bodySmall,
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     fontWeight = FontWeight.Medium,
                     color = Color.White
                 )
@@ -607,14 +607,14 @@ private fun ProfileMenuItem(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onBackground
             )
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
             )
         }

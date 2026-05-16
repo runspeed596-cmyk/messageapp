@@ -1,25 +1,26 @@
 package com.Kelasor.app.ui.screens.auth
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
+import java.io.File
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,10 +36,11 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.Kelasor.app.ui.components.PrimaryButton
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import com.Kelasor.app.ui.viewmodel.AuthEvent
 import com.Kelasor.app.ui.viewmodel.AuthViewModel
 import com.Kelasor.app.ui.viewmodel.ReferenceDataViewModel
+import coil3.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,8 +55,7 @@ fun UserInfoScreen(
     val extendedColors = MessageAppTheme.extendedColors
     
     // ── Form state ───────────────────────────────────────────────────────────
-    var firstName by remember { mutableStateOf("") }
-    var lastName by remember { mutableStateOf("") }
+    var fullName by remember { mutableStateOf("") }
     var selectedRoleValueEn by remember { mutableStateOf("") }
     var selectedEducationLevel by remember { mutableStateOf("") }
     var isLevelExpanded by remember { mutableStateOf(false) }
@@ -62,6 +63,38 @@ fun UserInfoScreen(
     var isFieldExpanded by remember { mutableStateOf(false) }
     var selectedFaculty by remember { mutableStateOf("") }
     var isFacultyExpanded by remember { mutableStateOf(false) }
+    
+    // New Fields
+    var avatarUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var editingAvatarUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var isGraduated by remember { mutableStateOf(false) }
+    var universities by remember { mutableStateOf(listOf<String>()) }
+    var fieldsOfStudy by remember { mutableStateOf(listOf<String>()) }
+    var selectedUniversity by remember { mutableStateOf("") }
+    var isUniversityExpanded by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+
+    // Handle back button when editing photo or in signup
+    androidx.activity.compose.BackHandler(enabled = true) {
+        if (editingAvatarUri != null) {
+            editingAvatarUri = null
+        } else {
+            // If in UserInfo screen, maybe show a toast or just let it exit if they really want
+            // but the user complained about accidental exit during cropping.
+            // For now, if not cropping, we let the default behavior happen (exit app since it's root)
+            // unless we want to force them to stay.
+            // The user said: "مشکل وقتی که یک بار Back میزنیم با اندروید کامل از اپلیکیشن میوفته بیرون(در صفحه ای که عکس پروفایل کراپ میکنیم)"
+            // So the primary fix is for the cropping state.
+            (context as? android.app.Activity)?.finish()
+        }
+    }
+
+    val photoPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let { editingAvatarUri = it }
+    }
 
     // ── Derived values ───────────────────────────────────────────────────────
     val selectedRole = refState.educationalRoles.firstOrNull { it.valueEn == selectedRoleValueEn }
@@ -77,13 +110,25 @@ fun UserInfoScreen(
         else refState.faculties.filter { it.educationLevel.equals(selectedEducationLevel, ignoreCase = true) }.map { it.name }
     }
     
-    val isFormValid = firstName.isNotBlank() && lastName.isNotBlank() && selectedRoleValueEn.isNotBlank()
+    val allUniversities = remember(refState.universities) { refState.universities.map { it.name } }
+    val allFieldsOfStudy = remember(refState.fieldsOfStudy) { refState.fieldsOfStudy.map { it.name } }
+    
+    val isFormValid = fullName.isNotBlank() && selectedRoleValueEn.isNotBlank()
 
-    // ── Navigation logic ─────────────────────────────────────────────────────
+    // Ensure data is loaded if it was missed or failed before
+    LaunchedEffect(refState.educationalRoles) {
+        if (refState.educationalRoles.isEmpty() && !refState.isLoading && refState.error == null) {
+            refViewModel.loadReferenceData()
+        }
+    }
+
     LaunchedEffect(Unit) {
         authViewModel.events.collect { event ->
             when (event) {
-                is AuthEvent.LoginSuccess -> onNavigateToMain()
+                is AuthEvent.LoginSuccess -> {
+                    authViewModel.setOnboardingComplete(true)
+                    onNavigateToMain()
+                }
                 is AuthEvent.Error -> snackbarHostState.showSnackbar(event.message)
                 else -> {}
             }
@@ -101,64 +146,36 @@ fun UserInfoScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(paddingValues)
         ) {
-            // ── Telegram-Style Header (Profile Preview) ─────────────────────
+            // ── Avatar Upload Section ─────────────────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(extendedColors.accent, extendedColors.accent.copy(alpha = 0.8f))
-                        )
-                    )
-                    .padding(top = 40.dp, bottom = 32.dp, start = 24.dp, end = 24.dp)
+                    .padding(top = 24.dp, bottom = 16.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable { photoPickerLauncher.launch("image/*") },
+                    contentAlignment = Alignment.Center
                 ) {
-                    // Initials Avatar (No image selection as requested)
-                    Box(
-                        modifier = Modifier
-                            .size(80.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.2f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = if (firstName.isNotEmpty()) firstName.take(1) else "?",
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            fontFamily = VazirFontFamily
+                    if (avatarUri != null) {
+                        AsyncImage(
+                            model = avatarUri,
+                            contentDescription = "Profile Avatar",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Upload Avatar",
+                            modifier = Modifier.size(32.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    
-                    Spacer(modifier = Modifier.width(20.dp))
-                    
-                    Column {
-                        Text(
-                            text = if (firstName.isBlank() && lastName.isBlank()) "نام شما" else "$firstName $lastName",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontFamily = VazirFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                        Text(
-                            text = selectedRoleLabel,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontFamily = VazirFontFamily,
-                            color = Color.White.copy(alpha = 0.7f)
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.weight(1f))
-                    
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Edit",
-                        modifier = Modifier.size(24.dp),
-                        tint = Color.White.copy(alpha = 0.5f)
-                    )
                 }
             }
 
@@ -171,53 +188,90 @@ fun UserInfoScreen(
                 SectionHeader("اطلاعات شناسایی")
                 
                 ProfileEditField(
-                    label = "نام *",
-                    value = firstName,
-                    onValueChange = { firstName = it },
-                    placeholder = "نام خود را وارد کنید",
-                    imeAction = ImeAction.Next
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                ProfileEditField(
-                    label = "نام خانوادگی *",
-                    value = lastName,
-                    onValueChange = { lastName = it },
-                    placeholder = "نام خانوادگی خود را وارد کنید",
+                    label = "نام کامل *",
+                    value = fullName,
+                    onValueChange = { fullName = it },
+                    placeholder = "نام و نام خانوادگی خود را وارد کنید",
                     imeAction = ImeAction.Done
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))
                 SectionHeader("نقش و تحصیلات")
                 
-                // Role Chips
-                if (refState.isLoading) {
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = extendedColors.accent)
-                } else {
-                    Text(
-                        text = "نقش من در آموزش *",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontFamily = VazirFontFamily,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                // Role Selection Section
+                Text(
+                    text = "به عنوان کدام یک از نقش های زیر وارد میشوید؟ *",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontFamily = DanaFontFamily,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                if (refState.isLoading && refState.educationalRoles.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(80.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        refState.educationalRoles.forEach { role ->
-                            RoleChip(
-                                emoji = role.emoji,
-                                label = role.labelFa,
-                                isSelected = selectedRoleValueEn == role.valueEn,
-                                onClick = { 
-                                    selectedRoleValueEn = role.valueEn
-                                    selectedEducationLevel = ""
-                                    selectedFieldOfStudy = ""
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
+                        CircularProgressIndicator(color = extendedColors.accent, strokeWidth = 2.dp)
+                    }
+                } else if (refState.error != null && refState.educationalRoles.isEmpty()) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "خطا در بارگذاری نقش‌ها",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = DanaFontFamily,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        TextButton(onClick = { refViewModel.loadReferenceData() }) {
+                            Text("تلاش مجدد", fontFamily = DanaFontFamily, color = extendedColors.accent)
+                        }
+                    }
+                } else if (refState.educationalRoles.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "در حال بارگذاری...",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = DanaFontFamily,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    }
+                } else {
+                    // Using a simple Column + Rows instead of FlowRow for better stability on different screens
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val roles = refState.educationalRoles
+                        val chunks = roles.chunked(2)
+                        chunks.forEach { rowRoles ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                rowRoles.forEach { role ->
+                                    RoleChip(
+                                        emoji = role.emoji,
+                                        label = role.labelFa,
+                                        isSelected = selectedRoleValueEn == role.valueEn,
+                                        onClick = { 
+                                            selectedRoleValueEn = role.valueEn
+                                            selectedEducationLevel = ""
+                                            selectedFieldOfStudy = ""
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                // If row has only one item, add a spacer to keep width consistent
+                                if (rowRoles.size == 1) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
                         }
                     }
                 }
@@ -230,58 +284,115 @@ fun UserInfoScreen(
                 ) {
                     Column {
                         Spacer(modifier = Modifier.height(24.dp))
-                        val filteredLevels = refState.educationLevels.filter { it.roleValueEn == selectedRoleValueEn || it.roleValueEn.isNullOrBlank() }
                         
-                        DropdownSelector(
-                            label = "مقطع تحصیلی",
-                            selected = selectedEducationLevel,
-                            options = filteredLevels.map { it.name },
-                            expanded = isLevelExpanded,
-                            onExpand = { isLevelExpanded = !isLevelExpanded },
-                            onDismiss = { isLevelExpanded = false },
-                            onSelect = { 
-                                selectedEducationLevel = it
-                                selectedFaculty = ""
-                                selectedFieldOfStudy = ""
-                                isLevelExpanded = false
+                        if (selectedRoleValueEn == "TEACHER") {
+                            // Teacher fields
+                            com.Kelasor.app.ui.components.DynamicChipGroup(
+                                label = "دانشگاه‌های محل تحصیل/تدریس",
+                                placeholder = "دانشگاه را جستجو کنید...",
+                                items = universities,
+                                suggestions = allUniversities,
+                                onAdd = { if (it !in universities) universities = universities + it },
+                                onRemove = { universities = universities - it },
+                                allowManualAdd = false
+                            )
+                            
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            com.Kelasor.app.ui.components.DynamicChipGroup(
+                                label = "رشته‌های تخصصی",
+                                placeholder = "رشته را جستجو کنید...",
+                                items = fieldsOfStudy,
+                                suggestions = allFieldsOfStudy,
+                                onAdd = { if (it !in fieldsOfStudy) fieldsOfStudy = fieldsOfStudy + it },
+                                onRemove = { fieldsOfStudy = fieldsOfStudy - it },
+                                allowManualAdd = false
+                            )
+                        } else if (selectedRoleValueEn == "SCHOOL_STUDENT") {
+                            // School student fields: مقطع + رشته (if configured)
+                            val schoolLevels = refState.educationLevels.filter { it.roleValueEn == "SCHOOL_STUDENT" }
+                            
+                            DropdownSelector(
+                                label = "مقطع تحصیلی",
+                                selected = selectedEducationLevel,
+                                options = schoolLevels.map { it.name },
+                                expanded = isLevelExpanded,
+                                onExpand = { isLevelExpanded = !isLevelExpanded },
+                                onDismiss = { isLevelExpanded = false },
+                                onSelect = { 
+                                    selectedEducationLevel = it
+                                    selectedFieldOfStudy = ""
+                                    isLevelExpanded = false
+                                }
+                            )
+                            
+                            // Show field of study if admin has enabled it for this level
+                            val selectedLevelObj = schoolLevels.firstOrNull { it.name == selectedEducationLevel }
+                            val showSchoolField = selectedLevelObj?.hasFieldOfStudy == true
+                            
+                            AnimatedVisibility(
+                                visible = showSchoolField && filteredFields.isNotEmpty(),
+                                enter = expandVertically() + fadeIn(),
+                                exit = shrinkVertically() + fadeOut()
+                            ) {
+                                Column {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    DropdownSelector(
+                                        label = "رشته تحصیلی",
+                                        selected = selectedFieldOfStudy,
+                                        options = filteredFields,
+                                        expanded = isFieldExpanded,
+                                        onExpand = { isFieldExpanded = !isFieldExpanded },
+                                        onDismiss = { isFieldExpanded = false },
+                                        onSelect = {
+                                            selectedFieldOfStudy = it
+                                            isFieldExpanded = false
+                                        }
+                                    )
+                                }
                             }
-                        )
-
-                        // Faculty Dropdown (Dynamic)
-                        AnimatedVisibility(
-                            visible = filteredFaculties.isNotEmpty(),
-                            enter = expandVertically() + fadeIn(),
-                            exit = shrinkVertically() + fadeOut()
-                        ) {
-                            Column {
-                                Spacer(modifier = Modifier.height(16.dp))
-                                DropdownSelector(
-                                    label = "دانشکده",
-                                    selected = selectedFaculty,
-                                    options = filteredFaculties,
-                                    expanded = isFacultyExpanded,
-                                    onExpand = { isFacultyExpanded = !isFacultyExpanded },
-                                    onDismiss = { isFacultyExpanded = false },
-                                    onSelect = {
-                                        selectedFaculty = it
-                                        isFacultyExpanded = false
-                                    }
+                        } else if (selectedRoleValueEn == "UNI_STUDENT") {
+                            // University student fields
+                            val filteredLevels = refState.educationLevels.filter { it.roleValueEn == selectedRoleValueEn || it.roleValueEn.isNullOrBlank() }
+                            
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = isGraduated,
+                                    onCheckedChange = { isGraduated = it },
+                                    colors = CheckboxDefaults.colors(checkedColor = extendedColors.accent)
+                                )
+                                Text(
+                                    text = "فارغ التحصیل شده‌ام",
+                                    fontFamily = DanaFontFamily,
+                                    fontSize = 14.sp,
+                                    modifier = Modifier.clickable { isGraduated = !isGraduated }
                                 )
                             }
-                        }
-                        
-                        // Major Dropdown (Dynamic)
-                        AnimatedVisibility(
-                            visible = filteredFields.isNotEmpty(),
-                            enter = expandVertically() + fadeIn(),
-                            exit = shrinkVertically() + fadeOut()
-                        ) {
-                            Column {
+                            
+                            if (isGraduated) {
+                                // Graduated student: دانشگاه → رشته → آخرین مقطع
+                                Spacer(modifier = Modifier.height(8.dp))
+                                DropdownSelector(
+                                    label = "دانشگاه محل تحصیل",
+                                    selected = selectedUniversity,
+                                    options = allUniversities,
+                                    expanded = isUniversityExpanded,
+                                    onExpand = { isUniversityExpanded = !isUniversityExpanded },
+                                    onDismiss = { isUniversityExpanded = false },
+                                    onSelect = {
+                                        selectedUniversity = it
+                                        isUniversityExpanded = false
+                                    }
+                                )
+                                
                                 Spacer(modifier = Modifier.height(16.dp))
                                 DropdownSelector(
                                     label = "رشته تحصیلی",
                                     selected = selectedFieldOfStudy,
-                                    options = filteredFields,
+                                    options = allFieldsOfStudy,
                                     expanded = isFieldExpanded,
                                     onExpand = { isFieldExpanded = !isFieldExpanded },
                                     onDismiss = { isFieldExpanded = false },
@@ -290,27 +401,149 @@ fun UserInfoScreen(
                                         isFieldExpanded = false
                                     }
                                 )
+                                
+                                Spacer(modifier = Modifier.height(16.dp))
+                                DropdownSelector(
+                                    label = "آخرین مقطع تحصیلی",
+                                    selected = selectedEducationLevel,
+                                    options = filteredLevels.map { it.name },
+                                    expanded = isLevelExpanded,
+                                    onExpand = { isLevelExpanded = !isLevelExpanded },
+                                    onDismiss = { isLevelExpanded = false },
+                                    onSelect = {
+                                        selectedEducationLevel = it
+                                        isLevelExpanded = false
+                                    }
+                                )
+                            } else {
+                                // Active student: دانشگاه → مقطع → دانشکده → رشته
+                                Spacer(modifier = Modifier.height(8.dp))
+                                DropdownSelector(
+                                    label = "دانشگاه محل تحصیل",
+                                    selected = selectedUniversity,
+                                    options = allUniversities,
+                                    expanded = isUniversityExpanded,
+                                    onExpand = { isUniversityExpanded = !isUniversityExpanded },
+                                    onDismiss = { isUniversityExpanded = false },
+                                    onSelect = {
+                                        selectedUniversity = it
+                                        isUniversityExpanded = false
+                                    }
+                                )
+                                
+                                Spacer(modifier = Modifier.height(16.dp))
+                                DropdownSelector(
+                                    label = "مقطع تحصیلی",
+                                    selected = selectedEducationLevel,
+                                    options = filteredLevels.map { it.name },
+                                    expanded = isLevelExpanded,
+                                    onExpand = { isLevelExpanded = !isLevelExpanded },
+                                    onDismiss = { isLevelExpanded = false },
+                                    onSelect = { 
+                                        selectedEducationLevel = it
+                                        selectedFaculty = ""
+                                        selectedFieldOfStudy = ""
+                                        isLevelExpanded = false
+                                    }
+                                )
+                                
+                                AnimatedVisibility(
+                                    visible = filteredFaculties.isNotEmpty(),
+                                    enter = expandVertically() + fadeIn(),
+                                    exit = shrinkVertically() + fadeOut()
+                                ) {
+                                    Column {
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        DropdownSelector(
+                                            label = "دانشکده",
+                                            selected = selectedFaculty,
+                                            options = filteredFaculties,
+                                            expanded = isFacultyExpanded,
+                                            onExpand = { isFacultyExpanded = !isFacultyExpanded },
+                                            onDismiss = { isFacultyExpanded = false },
+                                            onSelect = {
+                                                selectedFaculty = it
+                                                isFacultyExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                                
+                                AnimatedVisibility(
+                                    visible = filteredFields.isNotEmpty(),
+                                    enter = expandVertically() + fadeIn(),
+                                    exit = shrinkVertically() + fadeOut()
+                                ) {
+                                    Column {
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        DropdownSelector(
+                                            label = "رشته تحصیلی",
+                                            selected = selectedFieldOfStudy,
+                                            options = filteredFields,
+                                            expanded = isFieldExpanded,
+                                            onExpand = { isFieldExpanded = !isFieldExpanded },
+                                            onDismiss = { isFieldExpanded = false },
+                                            onSelect = {
+                                                selectedFieldOfStudy = it
+                                                isFieldExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
                         }
+                        // FREELANCER: No additional fields needed
                     }
                 }
-            }
-
                 Spacer(modifier = Modifier.height(48.dp))
                 
                 PrimaryButton(
                     text = "ذخیره و ادامه",
                     onClick = {
+                        if (fullName.isBlank()) {
+                            com.Kelasor.app.ui.components.KelasorToast.show(
+                                context = context,
+                                message = "لطفاً نام و نام خانوادگی را وارد کنید",
+                                type = com.Kelasor.app.ui.components.ToastType.ERROR
+                            )
+                            return@PrimaryButton
+                        }
+                        val resolvedAvatarFile: java.io.File? = avatarUri?.let { uri ->
+                            try {
+                                val inputStream: java.io.InputStream = context.contentResolver.openInputStream(uri)
+                                    ?: return@let null
+                                val tempFile: java.io.File = java.io.File(context.cacheDir, "avatar_temp_${System.currentTimeMillis()}.jpg")
+                                tempFile.outputStream().use { output -> inputStream.copyTo(output) }
+                                inputStream.close()
+                                tempFile
+                            } catch (e: Exception) {
+                                null
+                            }
+                        }
                         authViewModel.updateProfile(
-                            firstName = firstName,
-                            lastName = lastName,
+                            firstName = fullName,
+                            lastName = "",
                             educationalRole = selectedRoleValueEn,
-                            gradeLevel = selectedEducationLevel,
-                            major = selectedFieldOfStudy,
-                            faculty = selectedFaculty,
+                            gradeLevel = if (selectedRoleValueEn in listOf("SCHOOL_STUDENT", "UNI_STUDENT")) selectedEducationLevel.ifBlank { null } else null,
+                            major = if (selectedRoleValueEn in listOf("SCHOOL_STUDENT", "UNI_STUDENT")) selectedFieldOfStudy.ifBlank { null } else null,
+                            faculty = if (selectedRoleValueEn == "UNI_STUDENT" && !isGraduated) selectedFaculty.ifBlank { null } else null,
+                            university = if (selectedRoleValueEn == "UNI_STUDENT" && isGraduated) selectedUniversity.ifBlank { null } else null,
+                            universities = if (selectedRoleValueEn == "TEACHER") universities else null,
+                            fieldsOfStudy = if (selectedRoleValueEn == "TEACHER") fieldsOfStudy else null,
+                            isGraduated = if (selectedRoleValueEn == "UNI_STUDENT") isGraduated else null,
                             nationalCode = null,
                             username = null,
-                            bio = null
+                            bio = null,
+                            avatarFile = resolvedAvatarFile
                         )
+                        
+                        if (selectedRoleValueEn == "TEACHER") {
+                            com.Kelasor.app.ui.components.KelasorToast.show(
+                                context = context,
+                                message = "کانال اختصاصی شما در بخش اساتید پیام‌رسان ساخته شد",
+                                type = com.Kelasor.app.ui.components.ToastType.SUCCESS
+                            )
+                        }
                     },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = isFormValid && !authState.isLoading,
@@ -318,6 +551,24 @@ fun UserInfoScreen(
                 )
                 
                 Spacer(modifier = Modifier.height(40.dp))
+            }
+        }
+        
+        // ── Profile Photo Editor Overlay ──
+        AnimatedVisibility(
+            visible = editingAvatarUri != null,
+            enter = fadeIn() + scaleIn(initialScale = 0.8f) + expandIn(expandFrom = Alignment.Center),
+            exit = fadeOut() + scaleOut(targetScale = 0.8f) + shrinkOut(shrinkTowards = Alignment.Center)
+        ) {
+            editingAvatarUri?.let { uri ->
+                com.Kelasor.app.ui.components.ProfilePhotoEditorScreen(
+                    imageUri = uri,
+                    onSave = { editedUri ->
+                        avatarUri = editedUri
+                        editingAvatarUri = null
+                    },
+                    onDismiss = { editingAvatarUri = null }
+                )
             }
         }
     }
@@ -328,7 +579,7 @@ private fun SectionHeader(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.titleSmall,
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Black,
         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
         modifier = Modifier.padding(bottom = 16.dp)
@@ -347,14 +598,14 @@ private fun ProfileEditField(
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(bottom = 4.dp)
         )
         TextField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = { Text(placeholder, fontFamily = VazirFontFamily, color = Color.Gray) },
+            placeholder = { Text(placeholder, fontFamily = DanaFontFamily, color = Color.Gray) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             colors = TextFieldDefaults.colors(
@@ -393,7 +644,7 @@ private fun RoleChip(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = label,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                 color = if (isSelected) extendedColors.accent else MaterialTheme.colorScheme.onSurface,
                 fontSize = 12.sp
@@ -421,7 +672,7 @@ private fun DropdownSelector(
             value = selected,
             onValueChange = {},
             readOnly = true,
-            label = { Text(label, fontFamily = VazirFontFamily) },
+            label = { Text(label, fontFamily = DanaFontFamily) },
             trailingIcon = {
                 Icon(
                     imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
@@ -442,11 +693,10 @@ private fun DropdownSelector(
         ) {
             options.forEach { option ->
                 DropdownMenuItem(
-                    text = { Text(text = option, fontFamily = VazirFontFamily) },
+                    text = { Text(text = option, fontFamily = DanaFontFamily) },
                     onClick = { onSelect(option) }
                 )
             }
         }
     }
 }
-

@@ -4,6 +4,8 @@ import com.iliyadev.springboot.models.*
 import com.iliyadev.springboot.config.security.UserPrincipal
 import com.iliyadev.springboot.repositories.HomeBannerRepository
 import com.iliyadev.springboot.repositories.CourseRepository
+import com.iliyadev.springboot.repositories.InstitutionRepository
+import com.iliyadev.springboot.repositories.UserRepository
 import com.iliyadev.springboot.services.*
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
@@ -256,7 +258,9 @@ class SmartFolderController(
 class MosbatElmHomeController(
     private val bannerRepository: HomeBannerRepository,
     private val institutionService: InstitutionService,
-    private val courseRepository: CourseRepository
+    private val institutionRepository: InstitutionRepository,
+    private val courseRepository: CourseRepository,
+    private val userRepository: UserRepository
 ) {
     @GetMapping
     fun getHomeData(): ResponseEntity<ApiResponse<MosbatElmHomeDataDto>> {
@@ -266,15 +270,73 @@ class MosbatElmHomeController(
         val institutionsPage = institutionService.getActiveInstitutions(PageRequest.of(0, 10))
         val featuredInstitutions: List<InstitutionResponse> = institutionsPage.content
         
-        val coursesPage = courseRepository.findUpcomingCourses(Instant.now(), PageRequest.of(0, 10))
-        val upcomingCourses: List<CourseDto> = coursesPage.content.map { c -> c.toDto() }
+        // Fetch popular institutions
+        val popularInstitutionsPage = institutionRepository.findPopularInstitutions(PageRequest.of(0, 10))
+        val popularInstitutions = popularInstitutionsPage.content.map { inst -> inst.toResponse() }
+
+        // Fetch popular teachers
+        val popularTeachersPage = userRepository.findPopularTeachers(PageRequest.of(0, 10))
+        val popularTeachers = popularTeachersPage.content.map { user -> user.toDto() }
+
+        // Fetch upcoming approved courses
+        val coursesPage = courseRepository.findByStatus(CourseStatus.APPROVED, PageRequest.of(0, 10, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt")))
+        val instIds: List<java.util.UUID> = coursesPage.content.mapNotNull { course -> course.institutionId }.distinct()
+        val institutions = institutionRepository.findAllById(instIds).associateBy { inst -> inst.id }
+        val upcomingCourses: List<CourseDto> = coursesPage.content.map { c: Course -> 
+            c.toDto(institutions[c.institutionId]?.type?.name) 
+        }
         
         val data = MosbatElmHomeDataDto(
             banners = banners,
             featuredInstitutions = featuredInstitutions,
-            upcomingCourses = upcomingCourses
+            popularInstitutions = popularInstitutions,
+            upcomingCourses = upcomingCourses,
+            popularTeachers = popularTeachers
         )
         return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = data))
+    }
+}
+
+@RestController
+@RequestMapping("/api/mosbat-elm/popular")
+class MosbatElmPopularController(
+    private val userRepository: UserRepository,
+    private val institutionRepository: InstitutionRepository,
+    private val courseRepository: CourseRepository
+) {
+    @GetMapping("/teachers")
+    fun getPopularTeachers(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "10") size: Int
+    ): ResponseEntity<ApiResponse<Page<UserDto>>> {
+        val result = userRepository.findPopularTeachers(PageRequest.of(page, size))
+        return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = result.map { user -> user.toDto() }))
+    }
+
+    @GetMapping("/organizers")
+    fun getPopularOrganizers(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "10") size: Int
+    ): ResponseEntity<ApiResponse<Page<InstitutionResponse>>> {
+        val result = institutionRepository.findPopularInstitutions(PageRequest.of(page, size))
+        return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = result.map { it.toResponse() }))
+    }
+
+    @GetMapping("/teachers/{id}/courses")
+    fun getTeacherCourses(
+        @PathVariable id: java.util.UUID,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int
+    ): ResponseEntity<ApiResponse<Page<CourseDto>>> {
+        // We find courses where this user is either a teacher or organizer
+        val coursesPage = courseRepository.findByTeachersIdOrOrganizerId(id, id, PageRequest.of(page, size))
+        val instIds: List<java.util.UUID> = coursesPage.content.mapNotNull { it.institutionId }.distinct()
+        val institutions = institutionRepository.findAllById(instIds).associateBy { it.id }
+        
+        val dtos = coursesPage.map { c: com.iliyadev.springboot.models.Course -> 
+            c.toDto(institutions[c.institutionId]?.type?.name) 
+        }
+        return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = dtos))
     }
 }
 

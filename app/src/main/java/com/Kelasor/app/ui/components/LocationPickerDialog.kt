@@ -1,8 +1,11 @@
 package com.Kelasor.app.ui.components
 
 import android.Manifest
-import android.content.Context
-import android.graphics.drawable.Drawable
+import android.annotation.SuppressLint
+import android.webkit.WebChromeClient
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -51,30 +54,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.core.content.ContextCompat
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import com.Kelasor.app.R
 import com.Kelasor.app.data.location.LocationData
 import com.Kelasor.app.data.location.LocationManager
 import com.Kelasor.app.data.location.LocationState
 import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.theme.MessageAppTypography
-import com.mapbox.geojson.Point
-import com.mapbox.maps.CameraOptions
-import com.mapbox.maps.MapView
-import com.mapbox.maps.MapboxMap
-import com.mapbox.maps.Style
-import com.mapbox.maps.plugin.animation.flyTo
-import com.mapbox.maps.plugin.gestures.addOnMapClickListener
+import java.util.Base64
 
 /**
- * Location picker dialog with OpenStreetMap.
+ * Location picker dialog using Map.ir Web SDK via WebView.
  * Shows map, current location button, and send button.
  */
 
 @OptIn(ExperimentalPermissionsApi::class)
+@SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun LocationPickerDialog(
     visible: Boolean,
@@ -95,22 +91,71 @@ fun LocationPickerDialog(
     // Selected location
     var selectedLocation by remember { mutableStateOf<LocationData?>(null) }
     
-    // MapView reference
-    var mapboxMap by remember { mutableStateOf<MapboxMap?>(null) }
+    // WebView reference
+    var webView by remember { mutableStateOf<WebView?>(null) }
     
+    val htmlContent = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+            <link href="https://cdn.map.ir/web-sdk/1.4.2/css/mapp.min.css" rel="stylesheet" />
+            <link href="https://cdn.map.ir/web-sdk/1.4.2/css/fa/style.css" rel="stylesheet" />
+            <style>
+                body { margin: 0; padding: 0; background-color: #f5f5f5; overflow: hidden; }
+                #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+            </style>
+        </head>
+        <body>
+            <div id="map"></div>
+            <script src="https://cdn.map.ir/web-sdk/1.4.2/js/jquery-3.2.1.min.js"></script>
+            <script src="https://cdn.map.ir/web-sdk/1.4.2/js/mapp.env.js"></script>
+            <script src="https://cdn.map.ir/web-sdk/1.4.2/js/mapp.min.js"></script>
+            <script>
+                window.map = new Mapp({
+                    element: '#map',
+                    presets: {
+                        latlng: { lat: 35.6892, lng: 51.3890 },
+                        zoom: 12
+                    },
+                    apiKey: 'YOUR_MAPIR_API_KEY'
+                });
+                
+                map.addPlugin("MapirZoom", { position: "bottom-left" });
+                map.addPlugin("MapirLogo", { position: "bottom-right" });
+
+                map.on('click', function(e) {
+                    var lat = e.lngLat.lat;
+                    var lng = e.lngLat.lng;
+                    if (window.Android) {
+                        window.Android.onLocationSelected(lat, lng);
+                    }
+                });
+                
+                function flyTo(lat, lng, zoom) {
+                    if (window.map) {
+                        map.flyTo({
+                            center: [lng, lat],
+                            zoom: zoom || 15,
+                            speed: 1.2
+                        });
+                    }
+                }
+            </script>
+        </body>
+        </html>
+    """.trimIndent()
+    
+    val base64Html = Base64.getEncoder().encodeToString(htmlContent.toByteArray())
+
     // Update map when location changes
     LaunchedEffect(locationState) {
         if (locationState is LocationState.Success) {
             val location = (locationState as LocationState.Success).location
             selectedLocation = location
             
-            // Fly to location
-            mapboxMap?.flyTo(
-                CameraOptions.Builder()
-                    .center(Point.fromLngLat(location.longitude, location.latitude))
-                    .zoom(15.0)
-                    .build()
-            )
+            webView?.evaluateJavascript("flyTo(${location.latitude}, ${location.longitude}, 15)", null)
         }
     }
     
@@ -171,70 +216,35 @@ fun LocationPickerDialog(
                         .weight(1f)
                         .fillMaxWidth()
                 ) {
-                    // Mapbox View
                     AndroidView(
                         factory = { ctx ->
-                            MapView(ctx).apply {
-                                mapboxMap = this.getMapboxMap()
-                                
-                                getMapboxMap().loadStyleUri(Style.MAPBOX_STREETS) { loadedStyle ->
-                                    // Set Persian (Farsi) labels on symbol layers (Mapbox v10)
-                                    try {
-                                        val faExpr = com.mapbox.bindgen.Value(listOf(
-                                            com.mapbox.bindgen.Value("coalesce"),
-                                            com.mapbox.bindgen.Value(listOf(
-                                                com.mapbox.bindgen.Value("get"),
-                                                com.mapbox.bindgen.Value("name:fa")
-                                            )),
-                                            com.mapbox.bindgen.Value(listOf(
-                                                com.mapbox.bindgen.Value("get"),
-                                                com.mapbox.bindgen.Value("name:ar")
-                                            )),
-                                            com.mapbox.bindgen.Value(listOf(
-                                                com.mapbox.bindgen.Value("get"),
-                                                com.mapbox.bindgen.Value("name")
-                                            ))
-                                        ))
-                                        loadedStyle.styleLayers.forEach { layerInfo ->
-                                            if (layerInfo.type == "symbol") {
-                                                loadedStyle.setStyleLayerProperty(layerInfo.id, "text-field", faExpr)
-                                            }
-                                        }
-                                    } catch (e: Exception) {
-                                        android.util.Log.w("LocationPicker", "Could not set Persian locale: ${e.message}")
-                                    }
-                                    // Default to Tehran
-                                    getMapboxMap().setCamera(
-                                        CameraOptions.Builder()
-                                            .center(Point.fromLngLat(51.3890, 35.6892))
-                                            .zoom(12.0)
-                                            .build()
-                                    )
-                                    
-                                    // Add click listener
-                                    getMapboxMap().addOnMapClickListener { point ->
-                                        selectedLocation = LocationData(
-                                             latitude = point.latitude(),
-                                             longitude = point.longitude()
-                                        )
-                                        // Add Marker (Simplification: Just center camera on click?)
-                                        // Or use ViewAnnotation/PointAnnotation in full implementation.
-                                        // For now, we fly to the point to indicate selection.
-                                        getMapboxMap().flyTo(
-                                            CameraOptions.Builder()
-                                                .center(point)
-                                                .build()
-                                        )
-                                        true
+                            WebView(ctx).apply {
+                                settings.apply {
+                                    javaScriptEnabled = true
+                                    domStorageEnabled = true
+                                    cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
+                                }
+                                webViewClient = object : WebViewClient() {
+                                    override fun onPageFinished(view: WebView?, url: String?) {
+                                        super.onPageFinished(view, url)
+                                        webView = view as WebView
                                     }
                                 }
+                                webChromeClient = WebChromeClient()
+                                addJavascriptInterface(object {
+                                    @android.webkit.JavascriptInterface
+                                    fun onLocationSelected(lat: Double, lng: Double) {
+                                        selectedLocation = LocationData(lat, lng)
+                                    }
+                                }, "Android")
+                                loadData(base64Html, "text/html; charset=utf-8", "base64")
                             }
                         },
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
+                        update = { /* Updates handled by LaunchedEffect */ }
                     )
                     
-                    // Center PIN (To indicate selection center if we use center-based selection)
-                    // Since we use click-to-select and fly-to, the center IS the selection.
+                    // Center PIN
                     Icon(
                          imageVector = Icons.Default.LocationOn,
                          contentDescription = null,
@@ -270,24 +280,6 @@ fun LocationPickerDialog(
                             )
                         }
                     }
-                    
-                    // Error message
-                    if (locationState is LocationState.Error) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .padding(16.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color.Red.copy(alpha = 0.8f))
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                text = (locationState as LocationState.Error).message,
-                                color = Color.White,
-                                style = MessageAppTypography.chatTime
-                            )
-                        }
-                    }
                 }
                 
                 // Location info and Send button
@@ -297,18 +289,15 @@ fun LocationPickerDialog(
                         .background(MaterialTheme.colorScheme.surface)
                         .padding(16.dp)
                 ) {
-                    // Coordinates display
                     selectedLocation?.let { location ->
                         Text(
                             text = "📍 ${String.format("%.6f", location.latitude)}, ${String.format("%.6f", location.longitude)}",
                             style = MessageAppTypography.chatTime,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        
                         Spacer(modifier = Modifier.height(12.dp))
                     }
                     
-                    // Send button
                     Button(
                         onClick = {
                             selectedLocation?.let { location ->

@@ -8,10 +8,13 @@ import com.Kelasor.app.data.remote.dto.AiBotDto
 import com.Kelasor.app.data.remote.dto.SpecialChannelDto
 import com.Kelasor.app.data.remote.dto.SpecialFolderDto
 import com.Kelasor.app.data.remote.dto.SpecialGroupDto
+import com.Kelasor.app.data.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -34,10 +37,15 @@ data class SpecialFolderState(
 
 @HiltViewModel
 class SpecialFolderViewModel @Inject constructor(
-    private val apiService: ApiService
+    private val apiService: ApiService,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
     private val _state: MutableStateFlow<SpecialFolderState> = MutableStateFlow(SpecialFolderState())
     val state: StateFlow<SpecialFolderState> = _state.asStateFlow()
+    
+    val isProfileBannerDismissed: StateFlow<Boolean> = settingsRepository.isProfileBannerDismissed
+        .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
     init {
         Log.d("SpecialFolderVM", "🔥 ViewModel created, calling loadSpecialFolder()")
         loadSpecialFolder()
@@ -77,6 +85,12 @@ class SpecialFolderViewModel @Inject constructor(
                 Log.e("SpecialFolderVM", "💥 Exception in loadSpecialFolder", e)
                 _state.update { it.copy(isLoading = false, error = "خطا در اتصال: ${e.message}") }
             }
+        }
+    }
+
+    fun dismissProfileBanner() {
+        viewModelScope.launch {
+            settingsRepository.setProfileBannerDismissed(true)
         }
     }
 }

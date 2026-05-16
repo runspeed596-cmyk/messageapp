@@ -84,7 +84,7 @@ import com.Kelasor.app.ui.components.UnreadBadge
 import com.Kelasor.app.ui.theme.AppAnimations
 import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.theme.MessageAppTypography
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import com.Kelasor.app.ui.viewmodel.ChatListViewModel
 import java.time.Instant
 import java.time.ZoneId
@@ -373,7 +373,7 @@ private fun SectionHeader(title: String) {
             style = MaterialTheme.typography.titleSmall,
             color = extendedColors.accent,
             fontWeight = FontWeight.Bold,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             letterSpacing = 0.5.sp
         )
     }
@@ -407,7 +407,7 @@ private fun PremiumArchiveHeader(count: Int, isExpanded: Boolean, onClick: () ->
                 contentAlignment = Alignment.Center
             ) { Icon(Icons.Default.Archive, contentDescription = null, tint = extendedColors.accent, modifier = Modifier.size(18.dp)) }
             Spacer(Modifier.width(12.dp))
-            Text("آرشیو شده ($count)", style = MaterialTheme.typography.titleSmall, color = extendedColors.accent, fontWeight = FontWeight.SemiBold, fontFamily = VazirFontFamily)
+            Text("آرشیو شده ($count)", style = MaterialTheme.typography.titleSmall, color = extendedColors.accent, fontWeight = FontWeight.SemiBold, fontFamily = DanaFontFamily)
         }
         Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = extendedColors.accent.copy(alpha = 0.7f), modifier = Modifier.graphicsLayer { rotationZ = rotationAngle })
     }
@@ -439,9 +439,9 @@ private fun PremiumEmptyState() {
                 Icon(Icons.Default.ChatBubbleOutline, contentDescription = null, tint = extendedColors.accent.copy(alpha = 0.4f), modifier = Modifier.size(36.dp))
             }
             Spacer(Modifier.height(24.dp))
-            Text("گفتگویی وجود ندارد", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, fontFamily = VazirFontFamily, fontWeight = FontWeight.SemiBold)
+            Text("گفتگویی وجود ندارد", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, fontFamily = DanaFontFamily, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(6.dp))
-            Text("یک گفتگوی جدید آغاز کنید", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), fontFamily = VazirFontFamily)
+            Text("یک گفتگوی جدید آغاز کنید", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), fontFamily = DanaFontFamily)
         }
     }
 }
@@ -460,9 +460,9 @@ fun SearchUserItem(user: com.Kelasor.app.domain.model.User, onClick: () -> Unit)
         AvatarImage(imageUrl = user.displayAvatarUrl, name = resolvedName, size = AvatarSize.MEDIUM, isOnline = user.isOnline)
         Spacer(Modifier.width(14.dp))
         Column {
-            Text(resolvedName, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onBackground, fontFamily = VazirFontFamily, fontWeight = FontWeight.SemiBold)
+            Text(resolvedName, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onBackground, fontFamily = DanaFontFamily, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(2.dp))
-            Text("@${user.username}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontFamily = VazirFontFamily)
+            Text("@${user.username}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontFamily = DanaFontFamily)
         }
     }
 }
@@ -578,7 +578,7 @@ fun ChatItem(
                     Text(
                         text = displayTitle,
                         style = MaterialTheme.typography.titleSmall,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontWeight = if (chat.unreadCount > 0) FontWeight.Bold else FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onBackground,
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -589,7 +589,7 @@ fun ChatItem(
                     Text(
                         text = chat.lastMessage?.let { CHAT_TIME_FORMATTER.format(it.createdAt) } ?: "",
                         style = MaterialTheme.typography.labelSmall,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         color = if (chat.unreadCount > 0) extendedColors.accent else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                         fontWeight = if (chat.unreadCount > 0) FontWeight.SemiBold else FontWeight.Normal
                     )
@@ -613,7 +613,7 @@ fun ChatItem(
                             }
                         },
                         style = MaterialTheme.typography.bodySmall,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         color = if (chat.unreadCount > 0) MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
@@ -621,6 +621,8 @@ fun ChatItem(
                     Spacer(Modifier.width(8.dp))
                     if (chat.unreadCount > 0) {
                         UnreadBadge(count = chat.unreadCount, isMuted = chat.isMuted)
+                    } else if (chat.isMuted) {
+                        com.Kelasor.app.ui.components.MuteBadge()
                     }
                 }
             }

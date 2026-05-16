@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>کلاسور | بزرگترین اپلیکیشن دانشجویی</title>
+    
+    <style>
+        /* Critical CSS - Instant First Paint */
+        :root {
+            --primary: #6c5ce7;
+            --bg: #0b0c14;
+            --text: #e8e8f0;
+        }
+        
+        body {
+            background-color: var(--bg) !important;
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            font-family: Tahoma, Segoe UI, Arial, sans-serif; /* Reliable fallback */
+            display: block !important;
+            overflow-x: hidden;
+        }
+        
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            box-sizing: border-box;
+            background: radial-gradient(circle at center, #1a1b2e 0%, #0b0c14 100%);
+        }
+        
+        .hero-text h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #fff 0%, #a29bfe 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Vazirmatn', 'Segoe UI', 'Tahoma', sans-serif;
+            background: linear-gradient(145deg, #0b0c14 0%, #1a1b2f 100%);
+            color: #e8e8f0;
+            line-height: 1.7;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #12131c;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #6c5ce7, #a29bfe);
+            border-radius: 10px;
+        }
+
+        /* Glassmorphism base */
+        .glass {
+            background: rgba(20, 22, 40, 0.65);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 28px;
+            box-shadow: 0 25px 50px -10px rgba(0, 0, 0, 0.5);
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* Header Navigation */
+        header {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 1200px;
+            z-index: 999;
+            padding: 0.8rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.4s ease;
+            background: rgba(18, 19, 34, 0.7);
+            backdrop-filter: blur(20px);
+            border-radius: 50px;
+            border: 1px solid rgba(108, 92, 231, 0.25);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.9rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .logo i {
+            font-size: 2.2rem;
+            background: linear-gradient(135deg, #fdcb6e, #e17055);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+            font-weight: 500;
+        }
+
+        .nav-links a {
+            color: #cfd0e7;
+            text-decoration: none;
+            position: relative;
+            padding: 0.3rem 0;
+            transition: color 0.3s;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0%;
+            height: 2px;
+            background: #6c5ce7;
+            transition: 0.3s ease;
+            box-shadow: 0 0 8px #6c5ce7;
+        }
+
+        .nav-links a:hover {
+            color: white;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            border: none;
+            padding: 0.7rem 1.8rem;
+            border-radius: 40px;
+            font-weight: bold;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 8px 20px rgba(108, 92, 231, 0.4);
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(108, 92, 231, 0.7);
+        }
+
+        /* Hero section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding-top: 5rem;
+            position: relative;
+        }
+
+        .hero-content {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            gap: 3rem;
+        }
+
+        .hero-text {
+            flex: 1 1 400px;
+        }
+
+        .hero-text h1 {
+            font-size: 3.8rem;
+            font-weight: 900;
+            line-height: 1.2;
+            background: linear-gradient(to right, #dfe6f0, #b2bec3, #6c5ce7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1.5rem;
+        }
+
+        .hero-text p {
+            font-size: 1.2rem;
+            color: #b0b5d9;
+            margin-bottom: 2.5rem;
+        }
+
+        .phone-showcase {
+            flex: 1 1 380px;
+            display: flex;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* Mobile frame */
+        .phone-frame {
+            width: 280px;
+            height: 570px;
+            background: #0f0f17;
+            border-radius: 45px;
+            padding: 14px;
+            box-shadow: 0 40px 60px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(108, 92, 231, 0.6);
+            border: 2px solid rgba(108, 92, 231, 0.4);
+            position: relative;
+        }
+
+        .phone-screen {
+            background: #f5f6fa;
+            border-radius: 32px;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            color: #2d3436;
+            font-family: 'Vazirmatn', 'Segoe UI', sans-serif;
+        }
+
+        .app-header {
+            background: #6c5ce7;
+            color: white;
+            padding: 0.5rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .slider-container {
+            flex: 1;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 0.8rem;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+            background: white;
+        }
+
+        .slide.active {
+            opacity: 1;
+        }
+
+        .feature-card {
+            background: #f0f2ff;
+            padding: 0.7rem;
+            border-radius: 16px;
+            margin: 0.4rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .feature-card i {
+            font-size: 1.5rem;
+            color: #6c5ce7;
+        }
+
+        .slider-dots {
+            display: flex;
+            justify-content: center;
+            padding: 0.5rem;
+            background: white;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ccc;
+            margin: 0 5px;
+            cursor: pointer;
+        }
+
+        .dot.active {
+            background: #6c5ce7;
+            width: 20px;
+            border-radius: 10px;
+        }
+
+        /* Sections */
+        section {
+            padding: 5rem 0;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 3rem;
+            background: linear-gradient(135deg, #dfe6f0, #a29bfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 2.5rem;
+            margin-top: 2rem;
+        }
+
+        .feature-box {
+            background: rgba(25, 27, 45, 0.7);
+            backdrop-filter: blur(15px);
+            border-radius: 35px;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            transition: transform 0.4s, box-shadow 0.4s;
+            border: 1px solid rgba(108, 92, 231, 0.2);
+        }
+
+        .feature-box:hover {
+            transform: translateY(-12px);
+            box-shadow: 0 30px 45px rgba(108, 92, 231, 0.25);
+        }
+
+        .feature-icon {
+            font-size: 3.2rem;
+            margin-bottom: 1.2rem;
+            background: linear-gradient(135deg, #6c5ce7, #fd79a8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .world-science {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 3rem;
+            background: rgba(20, 22, 40, 0.6);
+            backdrop-filter: blur(20px);
+            border-radius: 60px;
+            padding: 2.5rem;
+            position: relative;
+        }
+
+        .map-container {
+            position: relative;
+            width: 350px;
+            height: 350px;
+        }
+
+        .map-container img {
+            width: 100%;
+            height: auto;
+            filter: drop-shadow(0 0 25px #6c5ce7aa);
+        }
+
+        .marker {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background: #fd79a8;
+            border-radius: 50%;
+            box-shadow: 0 0 18px #fd79a8;
+            cursor: pointer;
+            transition: 0.2s;
+            animation: pulse 2s infinite;
+        }
+
+        .marker::after {
+            content: attr(data-city);
+            position: absolute;
+            top: -25px;
+            right: -15px;
+            background: #1e1e32;
+            color: white;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            white-space: nowrap;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(253, 121, 168, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 18px rgba(253, 121, 168, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(253, 121, 168, 0);
+            }
+        }
+
+        .gallery {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .gallery-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 28px;
+            padding: 1.8rem;
+            width: 220px;
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(108, 92, 231, 0.3);
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: #7a7f9a;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Optimized for mobile */
+        @media (max-width: 768px) {
+            header {
+                padding: 0.5rem 1rem;
+                top: 10px;
+                width: 95%;
+            }
+
+            .nav-links {
+                display: none; /* Hide links on mobile for simplicity */
+            }
+
+            .logo {
+                font-size: 1.5rem;
+            }
+
+            .hero {
+                padding-top: 6rem;
+                text-align: center;
+            }
+
+            .hero-text h1 {
+                font-size: 2.4rem;
+            }
+
+            .hero-text p {
+                font-size: 1rem;
+            }
+
+            .phone-showcase {
+                margin-top: 2rem;
+            }
+
+            .phone-frame {
+                width: 240px;
+                height: 480px;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            .world-science {
+                border-radius: 30px;
+                padding: 1.5rem;
+                flex-direction: column;
+            }
+
+            .map-container {
+                width: 280px;
+                height: 280px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <div class="logo">
+            <i class="fas fa-graduation-cap"></i> کلاسور
+        </div>
+        <ul class="nav-links">
+            <li><a href="#home">خانه</a></li>
+            <li><a href="#positive">مثبت علم</a></li>
+            <li><a href="#bazaar">بازارچه</a></li>
+            <li><a href="#world">جهان علم</a></li>
+            <li><a href="#treasure">گنجینه</a></li>
+        </ul>
+        <button class="download-btn"><i class="fas fa-download"></i> دانلود اپ</button>
+    </header>
+
+    <!-- Hero with phone mockup -->
+    <section id="home" class="hero">
+        <div class="container hero-content">
+            <div class="hero-text">
+                <h1>کلاسور؛ دنیای دانشجویی در جیب شما</h1>
+                <p>از خرید جزوه تا پروژه‌های فریلنسری، نقشه دانشگاه‌های ایران و دوره‌های آموزشی، همه در یک اپلیکیشن.</p>
+                <button class="download-btn" style="font-size:1.2rem; padding:1rem 2.5rem;"><i
+                        class="fas fa-cloud-download-alt"></i> نصب رایگان</button>
+            </div>
+            <div class="phone-showcase">
+                <div class="phone-frame">
+                    <div class="phone-screen" id="phoneApp">
+                        <div class="app-header">
+                            <span>کلاسور</span>
+                            <i class="fas fa-bell"></i>
+                        </div>
+                        <div class="slider-container" id="sliderContainer">
+                            <!-- Slides generated by JS -->
+                        </div>
+                        <div class="slider-dots" id="dotsContainer"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- مثبت علم -->
+    <section id="positive">
+        <div class="container">
+            <h2 class="section-title"><i class="fas fa-flask"></i> مثبت علم</h2>
+            <div class="feature-grid">
+                <div class="feature-box">
+                    <div class="feature-icon"><i class="fas fa-video"></i></div>
+                    <h3>دوره‌های ویدیویی</h3>
+                    <p>آموزش دروس دانشگاهی با بهترین اساتید.</p>
+                </div>
+                <div class="feature-box">
+                    <div class="feature-icon"><i class="fas fa-laptop-code"></i></div>
+                    <h3>کارگاه‌های عملی</h3>
+                    <p>پروژه محور و متناسب بازار کار.</p>
+                </div>
+                <div class="feature-box">
+                    <div class="feature-icon"><i class="fas fa-certificate"></i></div>
+                    <h3>گواهی معتبر</h3>
+                    <p>دریافت مدرک پس از اتمام دوره.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- بازارچه -->
+    <section id="bazaar">
+        <div class="container">
+            <h2 class="section-title"><i class="fas fa-store"></i> بازارچه</h2>
+            <div class="feature-grid">
+                <div class="feature-box">
+                    <div class="feature-icon"><i class="fas fa-book"></i></div>
+                    <h3>کتاب و جزوه</h3>
+                    <p>خرید و فروش منابع درسی دست‌دوم.</p>
+                </div>
+                <div class="feature-box">
+                    <div class="feature-icon"><i class="fas fa-calculator"></i></div>
+                    <h3>لوازم تحریر تخصصی</h3>
+                    <p>تخفیف‌های دانشجویی ویژه.</p>
+                </div>
+                <div class="feature-box">
+                    <div class="feature-icon"><i class="fas fa-hand-holding-heart"></i></div>
+                    <h3>اهدای رایگان</h3>
+                    <p>بخش اهدای کتاب به دانشجویان نیازمند.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- جهان علم (نقشه دانشگاه‌های ایران) -->
+    <section id="world">
+        <div class="container">
+            <h2 class="section-title"><i class="fas fa-globe-asia"></i> جهان علم</h2>
+            <div class="world-science glass">
+                <div class="map-container" style="display:flex; align-items:center; justify-content:center; background:rgba(108, 92, 231, 0.1); border-radius:50%; border:2px dashed rgba(108, 92, 231, 0.3);">
+                    <i class="fas fa-map-marked-alt" style="font-size: 8rem; color: #6c5ce7; opacity: 0.6;"></i>
+                    <div class="marker" style="top: 36%; left: 44%;" data-city="تهران"></div>
+                    <div class="marker" style="top: 52%; left: 48%;" data-city="اصفهان"></div>
+                    <div class="marker" style="top: 44%; left: 58%;" data-city="مشهد"></div>
+                    <div class="marker" style="top: 55%; left: 32%;" data-city="شیراز"></div>
+                    <div class="marker" style="top: 28%; left: 35%;" data-city="تبریز"></div>
+                </div>
+                <div style="max-width: 400px;">
+                    <h3 style="font-size: 2rem; margin-bottom: 1rem;">دانشگاه‌های سراسر ایران</h3>
+                    <p style="color: #b0b5d9;">امتیازدهی، فعالیت‌ها و رتبه‌بندی دانشگاه‌ها بر اساس نظر دانشجویان در
+                        اپلیکیشن کلاسور.</p>
+                    <div style="margin-top:1.5rem;"><i class="fas fa-star" style="color: gold;"></i> دانشگاه تهران
+                        <strong>4.8</strong>
+                    </div>
+                    <div><i class="fas fa-star" style="color: gold;"></i> دانشگاه صنعتی شریف <strong>4.9</strong></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- گنجینه (فریلنسری) -->
+    <section id="treasure">
+        <div class="container">
+            <h2 class="section-title"><i class="fas fa-gem"></i> گنجینه</h2>
+            <div class="gallery">
+                <div class="gallery-item"><i class="fas fa-pen-fancy" style="font-size:2rem; color:#a29bfe;"></i>
+                    <h4>پروژه‌های تحقیقاتی</h4>
+                    <p>انجام پژوهش دانشجویی</p>
+                </div>
+                <div class="gallery-item"><i class="fas fa-code" style="font-size:2rem; color:#6c5ce7;"></i>
+                    <h4>برنامه‌نویسی</h4>
+                    <p>پروژه‌های فریلنسری</p>
+                </div>
+                <div class="gallery-item"><i class="fas fa-paint-brush" style="font-size:2rem; color:#fd79a8;"></i>
+                    <h4>طراحی و گرافیک</h4>
+                    <p>سفارش آنلاین</p>
+                </div>
+                <div class="gallery-item"><i class="fas fa-language" style="font-size:2rem; color:#fdcb6e;"></i>
+                    <h4>ترجمه تخصصی</h4>
+                    <p>مقالات و متون</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+            <p>© 2025 کلاسور - بزرگترین اپلیکیشن دانشجویی ایران. ساخت با افتخار برای دانشجویان.</p>
+            <p style="font-size: 0.95rem; color: #b0b5d9;"><i class="fas fa-phone-alt"></i> تماس با ما: 0۹۳۰۸۶۷۸۶۴۶</p>
+            <p style="font-size: 0.95rem; color: #b0b5d9; max-width: 600px; text-align: center; line-height: 1.8;"><i class="fas fa-map-marker-alt"></i> ادرس دفتر: استان تهران، شهرستان تهران، بخش مرکزی، شهر تهران، سلیمانی_تیموری، کوچه شهید مصطفی آذرخش، کوچه شهید برادران بنی علی(عبدالمجید)، پلاک 32، طبقه 2</p>
+        </div>
+    </footer>
+
+    <script>
+        (function () {
+            const slidesData = [
+                {
+                    title: 'مثبت علم',
+                    items: [
+                        { icon: 'fa-play-circle', text: 'دوره ریاضی عمومی' },
+                        { icon: 'fa-flask', text: 'آزمایشگاه فیزیک' },
+                        { icon: 'fa-brain', text: 'هوش مصنوعی مقدماتی' }
+                    ]
+                },
+                {
+                    title: 'بازارچه',
+                    items: [
+                        { icon: 'fa-book-open', text: 'جزوه معادلات' },
+                        { icon: 'fa-pencil-ruler', text: 'کتاب طراحی اجزا' },
+                        { icon: 'fa-calculator', text: 'ماشین حساب مهندسی' }
+                    ]
+                },
+                {
+                    title: 'جهان علم',
+                    items: [
+                        { icon: 'fa-university', text: 'دانشگاه تهران ۴.۸⭐' },
+                        { icon: 'fa-map-marker-alt', text: 'شریف ۴.۹⭐' },
+                        { icon: 'fa-globe', text: 'جستجوی دانشگاه‌ها' }
+                    ]
+                },
+                {
+                    title: 'گنجینه',
+                    items: [
+                        { icon: 'fa-code', text: 'پروژه React' },
+                        { icon: 'fa-pen', text: 'نگارش مقاله' },
+                        { icon: 'fa-chart-line', text: 'تحلیل داده' }
+                    ]
+                }
+            ];
+
+            const sliderContainer = document.getElementById('sliderContainer');
+            const dotsContainer = document.getElementById('dotsContainer');
+            let currentSlide = 0;
+
+            function renderSlides() {
+                sliderContainer.innerHTML = '';
+                dotsContainer.innerHTML = '';
+                slidesData.forEach((slide, index) => {
+                    const slideDiv = document.createElement('div');
+                    slideDiv.className = `slide ${index === 0 ? 'active' : ''}`;
+                    slideDiv.innerHTML = `<h4 style="margin:0.3rem 0; color:#6c5ce7;">${slide.title}</h4>` +
+                        slide.items.map(item => `
+              <div class="feature-card">
+                <i class="fas ${item.icon}"></i>
+                <span>${item.text}</span>
+              </div>
+            `).join('');
+                    sliderContainer.appendChild(slideDiv);
+
+                    const dot = document.createElement('span');
+                    dot.className = `dot ${index === 0 ? 'active' : ''}`;
+                    dot.dataset.index = index;
+                    dot.addEventListener('click', () => goToSlide(index));
+                    dotsContainer.appendChild(dot);
+                });
+            }
+
+            function goToSlide(index) {
+                const slides = document.querySelectorAll('.slide');
+                const dots = document.querySelectorAll('.dot');
+                slides.forEach(s => s.classList.remove('active'));
+                dots.forEach(d => d.classList.remove('active'));
+                slides[index].classList.add('active');
+                dots[index].classList.add('active');
+                currentSlide = index;
+            }
+
+            function autoSlide() {
+                setInterval(() => {
+                    let next = (currentSlide + 1) % slidesData.length;
+                    goToSlide(next);
+                }, 3500);
+            }
+
+            renderSlides();
+            autoSlide();
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = 1;
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, { threshold: 0.15 });
+
+            document.querySelectorAll('.feature-box, .gallery-item, .world-science').forEach(el => {
+                el.style.opacity = 0;
+                el.style.transform = 'translateY(35px)';
+                el.style.transition = 'all 0.6s ease';
+                observer.observe(el);
+            });
+
+            const showBody = () => {
+                document.body.classList.add('loaded');
+                document.querySelectorAll('.feature-box, .gallery-item, .world-science').forEach(el => {
+                    if (el.getBoundingClientRect().top < window.innerHeight) {
+                        el.style.opacity = 1;
+                        el.style.transform = 'translateY(0)';
+                    }
+                });
+            };
+
+            window.addEventListener('load', showBody);
+            // Fallback: force show after 2.5 seconds if some resources (like fonts) are stuck
+            setTimeout(showBody, 2500);
+        })();
+    </script>
+    
+    <!-- Non-blocking fonts and icons at the very end -->
+    <link href="https://unpkg.com/vazirmatn@33.0.3/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="https://unpkg.com/@fortawesome/fontawesome-free@6.0.0/css/all.min.css" />
+</body>
+</html>

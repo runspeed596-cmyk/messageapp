@@ -47,7 +47,7 @@ import com.Kelasor.app.ui.theme.CardShapes
 import com.Kelasor.app.ui.theme.GlassBorderLight
 import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.theme.MessageAppTypography
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -137,7 +137,7 @@ fun PrimaryButton(
                 Text(
                     text = text,
                     style = MessageAppTypography.buttonText,
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     fontWeight = FontWeight.Medium,
                     color = if (enabled) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                 )
@@ -215,7 +215,7 @@ fun SecondaryButton(
             Text(
                 text = text,
                 style = MessageAppTypography.buttonText,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.Medium,
                 color = if (enabled) extendedColors.accent else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
             )
@@ -250,7 +250,7 @@ fun TextButton(
     Text(
         text = text,
         style = MessageAppTypography.buttonText,
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Medium,
         color = if (enabled) {
             if (isPressed) extendedColors.accent.copy(alpha = 0.7f)
@@ -343,7 +343,7 @@ fun FilterChip(
         Text(
             text = text,
             style = MessageAppTypography.chatTime.copy(fontWeight = FontWeight.Medium),
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             color = if (isSelected) extendedColors.chipTextSelected else extendedColors.chipText
         )
     }
@@ -586,7 +586,7 @@ fun DateSeparator(
             Text(
                 text = dateText,
                 style = MessageAppTypography.chatTime,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

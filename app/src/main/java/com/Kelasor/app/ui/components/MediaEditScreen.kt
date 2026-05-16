@@ -95,7 +95,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import java.io.File
 import java.io.FileOutputStream
 import kotlin.math.roundToInt
@@ -333,7 +333,7 @@ fun MediaEditScreen(
                                     color = wm.color,
                                     fontSize = (wm.fontSize * wm.scale).sp,
                                     fontWeight = FontWeight.Bold,
-                                    fontFamily = VazirFontFamily,
+                                    fontFamily = DanaFontFamily,
                                     modifier = Modifier
                                         .absoluteOffset { IntOffset(wm.offsetX.roundToInt(), wm.offsetY.roundToInt()) }
                                         .then(
@@ -476,7 +476,7 @@ fun MediaEditScreen(
                             text = "گوشه‌ها را بکشید تا برش دهید",
                             color = Color.White.copy(alpha = 0.6f),
                             fontSize = 12.sp,
-                            fontFamily = VazirFontFamily,
+                            fontFamily = DanaFontFamily,
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
                                 .padding(bottom = 12.dp)
@@ -655,13 +655,13 @@ fun MediaEditScreen(
                             text = "توضیحات را بنویسید...",
                             color = Color.White.copy(alpha = 0.5f),
                             fontSize = 14.sp,
-                            fontFamily = VazirFontFamily
+                            fontFamily = DanaFontFamily
                         )
                     }
                     BasicTextField(
                         value = caption,
                         onValueChange = { caption = it },
-                        textStyle = TextStyle(color = Color.White, fontSize = 14.sp, fontFamily = VazirFontFamily),
+                        textStyle = TextStyle(color = Color.White, fontSize = 14.sp, fontFamily = DanaFontFamily),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = false,
                         maxLines = 3
@@ -721,7 +721,7 @@ private fun ToolButton(
     ) {
         Icon(icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(28.dp))
         Spacer(Modifier.height(4.dp))
-        Text(label, color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, fontFamily = VazirFontFamily)
+        Text(label, color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, fontFamily = DanaFontFamily)
     }
 }
 
@@ -781,7 +781,7 @@ private fun DrawToolPanel(
         }
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("ضخامت", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, fontFamily = VazirFontFamily)
+            Text("ضخامت", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, fontFamily = DanaFontFamily)
             Spacer(Modifier.width(8.dp))
             DraggableSlider(
                 value = strokeWidth,
@@ -817,7 +817,7 @@ private fun WatermarkToolPanel(
             text = "متن بنویسید و «+» بزنید. با انگشت بکشید تا جابه‌جا شود. دو انگشت برای بزرگ/کوچک.",
             color = Color.White.copy(alpha = 0.5f),
             fontSize = 11.sp,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             modifier = Modifier.padding(bottom = 6.dp)
         )
         Row(
@@ -836,13 +836,13 @@ private fun WatermarkToolPanel(
                         text = "متن واترمارک...",
                         color = Color.White.copy(alpha = 0.4f),
                         fontSize = 14.sp,
-                        fontFamily = VazirFontFamily
+                        fontFamily = DanaFontFamily
                     )
                 }
                 BasicTextField(
                     value = text,
                     onValueChange = onTextChange,
-                    textStyle = TextStyle(color = Color.White, fontSize = 14.sp, fontFamily = VazirFontFamily),
+                    textStyle = TextStyle(color = Color.White, fontSize = 14.sp, fontFamily = DanaFontFamily),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
@@ -903,7 +903,7 @@ private fun WatermarkSelectedPanel(
                 text = "اندازه",
                 color = Color.White.copy(alpha = 0.7f),
                 fontSize = 12.sp,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 modifier = Modifier.width(48.dp)
             )
             DraggableSlider(
@@ -957,7 +957,7 @@ private fun WatermarkSelectedPanel(
                 text = "پس\u200Cزمینه",
                 color = Color.White.copy(alpha = 0.7f),
                 fontSize = 12.sp,
-                fontFamily = VazirFontFamily
+                fontFamily = DanaFontFamily
             )
             // No background
             Box(
@@ -975,7 +975,7 @@ private fun WatermarkSelectedPanel(
                     .padding(horizontal = 12.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("بدون", color = Color.White, fontSize = 11.sp, fontFamily = VazirFontFamily)
+                Text("بدون", color = Color.White, fontSize = 11.sp, fontFamily = DanaFontFamily)
             }
             // Black background
             Box(
@@ -993,7 +993,7 @@ private fun WatermarkSelectedPanel(
                     .padding(horizontal = 12.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("مشکی", color = Color.White, fontSize = 11.sp, fontFamily = VazirFontFamily)
+                Text("مشکی", color = Color.White, fontSize = 11.sp, fontFamily = DanaFontFamily)
             }
             // White background
             Box(
@@ -1011,7 +1011,7 @@ private fun WatermarkSelectedPanel(
                     .padding(horizontal = 12.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("سفید", color = Color.Black, fontSize = 11.sp, fontFamily = VazirFontFamily)
+                Text("سفید", color = Color.Black, fontSize = 11.sp, fontFamily = DanaFontFamily)
             }
         }
     }
@@ -1057,7 +1057,7 @@ private fun AdjustSliderRow(
             text = label,
             color = Color.White.copy(alpha = 0.8f),
             fontSize = 12.sp,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             modifier = Modifier.width(56.dp)
         )
         DraggableSlider(

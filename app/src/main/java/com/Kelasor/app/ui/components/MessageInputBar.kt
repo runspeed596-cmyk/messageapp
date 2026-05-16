@@ -212,7 +212,7 @@ fun MessageInputBar(
                         .padding(vertical = 8.dp),
                     textStyle = MaterialTheme.typography.bodyMedium.copy(
                         color = MaterialTheme.colorScheme.onSurface,
-                        fontFamily = com.Kelasor.app.ui.theme.VazirFontFamily,
+                        fontFamily = com.Kelasor.app.ui.theme.DanaFontFamily,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Start,
                         textDirection = androidx.compose.ui.text.style.TextDirection.Content
                     ),
@@ -223,7 +223,7 @@ fun MessageInputBar(
                                 Text(
                                     text = stringResource(R.string.message_hint),
                                     style = MaterialTheme.typography.bodyMedium.copy(
-                                        fontFamily = com.Kelasor.app.ui.theme.VazirFontFamily
+                                        fontFamily = com.Kelasor.app.ui.theme.DanaFontFamily
                                     ),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                                 )

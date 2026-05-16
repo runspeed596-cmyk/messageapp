@@ -27,7 +27,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.Kelasor.app.data.remote.dto.SmartFolderChannelDto
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import com.Kelasor.app.ui.viewmodel.SmartFolderViewModel
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -44,6 +44,7 @@ fun SmartFolderTabContent(
     emptyMessage: String,
     accentColor: Color,
     onChannelClick: (String) -> Unit,
+    onGroupClick: (String) -> Unit = {},
     onMyStoriesClick: () -> Unit = {},
     onNavigateToChannelStories: (String, String) -> Unit = { _, _ -> },
     viewModel: SmartFolderViewModel = hiltViewModel(),
@@ -118,11 +119,11 @@ fun SmartFolderTabContent(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error,
                         textAlign = TextAlign.Center,
-                        fontFamily = VazirFontFamily
+                        fontFamily = DanaFontFamily
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     TextButton(onClick = { viewModel.loadSmartFolders() }) {
-                        Text("تلاش مجدد", fontFamily = VazirFontFamily, color = accentColor)
+                        Text("تلاش مجدد", fontFamily = DanaFontFamily, color = accentColor)
                     }
                 }
             }
@@ -145,11 +146,15 @@ fun SmartFolderTabContent(
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         textAlign = TextAlign.Center,
-                        fontFamily = VazirFontFamily
+                        fontFamily = DanaFontFamily
                     )
                 }
             }
             else -> {
+                // Sort by createdAt descending (newest first)
+                val sortedChannels: List<SmartFolderChannelDto> = remember(channels) {
+                    channels.sortedByDescending { it.createdAt ?: "" }
+                }
                 LazyColumn(
                     contentPadding = PaddingValues(vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -181,11 +186,11 @@ fun SmartFolderTabContent(
                             onAddStoryClick = { showChannelSelectionSheet = true }
                         )
                     }
-                    items(channels, key = { it.id }) { channel ->
+                    items(sortedChannels, key = { it.id }) { channel ->
                         SmartFolderChannelCard(
                             channel = channel,
                             accentColor = accentColor,
-                            onClick = { onChannelClick(channel.id) }
+                            onClick = { if (channel.chatType == "GROUP") onGroupClick(channel.id) else onChannelClick(channel.id) }
                         )
                     }
                 }
@@ -206,7 +211,7 @@ fun SmartFolderTabContent(
                         text = "ارسال استوری به عنوان...",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
                     if (channels.isEmpty()) {
@@ -214,7 +219,7 @@ fun SmartFolderTabContent(
                             text = "هیچ کانالی یافت نشد",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontFamily = VazirFontFamily
+                            fontFamily = DanaFontFamily
                         )
                     } else {
                         LazyColumn {
@@ -254,7 +259,7 @@ fun SmartFolderTabContent(
                                                 style = MaterialTheme.typography.titleMedium,
                                                 fontWeight = FontWeight.Bold,
                                                 color = accentColor,
-                                                fontFamily = VazirFontFamily
+                                                fontFamily = DanaFontFamily
                                             )
                                         }
                                     }
@@ -263,7 +268,7 @@ fun SmartFolderTabContent(
                                         text = channel.name,
                                         style = MaterialTheme.typography.bodyLarge,
                                         fontWeight = FontWeight.Medium,
-                                        fontFamily = VazirFontFamily
+                                        fontFamily = DanaFontFamily
                                     )
                                 }
                             }
@@ -287,7 +292,7 @@ fun SmartFolderTabContent(
                     Text(
                         text = "استوری‌های من - انتخاب کانال",
                         style = MaterialTheme.typography.titleMedium,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
                     LazyColumn {
@@ -322,7 +327,7 @@ fun SmartFolderTabContent(
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = accentColor,
-                                            fontFamily = VazirFontFamily
+                                            fontFamily = DanaFontFamily
                                         )
                                     }
                                 }
@@ -330,7 +335,7 @@ fun SmartFolderTabContent(
                                 Text(
                                     text = channel.name,
                                     style = MaterialTheme.typography.bodyLarge,
-                                    fontFamily = VazirFontFamily
+                                    fontFamily = DanaFontFamily
                                 )
                             }
                         }
@@ -401,7 +406,7 @@ private fun SmartFolderChannelCard(
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
-                    fontFamily = VazirFontFamily
+                    fontFamily = DanaFontFamily
                 )
             }
         }
@@ -418,7 +423,7 @@ private fun SmartFolderChannelCard(
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     modifier = Modifier.weight(1f, fill = false)
                 )
                 if (channel.isVerifiedTeacher) {
@@ -431,13 +436,22 @@ private fun SmartFolderChannelCard(
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = "${channel.subscriberCount} عضو",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontFamily = VazirFontFamily
-            )
+            Spacer(modifier = Modifier.height(5.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = channel.lastMessage ?: "${channel.subscriberCount} عضو",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (channel.unreadCount > 0) MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    fontFamily = DanaFontFamily,
+                    modifier = Modifier.weight(1f)
+                )
+                if (channel.unreadCount > 0) {
+                    Spacer(Modifier.width(8.dp))
+                    com.Kelasor.app.ui.components.UnreadBadge(count = channel.unreadCount)
+                }
+            }
         }
 
         // Subscription badge
@@ -451,7 +465,7 @@ private fun SmartFolderChannelCard(
                     text = "عضو",
                     style = MaterialTheme.typography.labelSmall,
                     color = Color(0xFF4CAF50),
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                 )
             }

@@ -18,7 +18,7 @@ const api = axios.create({
 // Add a request interceptor to inject the JWT token
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('admin_token');
+        const token = localStorage.getItem('admin_token_v2');
         if (token && config.headers) {
             config.headers['Authorization'] = `Bearer ${token}`;
         }
@@ -29,10 +29,32 @@ api.interceptors.request.use(
     }
 );
 
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response && error.response.status === 401) {
+            localStorage.removeItem('admin_token_v2');
+            localStorage.removeItem('admin_id');
+            localStorage.removeItem('isSuperAdmin');
+            localStorage.removeItem('permissions');
+            window.location.href = '/login';
+        }
+        return Promise.reject(error);
+    }
+);
+
 export interface ApiResponse<T> {
     success: boolean;
     message: string;
     data: T;
+}
+
+export interface PaginatedData<T> {
+    content: T[];
+    totalElements: number;
+    totalPages: number;
+    number: number;
+    size: number;
 }
 
 export interface User {
@@ -193,6 +215,7 @@ export interface PanelAdmin {
     username: string;
     displayName: string;
     isSuperAdmin: boolean;
+    permissions?: string[];
     createdAt: string;
 }
 
@@ -200,11 +223,12 @@ export type OfficialChannelCategory =
     | 'STUDENTS_IRAN' | 'MY_FIELD' | 'MY_UNIVERSITY' | 'MY_UNION'
     | 'FREELANCING' | 'PODCAST' | 'JOURNAL' | 'RESEARCH'
     | 'COMPETITIONS' | 'SCIENCE_TECH' | 'EDUCATION' | 'STUDENT_NEWS'
-    | 'ENTERTAINMENT' | 'APP_OFFICIAL' | 'LOTTERY_DISCOUNT';
+    | 'ENTERTAINMENT' | 'APP_OFFICIAL' | 'LOTTERY_DISCOUNT'
+    | 'TEACHERS' | 'QA_SCIENCE' | 'COURSE_GROUP';
 
 export type OfficialGroupCategory =
     | 'STUDENTS_IRAN' | 'MY_FIELD' | 'MY_UNIVERSITY'
-    | 'MY_FIELD_UNIVERSITY' | 'MY_UNION' | 'TEACHERS' | 'QA_SCIENCE';
+    | 'MY_FIELD_UNIVERSITY' | 'MY_UNION' | 'TEACHERS' | 'QA_SCIENCE' | 'COURSE_GROUP';
 
 export interface AdminUser {
     id: string;
@@ -228,6 +252,7 @@ export interface OfficialChannel {
     targetProvince?: string;
     targetCity?: string;
     targetUniversity?: string;
+    targetMinistry?: string;
 }
 
 export interface OfficialGroup {
@@ -245,6 +270,7 @@ export interface OfficialGroup {
     targetProvince?: string;
     targetCity?: string;
     targetUniversity?: string;
+    targetMinistry?: string;
 }
 
 export interface CreateOfficialChannelRequest {
@@ -258,6 +284,7 @@ export interface CreateOfficialChannelRequest {
     targetProvince?: string;
     targetCity?: string;
     targetUniversity?: string;
+    targetMinistry?: string;
     adminIds?: string[];
 }
 
@@ -273,6 +300,7 @@ export interface CreateOfficialGroupRequest {
     targetProvince?: string;
     targetCity?: string;
     targetUniversity?: string;
+    targetMinistry?: string;
     adminIds?: string[];
 }
 
@@ -313,9 +341,21 @@ const uploadFile = async (file: File, endpoint: string): Promise<string> => {
     return response.data.data.url;
 };
 
+export interface Feedback {
+    id: string;
+    userId?: string;
+    userDisplayName?: string;
+    title: string;
+    description: string;
+    rating: number;
+    status: string;
+    createdAt: string;
+    adminNote?: string;
+}
+
 export const adminApi = {
     // User management
-    getUsers: () => api.get<ApiResponse<User[]>>('/admin/users'),
+    getUsers: (page: number = 0, size: number = 20) => api.get<ApiResponse<PaginatedData<User>>>('/admin/users', { params: { page, size } }),
     deleteUser: (id: string) => api.delete<ApiResponse<void>>(`/admin/users/${id}`),
 
     // Banner management
@@ -330,14 +370,14 @@ export const adminApi = {
     uploadImage: (file: File) => uploadFile(file, 'image'),
 
     // University management
-    getUniversities: () => api.get<ApiResponse<University[]>>('/admin/universities'),
+    getUniversities: (page: number = 0, size: number = 20) => api.get<ApiResponse<PaginatedData<University>>>('/admin/universities', { params: { page, size } }),
     saveUniversity: (uni: University) => api.post<ApiResponse<University>>('/admin/universities', uni),
     deleteUniversity: (id: string) => api.delete<ApiResponse<void>>(`/admin/universities/${id}`),
 
     // Location data
     getCountries: () => api.get<ApiResponse<string[]>>('/locations/countries'),
-    getProvinces: (country: string) => api.get<ApiResponse<string[]>>(`/locations/provinces/${country}`),
-    getCities: (province: string) => api.get<ApiResponse<string[]>>(`/locations/cities/${province}`),
+    getProvinces: (country: string) => api.get<ApiResponse<string[]>>(`/locations/provinces/${encodeURIComponent(country)}`),
+    getCities: (province: string) => api.get<ApiResponse<string[]>>(`/locations/cities/${encodeURIComponent(province)}`),
 
     // Entertainment - Movies
     getMovies: () => api.get<ApiResponse<EntertainmentMovie[]>>('/admin/movies'),
@@ -405,10 +445,10 @@ export const adminApi = {
     removeGroupAdmin: (groupId: string, userId: string) => api.delete<ApiResponse<void>>(`/admin/special-folder/official-groups/${groupId}/admins/${userId}`),
 
     // Auth
-    login: (credentials: any) => api.post<ApiResponse<{ token: string; isSuperAdmin: boolean }>>('/admin/auth/login', credentials),
+    login: (credentials: any) => api.post<ApiResponse<{ token: string; isSuperAdmin: boolean; adminId?: string; permissions?: string[] }>>('/admin/auth/login', credentials),
 
     getPanelAdmins: () => api.get<ApiResponse<PanelAdmin[]>>('/admin/panel-admins'),
-    createPanelAdmin: (admin: { username: string; password: string; displayName: string; isSuperAdmin: boolean }) =>
+    createPanelAdmin: (admin: { username: string; password: string; displayName: string; isSuperAdmin: boolean; permissions?: string[] }) =>
         api.post<ApiResponse<PanelAdmin>>('/admin/panel-admins', admin),
     deletePanelAdmin: (id: string) => api.delete<ApiResponse<void>>(`/admin/panel-admins/${id}`),
 
@@ -440,6 +480,10 @@ export const adminApi = {
     getMosbatElmBanners: () => api.get<ApiResponse<HomeBanner[]>>('/admin/mosbat-elm/banners'),
     saveMosbatElmBanner: (banner: HomeBanner) => api.post<ApiResponse<HomeBanner>>('/admin/mosbat-elm/banners', banner),
     deleteMosbatElmBanner: (id: string) => api.delete<ApiResponse<void>>(`/admin/mosbat-elm/banners/${id}`),
+
+    // Feedbacks
+    getFeedbacks: (page: number = 0, size: number = 20) => api.get<ApiResponse<any>>('/admin/feedbacks', { params: { page, size } }),
+    updateFeedbackStatus: (id: string, status: string, adminNote?: string) => api.put<ApiResponse<Feedback>>(`/admin/feedbacks/${id}/status`, { status, adminNote }),
 };
 
 export default api;

@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.viewmodel.EntertainmentViewModel
+import com.Kelasor.app.data.remote.dto.RiddleResultDto
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

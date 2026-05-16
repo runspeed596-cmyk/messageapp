@@ -13,11 +13,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DoneAll
@@ -52,7 +54,7 @@ import com.Kelasor.app.ui.theme.GlassBorderLight
 import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.theme.MessageAppTypography
 import com.Kelasor.app.ui.theme.MessageShapes
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
@@ -102,6 +104,10 @@ fun ChatBubble(
     forwardedFrom: String? = null,
     onLongClick: (() -> Unit)? = null,
     onStoryReplyClick: ((storyId: String) -> Unit)? = null,
+    actionLabel: String? = null,
+    actionUrl: String? = null,
+    onActionClick: ((String) -> Unit)? = null,
+    timerTargetAt: Long? = null,
     modifier: Modifier = Modifier
 ) {
     val extendedColors = MessageAppTheme.extendedColors
@@ -203,7 +209,7 @@ fun ChatBubble(
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = extendedColors.accent,
-                                fontFamily = VazirFontFamily
+                                fontFamily = DanaFontFamily
                             ),
                             maxLines = 1
                         )
@@ -214,7 +220,7 @@ fun ChatBubble(
                             else "پیام رسانه",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 fontSize = 12.sp,
-                                fontFamily = VazirFontFamily
+                                fontFamily = DanaFontFamily
                             ),
                             color = if (isMyMessage) extendedColors.myBubbleText.copy(0.7f) else extendedColors.otherBubbleText.copy(0.7f),
                             maxLines = 1,
@@ -223,6 +229,35 @@ fun ChatBubble(
                     }
                 }
             }
+
+            // ── Interactive Bot Elements (Timer & Action Button) ──────────
+            if (timerTargetAt != null) {
+                Spacer(Modifier.height(8.dp))
+                CountdownTimer(targetTimestamp = timerTargetAt)
+            }
+
+            if (!actionLabel.isNullOrEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                androidx.compose.material3.Button(
+                    onClick = { onActionClick?.invoke(actionUrl ?: "") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(vertical = 8.dp),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = if (isMyMessage) Color.White.copy(alpha = 0.2f) else extendedColors.accent.copy(alpha = 0.15f),
+                        contentColor = if (isMyMessage) Color.White else extendedColors.accent
+                    )
+                ) {
+                    Text(
+                        text = actionLabel,
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = DanaFontFamily
+                        )
+                    )
+                }
+            }
+
             // ── Pin Indicator ────────────────────────────────────────────
             if (isPinned) {
                 Row(
@@ -240,7 +275,7 @@ fun ChatBubble(
                         text = "سنجاق شده",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontSize = 10.sp,
-                            fontFamily = VazirFontFamily
+                            fontFamily = DanaFontFamily
                         ),
                         color = if (isMyMessage) extendedColors.myBubbleText.copy(alpha = 0.7f) else extendedColors.accent
                     )
@@ -253,7 +288,7 @@ fun ChatBubble(
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Medium,
-                        fontFamily = VazirFontFamily
+                        fontFamily = DanaFontFamily
                     ),
                     color = if (isMyMessage) extendedColors.myBubbleText.copy(alpha = 0.65f) else extendedColors.otherBubbleText.copy(alpha = 0.65f),
                     modifier = Modifier.padding(bottom = 4.dp),
@@ -267,7 +302,7 @@ fun ChatBubble(
                     text = senderName,
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         letterSpacing = 0.3.sp
                     ),
                     color = extendedColors.accent,
@@ -337,7 +372,7 @@ fun ChatBubble(
                         text = "📸 پاسخ به استوری",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold,
-                            fontFamily = VazirFontFamily
+                            fontFamily = DanaFontFamily
                         ),
                         color = if (isMyMessage) extendedColors.myBubbleText.copy(alpha = 0.8f) else extendedColors.accent
                     )
@@ -380,7 +415,7 @@ fun ChatBubble(
                         }
                     },
                     style = MessageAppTypography.messageText.copy(
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         color = textColor,
                         lineHeight = 22.sp
                     ),
@@ -421,7 +456,7 @@ fun ChatBubble(
                             text = "ویرایش شده",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontSize = 10.sp,
-                                fontFamily = VazirFontFamily
+                                fontFamily = DanaFontFamily
                             ),
                             color = if (isMyMessage) extendedColors.myBubbleText.copy(alpha = 0.55f) else extendedColors.otherBubbleText.copy(alpha = 0.55f)
                         )
@@ -430,7 +465,7 @@ fun ChatBubble(
                         text = time,
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontSize = 10.sp,
-                            fontFamily = VazirFontFamily
+                            fontFamily = DanaFontFamily
                         ),
                         color = if (isMyMessage) extendedColors.myBubbleText.copy(alpha = 0.55f) else extendedColors.otherBubbleText.copy(alpha = 0.55f)
                     )
@@ -440,6 +475,30 @@ fun ChatBubble(
                             tint = extendedColors.myBubbleText.copy(alpha = 0.55f)
                         )
                     }
+                }
+            }
+            // ── Action Button (e.g. View Course Details) ─────────────────
+            if (!actionLabel.isNullOrBlank()) {
+                Spacer(Modifier.height(10.dp))
+                androidx.compose.material3.Button(
+                    onClick = { actionUrl?.let { onActionClick?.invoke(it) } },
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth().height(38.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = if (isMyMessage) Color.White.copy(alpha = 0.2f) else extendedColors.accent.copy(alpha = 0.15f),
+                        contentColor = if (isMyMessage) extendedColors.myBubbleText else extendedColors.accent
+                    ),
+                    elevation = null,
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 0.dp)
+                ) {
+                    Text(
+                        text = actionLabel,
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = DanaFontFamily,
+                            fontSize = 13.sp
+                        )
+                    )
                 }
             }
             // ── Reactions Row — Premium Pill Style ────────────────────────
@@ -465,7 +524,7 @@ fun ChatBubble(
                                 text = "$emoji $count",
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontSize = 11.sp,
-                                    fontFamily = VazirFontFamily
+                                    fontFamily = DanaFontFamily
                                 ),
                                 color = if (isMyMessage) extendedColors.myBubbleText else extendedColors.otherBubbleText
                             )
@@ -676,3 +735,160 @@ private fun ShimmerDots() {
         }
     }
 }
+
+
+@Composable
+fun CountdownTimer(
+    targetTimestamp: Long,
+    modifier: Modifier = Modifier
+) {
+    val extendedColors = MessageAppTheme.extendedColors
+    var timeLeft by remember { mutableStateOf(targetTimestamp - System.currentTimeMillis()) }
+
+    LaunchedEffect(targetTimestamp) {
+        while (timeLeft > 0) {
+            timeLeft = targetTimestamp - System.currentTimeMillis()
+            kotlinx.coroutines.delay(1000)
+        }
+    }
+
+    if (timeLeft > 0) {
+        val days = timeLeft / (1000 * 60 * 60 * 24)
+        val hours = (timeLeft / (1000 * 60 * 60)) % 24
+        val minutes = (timeLeft / (1000 * 60)) % 60
+        val seconds = (timeLeft / 1000) % 60
+
+        Column(
+            modifier = modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            extendedColors.accent.copy(alpha = 0.15f),
+                            extendedColors.accent.copy(alpha = 0.05f)
+                        )
+                    )
+                )
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(bottom = 8.dp)
+            ) {
+                // Pulsing dot
+                val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition()
+                val pulseAlpha by infiniteTransition.animateFloat(
+                    initialValue = 0.4f,
+                    targetValue = 1f,
+                    animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                        animation = tween(800),
+                        repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+                    )
+                )
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(Color(0xFFFF3B30).copy(alpha = pulseAlpha))
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "زمان تا شروع جلسه",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = extendedColors.accent,
+                    fontFamily = DanaFontFamily
+                )
+            }
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (days > 0) {
+                    ChatTimerUnit(value = days.toString(), label = "روز")
+                    ChatTimerSeparator()
+                }
+                ChatTimerUnit(value = String.format("%02d", hours), label = "ساعت")
+                ChatTimerSeparator()
+                ChatTimerUnit(value = String.format("%02d", minutes), label = "دقیقه")
+                ChatTimerSeparator()
+                ChatTimerUnit(value = String.format("%02d", seconds), label = "ثانیه", isHighlight = true)
+            }
+        }
+    } else {
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFF4CAF50).copy(alpha = 0.15f))
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = null,
+                tint = Color(0xFF4CAF50),
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = "جلسه در حال برگزاری است",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF4CAF50),
+                fontFamily = DanaFontFamily
+            )
+        }
+    }
+}
+
+@Composable
+private fun ChatTimerUnit(value: String, label: String, isHighlight: Boolean = false) {
+    val extendedColors = MessageAppTheme.extendedColors
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(42.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(if (isHighlight) extendedColors.accent else MaterialTheme.colorScheme.surface)
+                .padding(vertical = 6.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = if (isHighlight) Color.White else MaterialTheme.colorScheme.onSurface,
+                fontFamily = DanaFontFamily
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontFamily = DanaFontFamily
+        )
+    }
+}
+
+@Composable
+private fun ChatTimerSeparator() {
+    Text(
+        text = ":",
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+        modifier = Modifier.padding(bottom = 16.dp)
+    )
+}
+

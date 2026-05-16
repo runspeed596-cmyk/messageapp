@@ -2,14 +2,65 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminApi } from '../api/adminApi';
 import type { University, Faculty, FieldOfStudy } from '../api/adminApi';
+import Pagination from '../components/Pagination';
 import {
     Plus, Check, X, GraduationCap, MapPin, Globe, BookOpen, Users as UsersIcon,
     Search, Trash2, Building2, FileText, Trophy, Loader2, Pencil, AlertTriangle,
     Settings, Award, Newspaper, UsersRound
 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import { MapContainer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+
+// ─── map.ir Configuration ───
+const MAP_IR_API_KEY = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6ImM0MmU3MjNmNDA0M2YyYmUzMWQ2M2Y4OTZlNjg5NDkxZTFkYmNjMGJmMjQ4OGQ5Nzc3ZTdmNzkxZDQ2ZTU1NzQzOGQ0NmNlNTFhYTcxYmE2In0.eyJhdWQiOiI0MDQzNiIsImp0aSI6ImM0MmU3MjNmNDA0M2YyYmUzMWQ2M2Y4OTZlNjg5NDkxZTFkYmNjMGJmMjQ4OGQ5Nzc3ZTdmNzkxZDQ2ZTU1NzQzOGQ0NmNlNTFhYTcxYmE2IiwiaWF0IjoxNzc4MjQ5MTA5LCJuYmYiOjE3NzgyNDkxMDksImV4cCI6MTc4MDg0MTEwOSwic3ViIjoiIiwic2NvcGVzIjpbImJhc2ljIl19.lN70pBpP7W_16H_y5Y2uDzdjwpuDZpps5GDOt4JtyNFJmx0ddOKBk3jLe3dzm0TuxLTtNPe8hnSabOGnajppH1LsgptP6YYwkOs0Q0xTaBIX9GgAY6S1PA1cPIsNzpI-CkOHcoWa62foOM5eWhSvvQoDXe7DNvzAaa7gnyyh-P2ZJHwJ554W3stfq8y8K0h7hzLLY10eJH5m2o9rFAPti0QFgBhjxmSVVKaFQUO6J269-lye9SvKfCSTxa9NfiKmFhu7kMH0BR7TmjpLpI8LD41ZCi4m4Y6-IzbvwvfbBECmwrF1_oXcsEBxpmgF6KNyBrSdC7h_3GsKZuRWOcF8Rw';
+const MAP_IR_SEARCH_URL = 'https://map.ir/search/v2/autocomplete';
+
+// ─── Custom Leaflet TileLayer with x-api-key header for map.ir ───
+const MapIrTileLayer = L.TileLayer.WMS.extend({
+    createTile(coords: any, done: any): HTMLImageElement {
+        const tile: HTMLImageElement = document.createElement('img');
+        tile.alt = '';
+        tile.setAttribute('role', 'presentation');
+        const url: string = this.getTileUrl(coords);
+        fetch(url, {
+            headers: {
+                'x-api-key': MAP_IR_API_KEY,
+            },
+        })
+            .then((response: Response) => {
+                if (!response.ok) throw new Error(`Tile fetch failed: ${response.status}`);
+                return response.blob();
+            })
+            .then((blob: Blob) => {
+                tile.src = URL.createObjectURL(blob);
+                done(null, tile);
+            })
+            .catch((err: Error) => {
+                console.error('Map.ir tile error:', err);
+                done(err, tile);
+            });
+        return tile;
+    },
+});
+
+// React component that adds the map.ir tile layer to the Leaflet map
+const MapIrLayer = () => {
+    const map = useMap();
+    useEffect(() => {
+        const layer = new (MapIrTileLayer as any)('https://map.ir/shiveh', {
+            layers: 'Shiveh:Shiveh',
+            format: 'image/png',
+            transparent: true,
+            attribution: '&copy; <a href="https://map.ir">Map.ir</a>',
+        });
+        layer.addTo(map);
+        return () => {
+            map.removeLayer(layer);
+        };
+    }, [map]);
+    return null;
+};
 
 // Fix default marker icon issue with bundlers
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -152,6 +203,12 @@ const Universities = () => {
     const [editingUniId, setEditingUniId] = useState<string | null>(null);
     const [error, setError] = useState<string>('');
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState<number>(0);
+    const [totalPages, setTotalPages] = useState<number>(0);
+    const [totalElements, setTotalElements] = useState<number>(0);
+    const PAGE_SIZE: number = 20;
+
     // Reference data
     const [refFaculties, setRefFaculties] = useState<Faculty[]>([]);
     const [refFields, setRefFields] = useState<FieldOfStudy[]>([]);
@@ -166,12 +223,14 @@ const Universities = () => {
     const [mapSearchResults, setMapSearchResults] = useState<any[]>([]);
     const [mapFlyTarget, setMapFlyTarget] = useState<{ lat: number; lng: number } | null>(null);
 
+    const [facultyAssignments, setFacultyAssignments] = useState<{ id: string; faculty: string; fields: string[] }[]>([]);
+
     const [newUni, setNewUni] = useState<University>({
         name: '',
         country: 'ایران',
         province: '',
         city: '',
-        ministryName: 'وزارت علوم، تحقیقات و فناوری',
+        ministryName: 'وزارت علوم',
         type: 'دولتی',
         establishedYear: 1300,
         studentCount: 0,
@@ -207,15 +266,23 @@ const Universities = () => {
         }
     }, [error]);
 
-    const fetchUnis = async () => {
+    const fetchUnis = async (page: number = 0) => {
         try {
-            const response = await adminApi.getUniversities();
+            const response = await adminApi.getUniversities(page, PAGE_SIZE);
             if (response.data.success) {
-                setUnis(response.data.data);
+                const paginated = response.data.data;
+                setUnis(paginated.content);
+                setTotalPages(paginated.totalPages);
+                setTotalElements(paginated.totalElements);
+                setCurrentPage(paginated.number);
             }
         } catch (err) {
             console.error('Error fetching universities:', err);
         }
+    };
+
+    const handlePageChange = (page: number): void => {
+        fetchUnis(page);
     };
 
     const fetchReferenceData = async () => {
@@ -263,11 +330,12 @@ const Universities = () => {
         try {
             setMapSearchResults([]);
             const res = await fetch(
-                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(mapSearch)}&limit=5&accept-language=fa`,
+                `${MAP_IR_SEARCH_URL}?text=${encodeURIComponent(mapSearch)}&$filter=province eq تهران&$select=roads,poi`,
                 {
                     headers: {
                         'Accept': 'application/json',
-                        'User-Agent': 'MosbatElmAdminPanel/1.0'
+                        'Content-Type': 'application/json',
+                        'x-api-key': MAP_IR_API_KEY
                     }
                 }
             );
@@ -276,11 +344,12 @@ const Universities = () => {
                 return;
             }
             const data = await res.json();
-            if (data.length === 0) {
+            const results: any[] = data.value || data.odata || data || [];
+            if (results.length === 0) {
                 setError('نتیجه‌ای یافت نشد. عبارت دیگری جستجو کنید.');
                 return;
             }
-            setMapSearchResults(data);
+            setMapSearchResults(results.slice(0, 5));
         } catch (err) {
             console.error('Map search error:', err);
             setError('خطا در ارتباط با سرویس نقشه. لطفاً دوباره تلاش کنید.');
@@ -288,8 +357,18 @@ const Universities = () => {
     };
 
     const handleSelectMapResult = (result: any) => {
-        const lat: number = parseFloat(result.lat);
-        const lng: number = parseFloat(result.lon);
+        const geom = result.geom;
+        let lat: number;
+        let lng: number;
+        if (geom && geom.coordinates) {
+            lng = geom.coordinates[0];
+            lat = geom.coordinates[1];
+        } else if (result.lat && result.lon) {
+            lat = parseFloat(result.lat);
+            lng = parseFloat(result.lon);
+        } else {
+            return;
+        }
         setNewUni({ ...newUni, latitude: parseFloat(lat.toFixed(6)), longitude: parseFloat(lng.toFixed(6)) });
         setMapFlyTarget({ lat, lng });
         setMapSearchResults([]);
@@ -338,6 +417,32 @@ const Universities = () => {
         if (uni.province) {
             fetchCities(uni.province);
         }
+
+        const assignments: { id: string; faculty: string; fields: string[] }[] = [];
+        if (uni.departments) {
+            if (uni.departments.includes(':')) {
+                uni.departments.split('|').forEach((part, i) => {
+                    const [fac, flds] = part.split(':');
+                    if (fac && flds) {
+                        assignments.push({
+                            id: Date.now().toString() + '-' + i,
+                            faculty: fac.trim(),
+                            fields: flds.split(',').map(s => s.trim()).filter(Boolean)
+                        });
+                    }
+                });
+            } else {
+                 const faculties = uni.faculties ? uni.faculties.split(',').map(s=>s.trim()).filter(Boolean) : [];
+                 if (faculties.length > 0) {
+                     assignments.push({
+                         id: Date.now().toString(),
+                         faculty: faculties[0],
+                         fields: uni.departments.split(',').map(s=>s.trim()).filter(Boolean)
+                     });
+                 }
+            }
+        }
+        setFacultyAssignments(assignments);
     };
 
     const handleDelete = async (id: string) => {
@@ -357,7 +462,7 @@ const Universities = () => {
             country: 'ایران',
             province: '',
             city: '',
-            ministryName: 'وزارت علوم، تحقیقات و فناوری',
+            ministryName: 'وزارت علوم',
             type: 'دولتی',
             establishedYear: 1300,
             studentCount: 0,
@@ -381,26 +486,46 @@ const Universities = () => {
         });
         setCities([]);
         setMapFlyTarget(null);
+        setFacultyAssignments([]);
     };
 
     // ─── Build multi-select options from reference data ───
-    const facultyOptions: MultiSelectOption[] = refFaculties
-        .sort((a, b) => a.displayOrder - b.displayOrder)
-        .map(f => ({ value: f.name, label: f.name }));
 
     const fieldOptions: MultiSelectOption[] = refFields
         .sort((a, b) => a.displayOrder - b.displayOrder)
         .map(f => ({ value: `${f.name} (${f.educationLevel})`, label: `${f.name} — ${f.educationLevel}`, group: f.educationLevel }));
 
-    // Parse comma-separated strings into arrays
-    const selectedFaculties: string[] = newUni.faculties ? newUni.faculties.split(',').map(s => s.trim()).filter(Boolean) : [];
-    const selectedDepartments: string[] = newUni.departments ? newUni.departments.split(',').map(s => s.trim()).filter(Boolean) : [];
+    const updateFacultyAssignments = (newAssignments: typeof facultyAssignments) => {
+        setFacultyAssignments(newAssignments);
+        const faculties = newAssignments.map(a => a.faculty).filter(Boolean);
+        const uniqueFaculties = Array.from(new Set(faculties));
+        const deps = newAssignments
+            .filter(a => a.faculty && a.fields.length > 0)
+            .map(a => `${a.faculty}:${a.fields.join(',')}`)
+            .join('|');
+            
+        setNewUni(prev => ({
+            ...prev,
+            faculties: uniqueFaculties.join(', '),
+            departments: deps
+        }));
+    };
 
     const ministryOptions: string[] = [
-        'وزارت علوم، تحقیقات و فناوری',
-        'وزارت بهداشت، درمان و آموزش پزشکی',
-        'دانشگاه آزاد اسلامی',
-        'سایر'
+        'وزارت علوم',
+        'وزارت بهداشت',
+        'پیام نور',
+        'دانشگاه آزاد',
+        'فنی حرفه ای',
+        'منابع طبیعی',
+        'علمی کاربردی',
+        'غیرانتفاعی',
+        'ملی مهارت',
+        'علوم قرآن و معارف',
+        'هنر',
+        'موسسه آموزش عالی',
+        'فرهنگیان',
+        'علوم پزشکی'
     ];
 
     const typeOptions: string[] = ['دولتی', 'آزاد اسلامی', 'غیرانتفاعی', 'علوم پزشکی', 'پیام نور', 'فنی و حرفه‌ای', 'جامع علمی کاربردی'];
@@ -519,7 +644,7 @@ const Universities = () => {
                                             onClick={() => handleSelectMapResult(r)}
                                         >
                                             <MapPin size={14} className="text-emerald-400 shrink-0" />
-                                            <span className="truncate">{r.display_name}</span>
+                                            <span className="truncate">{r.title || r.address || r.display_name || r.province}</span>
                                         </button>
                                     ))}
                                 </div>
@@ -537,10 +662,7 @@ const Universities = () => {
                                     style={{ height: '100%', width: '100%' }}
                                     scrollWheelZoom={true}
                                 >
-                                    <TileLayer
-                                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                    />
+                                    <MapIrLayer />
                                     <Marker position={[newUni.latitude, newUni.longitude]} />
                                     <MapClickHandler onMapClick={(lat, lng) => setNewUni({ ...newUni, latitude: parseFloat(lat.toFixed(6)), longitude: parseFloat(lng.toFixed(6)) })} />
                                     {mapFlyTarget && <MapFlyTo lat={mapFlyTarget.lat} lng={mapFlyTarget.lng} />}
@@ -613,35 +735,88 @@ const Universities = () => {
                         </div>
                     </div>
 
-                    {/* Academic Info Section — Searchable selects */}
-                    <div className="mb-8">
-                        <h3 className="text-sm font-black text-indigo-400 mb-4 flex items-center gap-2">
-                            <BookOpen size={16} /> اطلاعات آکادمیک
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-500 mr-2 uppercase tracking-widest">دانشکده‌ها</label>
-                                <SearchableMultiSelect
-                                    options={facultyOptions}
-                                    selected={selectedFaculties}
-                                    onChange={(val) => setNewUni({ ...newUni, faculties: val.join(', ') })}
-                                    placeholder="انتخاب دانشکده‌ها از لیست..."
-                                    accentColor="amber"
-                                />
-                                <p className="text-[10px] text-slate-600 mr-2">دانشکده‌ها از بخش تنظیمات جهان علم بارگذاری می‌شوند</p>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-500 mr-2 uppercase tracking-widest">رشته‌های تحصیلی</label>
-                                <SearchableMultiSelect
-                                    options={fieldOptions}
-                                    selected={selectedDepartments}
-                                    onChange={(val) => setNewUni({ ...newUni, departments: val.join(', ') })}
-                                    placeholder="انتخاب رشته‌ها از لیست..."
-                                    accentColor="indigo"
-                                />
-                                <p className="text-[10px] text-slate-600 mr-2">رشته‌ها به تفکیک مقطع تحصیلی از تنظیمات بارگذاری می‌شوند</p>
-                            </div>
+                    {/* Academic Info Section — Dynamic Rows */}
+                    <div className="mb-8 relative z-50">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-sm font-black text-indigo-400 flex items-center gap-2">
+                                <BookOpen size={16} /> دانشکده‌ها و رشته‌های تحصیلی
+                            </h3>
+                            <button
+                                onClick={() => {
+                                    updateFacultyAssignments([...facultyAssignments, { id: Date.now().toString() + Math.random(), faculty: '', fields: [] }]);
+                                }}
+                                className="flex items-center gap-1 bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                            >
+                                <Plus size={14} />
+                                افزودن دانشکده
+                            </button>
                         </div>
+                        
+                        <div className="space-y-4 glass bg-white/5 border-white/5 p-4 rounded-xl pr-2 overflow-visible">
+                            {facultyAssignments.length === 0 ? (
+                                <div className="text-center text-slate-500 text-sm py-8">
+                                    هنوز دانشکده‌ای اضافه نشده است. برای شروع روی «افزودن دانشکده» کلیک کنید.
+                                </div>
+                            ) : (
+                                facultyAssignments.map((assignment, index) => (
+                                    <div key={assignment.id} style={{ zIndex: 50 - index }} className="p-5 bg-slate-900/50 rounded-xl border border-white/5 relative group">
+                                        <button
+                                            onClick={() => {
+                                                const newAssignments = [...facultyAssignments];
+                                                newAssignments.splice(index, 1);
+                                                updateFacultyAssignments(newAssignments);
+                                            }}
+                                            className="absolute top-3 left-3 text-slate-500 hover:text-rose-400 bg-slate-800 hover:bg-rose-500/10 p-1.5 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                            title="حذف این دانشکده"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                        
+                                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest block">انتخاب دانشکده</label>
+                                                <select
+                                                    className="w-full glass bg-slate-800 border-white/5 p-3.5 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer text-sm"
+                                                    value={assignment.faculty}
+                                                    onChange={(e) => {
+                                                        const newAssignments = [...facultyAssignments];
+                                                        newAssignments[index].faculty = e.target.value;
+                                                        updateFacultyAssignments(newAssignments);
+                                                    }}
+                                                >
+                                                    <option value="" className="bg-slate-900">انتخاب کنید...</option>
+                                                    {refFaculties.sort((a,b) => a.displayOrder - b.displayOrder).map(f => (
+                                                        <option key={f.id} value={f.name} className="bg-slate-900">{f.name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            
+                                            <div className="space-y-2 lg:col-span-2">
+                                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest block">رشته‌های تحصیلی</label>
+                                                {assignment.faculty ? (
+                                                    <SearchableMultiSelect
+                                                         options={fieldOptions}
+                                                         selected={assignment.fields}
+                                                         onChange={(val) => {
+                                                              const newAssignments = [...facultyAssignments];
+                                                              newAssignments[index].fields = val;
+                                                              updateFacultyAssignments(newAssignments);
+                                                         }}
+                                                         placeholder={`جستجو و افزودن رشته‌های ${assignment.faculty}...`}
+                                                         accentColor="indigo"
+                                                    />
+                                                ) : (
+                                                    <div className="w-full glass bg-slate-800/50 border-white/5 p-3.5 rounded-xl text-slate-500 text-sm flex items-center min-h-[52px]">
+                                                        ابتدا یک دانشکده انتخاب کنید
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                        <p className="text-[10px] text-slate-600 mt-2">با کلیک روی «افزودن دانشکده»، می‌توانید دانشکده‌های مختلف را انتخاب کرده و برای هرکدام بی‌نهایت رشته تخصیص دهید.</p>
                     </div>
 
                     {/* Rankings Section */}
@@ -867,6 +1042,15 @@ const Universities = () => {
                     </div>
                 )}
             </div>
+
+            {/* Pagination */}
+            <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalElements={totalElements}
+                pageSize={PAGE_SIZE}
+                onPageChange={handlePageChange}
+            />
         </div>
     );
 };

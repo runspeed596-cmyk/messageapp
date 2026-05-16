@@ -32,11 +32,15 @@ data class CourseDetailState(
     val isSubmittingComment: Boolean = false,
     val isOwner: Boolean = false,
     val isDeleting: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val joinClassUrl: String? = null,
+    val isJoiningClass: Boolean = false,
+    val isCreatingKelasor: Boolean = false
 )
 
 sealed class CourseDetailEvent {
     data class NavigateToChat(val chatId: String) : CourseDetailEvent()
+    data class OpenUrl(val url: String) : CourseDetailEvent()
 }
 
 @HiltViewModel
@@ -44,6 +48,7 @@ class CourseDetailViewModel @Inject constructor(
     private val courseRepository: CourseRepository,
     private val userRepository: com.Kelasor.app.data.repository.UserRepository,
     private val chatRepository: ChatRepository,
+    private val webSocketManager: com.Kelasor.app.data.websocket.WebSocketManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -53,10 +58,38 @@ class CourseDetailViewModel @Inject constructor(
     private val _events = MutableSharedFlow<CourseDetailEvent>()
     val events: SharedFlow<CourseDetailEvent> = _events.asSharedFlow()
 
+    private var currentCourseId: String? = null
+
     init {
         val courseId: String? = savedStateHandle["courseId"]
         if (!courseId.isNullOrEmpty()) {
+            currentCourseId = courseId
             loadCourse(courseId)
+            webSocketManager.subscribeToCourseCapacity(courseId)
+            observeWebSocketMessages(courseId)
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        currentCourseId?.let {
+            webSocketManager.unsubscribeFromCourseCapacity(it)
+        }
+    }
+
+    private fun observeWebSocketMessages(courseId: String) {
+        viewModelScope.launch {
+            webSocketManager.messages.collect { message ->
+                if (message is com.Kelasor.app.data.websocket.WebSocketMessage.CourseCapacityUpdate && message.courseId == courseId) {
+                    _state.update { currentState ->
+                        val updatedCourse = currentState.course?.copy(
+                            enrollmentLimit = message.capacity,
+                            enrolledCount = message.currentEnrollment
+                        )
+                        currentState.copy(course = updatedCourse)
+                    }
+                }
+            }
         }
     }
 
@@ -141,19 +174,30 @@ class CourseDetailViewModel @Inject constructor(
         }
     }
 
-    fun enrollInCourse() {
+    fun clearError() {
+        _state.update { it.copy(error = null) }
+    }
+
+    fun enrollInCourse(paymentType: String) {
         val courseId: String = _state.value.course?.id ?: return
         if (_state.value.isEnrolled || _state.value.isEnrolling) return
         viewModelScope.launch {
             _state.update { it.copy(isEnrolling = true) }
             try {
-                val result: Result<Unit> = courseRepository.enrollInCourse(courseId)
+                val result: Result<Unit> = courseRepository.enrollInCourse(courseId, paymentType)
                 result.fold(
                     onSuccess = {
                         _state.update { state ->
                             val updatedCourse: Course? = state.course?.copy(enrolledCount = state.course.enrolledCount + 1)
-                            state.copy(isEnrolled = true, isEnrolling = false, course = updatedCourse)
+                            state.copy(isEnrolled = true, isEnrolling = false, course = updatedCourse, error = "ENROLL_SUCCESS")
                         }
+                        // Re-fetch course details from server to get authoritative enrolledCount/capacity
+                        try {
+                            val refreshResult = courseRepository.getCourseById(courseId)
+                            refreshResult.onSuccess { freshCourse ->
+                                _state.update { it.copy(course = freshCourse) }
+                            }
+                        } catch (_: Exception) { }
                     },
                     onFailure = { e ->
                         _state.update { it.copy(isEnrolling = false, error = e.message) }
@@ -179,13 +223,27 @@ class CourseDetailViewModel @Inject constructor(
                 // I will temporarily leave the repository call unchanged and fix it right after.
                 val result = courseRepository.addComment(courseId, content, rating, replyToId)
                 result.onSuccess { newComment ->
-                    _state.update { it.copy(
-                        comments = listOf(newComment) + it.comments,
-                        isSubmittingComment = false
-                    ) }
+                    _state.update { state ->
+                        val currentCourse = state.course ?: return@update state
+                        val newReviewCount = currentCourse.reviewCount + 1
+                        val newRating = if (currentCourse.reviewCount == 0) {
+                            rating.toDouble()
+                        } else {
+                            (currentCourse.rating * currentCourse.reviewCount + rating) / newReviewCount
+                        }
+                        
+                        state.copy(
+                            course = currentCourse.copy(
+                                rating = newRating,
+                                reviewCount = newReviewCount
+                            ),
+                            comments = listOf(newComment) + state.comments,
+                            isSubmittingComment = false
+                        )
+                    }
                 }
-                result.onFailure {
-                    _state.update { it.copy(isSubmittingComment = false) }
+                result.onFailure { e ->
+                    _state.update { it.copy(isSubmittingComment = false, error = e.message) }
                 }
             } catch (_: Exception) {
                 _state.update { it.copy(isSubmittingComment = false) }
@@ -232,12 +290,55 @@ class CourseDetailViewModel @Inject constructor(
                     .filter { it !is com.Kelasor.app.data.repository.UserResult.Loading }
                     .first()
                 if (userResult is com.Kelasor.app.data.repository.UserResult.Success) {
-                    val isOwner = course.creatorId == userResult.data.id || course.institutionId == userResult.data.institutionId
+                    val user = userResult.data
+                    // A user is an owner if:
+                    // 1. They are the creator of the course
+                    // 2. They belong to the institution that organized the course AND are not a regular user
+                    // 3. They are an admin of the platform
+                    val isOwner = (course.managerId == user.id || 
+                                  (course.institutionId != null && course.institutionId == user.institutionId && user.role != "NORMAL") ||
+                                  user.role == "ADMIN")
+                                  
                     _state.update { it.copy(isOwner = isOwner) }
                 }
-            } catch (e: Exception) {
-                // Ignore
-            }
+            } catch (_: Exception) { }
+        }
+    }
+
+    fun joinOnlineClass() {
+        val courseId = _state.value.course?.id ?: return
+        if (_state.value.isJoiningClass) return
+        
+        viewModelScope.launch {
+            _state.update { it.copy(isJoiningClass = true, error = null) }
+            val result = courseRepository.getJoinClassUrl(courseId)
+            result.fold(
+                onSuccess = { url ->
+                    _state.update { it.copy(isJoiningClass = false, joinClassUrl = url) }
+                    _events.emit(CourseDetailEvent.OpenUrl(url))
+                },
+                onFailure = { e ->
+                    _state.update { it.copy(isJoiningClass = false, error = e.message ?: "خطا در ورود به کلاس آنلاین") }
+                }
+            )
+        }
+    }
+
+    fun createKelasorOnline() {
+        val courseId = _state.value.course?.id ?: return
+        if (_state.value.isCreatingKelasor) return
+        viewModelScope.launch {
+            _state.update { it.copy(isCreatingKelasor = true, error = null) }
+            val result = courseRepository.createKelasorOnline(courseId)
+            result.fold(
+                onSuccess = { updatedCourse ->
+                    _state.update { it.copy(isCreatingKelasor = false, course = updatedCourse, error = "KELASOR_CREATED") }
+                },
+                onFailure = { e ->
+                    _state.update { it.copy(isCreatingKelasor = false, error = e.message ?: "خطا در ساخت کلاسور آنلاین") }
+                }
+            )
         }
     }
 }
+

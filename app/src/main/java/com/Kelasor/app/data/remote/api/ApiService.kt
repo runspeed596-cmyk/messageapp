@@ -27,6 +27,18 @@ interface ApiService {
     suspend fun refreshToken(@Body request: RefreshTokenRequest): Response<AuthResponse>
     @POST("api/auth/logout")
     suspend fun logout(): Response<ApiResponse<Unit>>
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // 📱 Session Endpoints (Devices)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    @GET("api/sessions/active")
+    suspend fun getActiveSessions(): Response<ApiResponse<List<DeviceSessionDto>>>
+
+    @DELETE("api/sessions/{id}")
+    suspend fun terminateSession(@Path("id") id: String): Response<ApiResponse<Unit>>
+
+    @DELETE("api/sessions/terminate-others")
+    suspend fun terminateOtherSessions(): Response<ApiResponse<Unit>>
     // ═══════════════════════════════════════════════════════════════════════════════
     // 👤 User Endpoints
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -595,6 +607,18 @@ interface ApiService {
     @GET("api/mosbat-elm/home")
     suspend fun getMosbatElmHomeData(): Response<ApiResponse<MosbatElmHomeDataDto>>
 
+    @GET("api/mosbat-elm/popular/teachers")
+    suspend fun getPopularTeachers(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 10
+    ): Response<ApiResponse<PageResponse<UserDto>>>
+
+    @GET("api/mosbat-elm/popular/organizers")
+    suspend fun getPopularOrganizers(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 10
+    ): Response<ApiResponse<PageResponse<InstitutionDto>>>
+
     @POST("api/users/list")
     suspend fun getUsersByIds(@Body ids: List<String>): Response<ApiResponse<List<UserDto>>>
 
@@ -626,6 +650,16 @@ interface ApiService {
         @Path("id") courseId: String
     ): Response<ApiResponse<CourseDto>>
 
+    @GET("api/courses/{id}/join-class")
+    suspend fun getJoinClassUrl(
+        @Path("id") courseId: String
+    ): Response<ApiResponse<Map<String, String>>>
+
+    @POST("api/courses/{id}/kelasor-online")
+    suspend fun createKelasorOnline(
+        @Path("id") courseId: String
+    ): Response<ApiResponse<CourseDto>>
+
     @POST("api/courses/{id}/favorite")
     suspend fun toggleCourseFavorite(
         @Path("id") courseId: String
@@ -636,10 +670,20 @@ interface ApiService {
         @Path("id") courseId: String
     ): Response<ApiResponse<Boolean>>
 
+    @GET("api/courses/favorites")
+    suspend fun getFavoriteCourses(): Response<ApiResponse<List<CourseDto>>>
+
     @POST("api/courses/{id}/enroll")
     suspend fun enrollInCourse(
-        @Path("id") courseId: String
-    ): Response<ApiResponse<Unit>>
+        @Path("id") courseId: String,
+        @Body request: EnrollmentRequestDto
+    ): Response<ApiResponse<EnrollmentResponseDto>>
+
+    @GET("api/courses/enrollments")
+    suspend fun getMyEnrollments(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 50
+    ): Response<ApiResponse<PageResponse<EnrollmentResponseDto>>>
 
     @GET("api/courses/{id}/enrolled")
     suspend fun isEnrolledInCourse(
@@ -655,6 +699,13 @@ interface ApiService {
 
     @GET("api/courses")
     suspend fun getPublicCourses(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 20
+    ): Response<ApiResponse<PageResponse<CourseDto>>>
+
+    @GET("api/mosbat-elm/popular/teachers/{id}/courses")
+    suspend fun getTeacherCourses(
+        @Path("id") teacherId: String,
         @Query("page") page: Int = 0,
         @Query("size") size: Int = 20
     ): Response<ApiResponse<PageResponse<CourseDto>>>
@@ -856,5 +907,10 @@ interface ApiService {
         @Path("id") id: String,
         @Body request: InstitutionRegisterRequestDto
     ): Response<ApiResponse<InstitutionDto>>
+
+    @POST("api/feedback/submit")
+    suspend fun submitFeedback(
+        @Body request: CreateFeedbackRequestDto
+    ): Response<ApiResponse<FeedbackResponseDto>>
 }
 

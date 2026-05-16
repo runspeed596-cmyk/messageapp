@@ -26,7 +26,7 @@ import androidx.room.TypeConverters
         StoryUserEntity::class,
         CourseEntity::class
     ],
-    version = 5, // Bumped for new profile fields (birthDate, etc.)
+    version = 9, // Added timerTargetAt and Ad support fields
     exportSchema = false
 )
 @TypeConverters(Converters::class)

@@ -7,6 +7,7 @@ import com.Kelasor.app.data.session.SessionManager
 import com.Kelasor.app.domain.mapper.toDomain
 import com.Kelasor.app.domain.mapper.toEntity
 import com.Kelasor.app.domain.model.User
+import com.Kelasor.app.domain.model.SavedAccount
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -32,7 +33,10 @@ class AuthRepository @Inject constructor(
     private val database: AppDatabase
 ) {
     val isLoggedIn: Flow<Boolean> = sessionManager.isLoggedIn
+    val isOnboardingComplete: Flow<Boolean> = sessionManager.isOnboardingComplete
     val currentUserId: Flow<String?> = sessionManager.userId
+    val savedAccounts: Flow<List<SavedAccount>> = sessionManager.savedAccounts
+
     suspend fun sendOtp(phoneNumber: String): Flow<OtpResult> = flow {
         emit(OtpResult.Loading)
         try {
@@ -46,10 +50,24 @@ class AuthRepository @Inject constructor(
             emit(OtpResult.Error("خطا در اتصال به سرور: ${e.message}"))
         }
     }
-    suspend fun verifyOtp(phoneNumber: String, code: String): Flow<AuthResult> = flow {
+    suspend fun verifyOtp(
+        phoneNumber: String,
+        code: String,
+        deviceName: String? = null,
+        platform: String? = null,
+        osVersion: String? = null,
+        appVersion: String? = null
+    ): Flow<AuthResult> = flow {
         emit(AuthResult.Loading)
         try {
-            val response = apiService.verifyOtp(VerifyOtpRequest(phoneNumber, code))
+            val response = apiService.verifyOtp(VerifyOtpRequest(
+                phoneNumber = phoneNumber,
+                code = code,
+                deviceName = deviceName,
+                platform = platform,
+                osVersion = osVersion,
+                appVersion = appVersion
+            ))
             if (response.isSuccessful && response.body()?.success == true) {
                 val body = response.body()!!
                 val accessToken = body.accessToken
@@ -69,7 +87,10 @@ class AuthRepository @Inject constructor(
                         accessToken = accessToken,
                         refreshToken = refreshToken,
                         userId = user.id,
-                        phoneNumber = phoneNumber
+                        phoneNumber = phoneNumber,
+                        onboardingComplete = !body.isNewUser,
+                        displayName = user.displayName ?: user.firstName ?: "",
+                        avatarUrl = user.avatarUrl
                     )
                     emit(AuthResult.Success(user.toDomain(), body.isNewUser))
                 } else {
@@ -99,26 +120,48 @@ class AuthRepository @Inject constructor(
         }
     }
     
+    suspend fun setOnboardingComplete(complete: Boolean) {
+        sessionManager.setOnboardingComplete(complete)
+    }
+
+    suspend fun switchAccount(userId: String): Boolean {
+        val previousUserId = sessionManager.userId.first()
+        if (previousUserId == userId) return true
+        val success = sessionManager.switchAccount(userId)
+        if (success) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                database.clearAllData()
+            }
+        }
+        return success
+    }
+    
     /**
      * Logout user: Clear all local data (database + session)
      * This ensures no old chats remain when a new user logs in
      */
-    suspend fun logout(): Boolean {
+    suspend fun logout(userId: String? = null): Boolean {
         return try {
-            // Call API logout
-            val response = apiService.logout()
-            // Clear ALL local data - database first, then session
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                database.clearAllData()
+            val targetUserId = userId ?: sessionManager.userId.first()
+            if (targetUserId == null) return false
+            
+            val isActiveAccount = targetUserId == sessionManager.userId.first()
+            if (isActiveAccount) {
+                try { apiService.logout() } catch (e: Exception) {}
             }
-            sessionManager.clearSession()
-            response.isSuccessful
+            
+            val hasOtherAccounts = sessionManager.removeAccount(targetUserId)
+            if (!hasOtherAccounts) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    database.clearAllData()
+                }
+            } else if (isActiveAccount) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    database.clearAllData()
+                }
+            }
+            true
         } catch (e: Exception) {
-            // Even if API fails, clear local data
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                database.clearAllData()
-            }
-            sessionManager.clearSession()
             false
         }
     }

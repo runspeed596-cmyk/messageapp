@@ -100,8 +100,7 @@ dependencies {
     implementation(libs.camerax.video)
     implementation(libs.camerax.view)
     
-    // Mapbox
-    implementation(libs.mapbox.maps)
+    // Map.ir: Using WebView + Web SDK (no native SDK needed)
     // WorkManager for background notification sync
     implementation(libs.workmanager.runtime)
     

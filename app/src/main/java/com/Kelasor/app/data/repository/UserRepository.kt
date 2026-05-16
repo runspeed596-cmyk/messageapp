@@ -30,6 +30,7 @@ class UserRepository @Inject constructor(
     private val userDao: UserDao,
     private val sessionManager: SessionManager
 ) {
+    val currentUserId: Flow<String?> = sessionManager.userId
     fun observeCurrentUser(): Flow<User?> = userDao.observeCurrentUser().map { it?.toDomain() }
     suspend fun getCurrentUser(forceRefresh: Boolean = false): Flow<UserResult<User>> = flow {
         emit(UserResult.Loading)
@@ -48,6 +49,11 @@ class UserRepository @Inject constructor(
                 if (userDto != null) {
                     val userEntity = userDto.toEntity(isCurrentUser = true)
                     userDao.insertUser(userEntity)
+                    sessionManager.updateSavedAccountProfile(
+                        userId = userDto.id,
+                        displayName = userDto.displayName ?: userDto.firstName ?: "",
+                        avatarUrl = userDto.avatarUrl
+                    )
                     emit(UserResult.Success(userDto.toDomain()))
                 } else {
                     emit(UserResult.Error("کاربر یافت نشد"))
@@ -76,6 +82,9 @@ class UserRepository @Inject constructor(
         bio: String?,
         university: String? = null,
         fieldOfStudy: String? = null,
+        universities: List<String>? = null,
+        fieldsOfStudy: List<String>? = null,
+        isGraduated: Boolean? = null,
         education: String? = null,
         skills: String? = null,
         interests: String? = null,
@@ -106,6 +115,9 @@ class UserRepository @Inject constructor(
                 bio = bio,
                 university = university,
                 fieldOfStudy = fieldOfStudy,
+                universities = universities,
+                fieldsOfStudy = fieldsOfStudy,
+                isGraduated = isGraduated,
                 education = education,
                 skills = skills,
                 interests = interests,
@@ -126,6 +138,11 @@ class UserRepository @Inject constructor(
                 if (userDto != null) {
                     val userEntity = userDto.toEntity(isCurrentUser = true)
                     userDao.insertUser(userEntity)
+                    sessionManager.updateSavedAccountProfile(
+                        userId = userDto.id,
+                        displayName = userDto.displayName ?: userDto.firstName ?: "",
+                        avatarUrl = userDto.avatarUrl
+                    )
                     emit(UserResult.Success(userDto.toDomain()))
                 } else {
                     emit(UserResult.Error("خطا در پردازش پاسخ سرور"))
@@ -148,6 +165,11 @@ class UserRepository @Inject constructor(
                 if (userDto != null) {
                     val userEntity = userDto.toEntity(isCurrentUser = true)
                     userDao.insertUser(userEntity)
+                    sessionManager.updateSavedAccountProfile(
+                        userId = userDto.id,
+                        displayName = userDto.displayName ?: userDto.firstName ?: "",
+                        avatarUrl = userDto.avatarUrl
+                    )
                     emit(UserResult.Success(userDto.toDomain()))
                 } else {
                     emit(UserResult.Error("خطا در آپلود آواتار"))
@@ -288,7 +310,7 @@ class UserRepository @Inject constructor(
         }
     }
 
-    suspend fun followUser(userId: String): Flow<UserResult<Boolean>> = flow {
+    fun followUser(userId: String): Flow<UserResult<Boolean>> = flow {
         emit(UserResult.Loading)
         try {
             val response = apiService.followUser(userId)
@@ -302,7 +324,7 @@ class UserRepository @Inject constructor(
         }
     }
 
-    suspend fun unfollowUser(userId: String): Flow<UserResult<Boolean>> = flow {
+    fun unfollowUser(userId: String): Flow<UserResult<Boolean>> = flow {
         emit(UserResult.Loading)
         try {
             val response = apiService.unfollowUser(userId)
@@ -316,7 +338,7 @@ class UserRepository @Inject constructor(
         }
     }
 
-    suspend fun isFollowing(userId: String): Flow<UserResult<Boolean>> = flow {
+    fun isFollowing(userId: String): Flow<UserResult<Boolean>> = flow {
         emit(UserResult.Loading)
         try {
             val response = apiService.isFollowing(userId)
@@ -343,5 +365,28 @@ class UserRepository @Inject constructor(
             "خطا در بروزرسانی پروفایل"
         }
     }
-}
 
+    suspend fun submitFeedback(title: String, description: String, rating: Int): Flow<UserResult<Unit>> = flow {
+        try {
+            emit(UserResult.Loading)
+            val request = com.Kelasor.app.data.remote.dto.CreateFeedbackRequestDto(
+                title = title,
+                description = description,
+                rating = rating
+            )
+            val response = apiService.submitFeedback(request)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null && body.success) {
+                    emit(UserResult.Success(Unit))
+                } else {
+                    emit(UserResult.Error(body?.message ?: "خطای نامشخص در ثبت بازخورد"))
+                }
+            } else {
+                emit(UserResult.Error(getErrorMessage(response)))
+            }
+        } catch (e: Exception) {
+            emit(UserResult.Error("خطا در ارتباط با سرور: ${e.localizedMessage}"))
+        }
+    }
+}

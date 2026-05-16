@@ -21,7 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 📋 Profile Info Section
@@ -54,7 +54,7 @@ fun ProfileInfoSection(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -71,7 +71,7 @@ fun ProfileInfoSection(
                     Text(
                         text = item,
                         style = MaterialTheme.typography.bodyMedium,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f),
                         lineHeight = 24.sp,
                         modifier = Modifier.padding(vertical = 4.dp)
@@ -113,7 +113,7 @@ fun SkillsChipsSection(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -149,7 +149,7 @@ fun SkillChip(
         Text(
             text = text,
             style = MaterialTheme.typography.bodySmall,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             fontWeight = FontWeight.Medium,
             color = color,
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
@@ -186,14 +186,14 @@ fun StatItem(
         Text(
             text = formatCount(count),
             style = MaterialTheme.typography.titleLarge,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
         )
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
         )
     }

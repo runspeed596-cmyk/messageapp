@@ -75,6 +75,7 @@ fun AiBotChatScreen(
     botName: String,
     botType: String = "",
     onNavigateBack: () -> Unit,
+    onActionClick: (String) -> Unit = {},
     viewModel: AiBotChatViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -204,7 +205,7 @@ fun AiBotChatScreen(
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         items(state.messages, key = { it.id }) { message ->
-                            ChatBubble(message = message)
+                            ChatBubble(message = message, onActionClick = onActionClick)
                         }
                     }
                 }
@@ -218,7 +219,7 @@ fun AiBotChatScreen(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun ChatBubble(message: AiBotMessageDto) {
+private fun ChatBubble(message: AiBotMessageDto, onActionClick: (String) -> Unit) {
     val extendedColors = MessageAppTheme.extendedColors
     val isUser: Boolean = message.role == "USER"
 
@@ -226,32 +227,57 @@ private fun ChatBubble(message: AiBotMessageDto) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
     ) {
-        Box(
-            modifier = Modifier
-                .widthIn(max = 300.dp)
-                .clip(
-                    RoundedCornerShape(
-                        topStart = 16.dp,
-                        topEnd = 16.dp,
-                        bottomStart = if (isUser) 16.dp else 4.dp,
-                        bottomEnd = if (isUser) 4.dp else 16.dp
-                    )
-                )
-                .background(
-                    if (isUser) {
-                        extendedColors.accent
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant
-                    }
-                )
-                .padding(horizontal = 14.dp, vertical = 10.dp)
+        Column(
+            modifier = Modifier.widthIn(max = 300.dp),
+            horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
         ) {
-            Text(
-                text = message.content,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (isUser) Color.White else MaterialTheme.colorScheme.onSurface,
-                lineHeight = 22.sp
-            )
+            Box(
+                modifier = Modifier
+                    .clip(
+                        RoundedCornerShape(
+                            topStart = 16.dp,
+                            topEnd = 16.dp,
+                            bottomStart = if (isUser) 16.dp else 4.dp,
+                            bottomEnd = if (isUser) 4.dp else 16.dp
+                        )
+                    )
+                    .background(
+                        if (isUser) {
+                            extendedColors.accent
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        }
+                    )
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+            ) {
+                Text(
+                    text = message.content,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isUser) Color.White else MaterialTheme.colorScheme.onSurface,
+                    lineHeight = 22.sp
+                )
+            }
+
+            if (message.actionLabel != null && message.actionUrl != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                androidx.compose.material3.Button(
+                    onClick = { onActionClick(message.actionUrl) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = extendedColors.accent.copy(alpha = 0.9f)
+                    ),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    androidx.compose.material3.Text(
+                        text = message.actionLabel,
+                        fontFamily = com.Kelasor.app.ui.theme.DanaFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = Color.White
+                    )
+                }
+            }
         }
     }
 }

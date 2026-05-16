@@ -23,3 +23,7 @@ uploads/
 *.tar.gz
 *.exe
 *.msi
+
+# Deploy temp files
+.ssh_control/
+deploy_tmp/

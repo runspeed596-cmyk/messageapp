@@ -43,7 +43,7 @@ val Typography = Typography(
     // Display Styles - Large Headlines
     // ─────────────────────────────────────────────────────────────────────────────
     displayLarge = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 57.sp,
         lineHeight = 64.sp,
@@ -51,7 +51,7 @@ val Typography = Typography(
 
     ),
     displayMedium = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 45.sp,
         lineHeight = 52.sp,
@@ -59,7 +59,7 @@ val Typography = Typography(
 
     ),
     displaySmall = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 36.sp,
         lineHeight = 44.sp,
@@ -70,7 +70,7 @@ val Typography = Typography(
     // Headline Styles - Section Headers
     // ─────────────────────────────────────────────────────────────────────────────
     headlineLarge = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 32.sp,
         lineHeight = 40.sp,
@@ -78,7 +78,7 @@ val Typography = Typography(
 
     ),
     headlineMedium = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 28.sp,
         lineHeight = 36.sp,
@@ -86,7 +86,7 @@ val Typography = Typography(
 
     ),
     headlineSmall = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 24.sp,
         lineHeight = 32.sp,
@@ -97,7 +97,7 @@ val Typography = Typography(
     // Title Styles - App Bar & Cards
     // ─────────────────────────────────────────────────────────────────────────────
     titleLarge = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 22.sp,
         lineHeight = 28.sp,
@@ -105,7 +105,7 @@ val Typography = Typography(
 
     ),
     titleMedium = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 16.sp,
         lineHeight = 24.sp,
@@ -113,7 +113,7 @@ val Typography = Typography(
 
     ),
     titleSmall = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
         lineHeight = 20.sp,
@@ -124,7 +124,7 @@ val Typography = Typography(
     // Body Styles - Main Content & Messages
     // ─────────────────────────────────────────────────────────────────────────────
     bodyLarge = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
@@ -132,7 +132,7 @@ val Typography = Typography(
 
     ),
     bodyMedium = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 20.sp,
@@ -140,7 +140,7 @@ val Typography = Typography(
 
     ),
     bodySmall = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
         lineHeight = 16.sp,
@@ -151,7 +151,7 @@ val Typography = Typography(
     // Label Styles - Buttons & Tags
     // ─────────────────────────────────────────────────────────────────────────────
     labelLarge = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
         lineHeight = 20.sp,
@@ -159,7 +159,7 @@ val Typography = Typography(
 
     ),
     labelMedium = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
         lineHeight = 16.sp,
@@ -167,7 +167,7 @@ val Typography = Typography(
 
     ),
     labelSmall = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
         lineHeight = 16.sp,
@@ -182,84 +182,84 @@ val Typography = Typography(
 
 object MessageAppTypography {
     val chatName = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 16.sp,
         lineHeight = 22.sp,
 
     )
     val chatPreview = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 20.sp,
 
     )
     val chatTime = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
         lineHeight = 16.sp,
         textDirection = TextDirection.Ltr
     )
     val messageText = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 15.sp,
         lineHeight = 22.sp,
 
     )
     val messageTime = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 11.sp,
         lineHeight = 14.sp,
         textDirection = TextDirection.Ltr
     )
     val unreadCount = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 11.sp,
         lineHeight = 14.sp,
         textDirection = TextDirection.Ltr
     )
     val appBarTitle = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 20.sp,
         lineHeight = 26.sp,
 
     )
     val buttonText = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 15.sp,
         lineHeight = 20.sp,
 
     )
     val inputHint = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 15.sp,
         lineHeight = 22.sp,
 
     )
     val sectionTitle = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 13.sp,
         lineHeight = 18.sp,
         letterSpacing = 0.5.sp,
     )
     val caption = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.4.sp
     )
     val body = TextStyle(
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 20.sp,

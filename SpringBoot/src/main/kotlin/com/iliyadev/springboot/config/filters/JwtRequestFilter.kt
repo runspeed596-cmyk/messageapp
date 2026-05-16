@@ -30,6 +30,7 @@ class JwtRequestFilter(
                 println("JWT_FILTER: Token validation result = $isValid for ${request.method} ${request.requestURI}")
                 if (isValid) {
                     val userId = jwtTokenUtils.getUserIdFromToken(token)
+                    val sessionId = jwtTokenUtils.getSessionIdFromToken(token)
                     val uuid = UUID.fromString(userId)
                     
                     // Create UserPrincipal matching the one used in STOMP
@@ -43,7 +44,10 @@ class JwtRequestFilter(
                     
                     // Keep compatibility for any legacy code using request attribute
                     request.setAttribute("userId", uuid)
-                    println("JWT_FILTER: Authentication set for user $userId")
+                    if (sessionId != null) {
+                        request.setAttribute("sessionId", UUID.fromString(sessionId))
+                    }
+                    println("JWT_FILTER: Authentication set for user $userId, session $sessionId")
                 } else {
                     println("JWT_FILTER: Token is INVALID or EXPIRED")
                 }

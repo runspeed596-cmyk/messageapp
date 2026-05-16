@@ -8,7 +8,12 @@ import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.server.ResponseStatusException
+import org.springframework.scheduling.annotation.Scheduled
+import com.iliyadev.springboot.websocket.WebSocketMessageHandler
+import com.iliyadev.springboot.websocket.WsMessage
 import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -17,7 +22,9 @@ import java.util.UUID
 
 data class CourseChapterDto(
     val title: String,
-    val durationText: String
+    val durationText: String,
+    val sessionStartTime: Instant? = null,
+    val sessionEndTime: Instant? = null
 )
 
 data class CreateCourseRequest(
@@ -42,6 +49,7 @@ data class CreateCourseRequest(
     val tags: List<String> = emptyList(),
     val suitableFor: List<String> = emptyList(),
     val chapters: List<CourseChapterDto> = emptyList(),
+    val manualInstructors: List<ManualInstructorDto> = emptyList(),
     val organizerDescription: String? = null,
     val scientificAssociationName: String? = null,
     val isVerticalPoster: Boolean = false
@@ -66,6 +74,7 @@ data class UpdateCourseRequest(
     val tags: List<String>? = null,
     val suitableFor: List<String>? = null,
     val chapters: List<CourseChapterDto>? = null,
+    val manualInstructors: List<ManualInstructorDto>? = null,
     val organizerDescription: String? = null,
     val scientificAssociationName: String? = null,
     val isVerticalPoster: Boolean? = null
@@ -85,6 +94,7 @@ data class CourseResponse(
     val organizerDescription: String?,
     val scientificAssociationName: String?,
     val institutionId: UUID?,
+    val academyUniversities: List<String> = emptyList(),
     val channelId: UUID?,
     val groupId: UUID?,
     val coverImageUrl: String?,
@@ -96,6 +106,7 @@ data class CourseResponse(
     val capacity: Int?,
     val discountPercentage: Int?,
     val syllabusDuration: String?,
+    val manualInstructors: List<ManualInstructorDto> = emptyList(),
     val collaborators: List<UUID>,
     val enrolledCount: Long,
     val isPublic: Boolean,
@@ -108,7 +119,16 @@ data class CourseResponse(
     val averageRating: Double = 0.0,
     val reviewCount: Int = 0,
     val isVerticalPoster: Boolean = false,
+    val hasOnlineClass: Boolean = false,
+    val organizerType: String? = null,
+    val managerId: UUID,
+    val managerName: String,
+    val managerAvatarUrl: String?,
     val createdAt: Instant
+)
+
+data class EnrollmentRequest(
+    val paymentType: String // WALLET, ONLINE
 )
 
 data class EnrollmentResponse(
@@ -117,7 +137,8 @@ data class EnrollmentResponse(
     val courseTitle: String,
     val userId: UUID,
     val enrolledAt: Instant,
-    val isActive: Boolean
+    val isActive: Boolean,
+    val course: CourseResponse? = null
 )
 
 data class AddMaterialRequest(
@@ -176,6 +197,8 @@ data class AddCommentRequest(
 class CourseService(
     private val courseRepository: CourseRepository,
     private val enrollmentRepository: CourseEnrollmentRepository,
+    private val aiBotRepository: AiBotRepository,
+    private val aiBotMessageRepository: AiBotMessageRepository,
     private val materialRepository: CourseMaterialRepository,
     private val commentRepository: CourseCommentRepository,
     private val userRepository: UserRepository,
@@ -183,8 +206,37 @@ class CourseService(
     private val groupRepository: GroupRepository,
     private val groupMemberRepository: GroupMemberRepository,
     private val collaborationService: CollaborationService,
-    private val collaborationRepository: CollaborationRequestRepository
+    private val collaborationRepository: CollaborationRequestRepository,
+    private val institutionRepository: InstitutionRepository,
+    private val chatRepository: ChatRepository,
+    private val messageRepository: MessageRepository,
+    private val webSocketMessageHandler: WebSocketMessageHandler,
+    private val bigBlueButtonService: BigBlueButtonService
 ) {
+    private val logger = org.slf4j.LoggerFactory.getLogger(CourseService::class.java)
+
+    private fun syncManualInstructorsToInstitution(institutionId: UUID?, manualInstructors: List<ManualInstructorDto>) {
+        if (institutionId != null && manualInstructors.isNotEmpty()) {
+            try {
+                val institution = institutionRepository.findById(institutionId).orElse(null)
+                if (institution != null) {
+                    val existingNames = institution.manualInstructors.map { it.name }.toSet()
+                    val newManuals = manualInstructors
+                        .filter { it.name !in existingNames }
+                        .map { ManualInstructor(name = it.name, avatarUrl = it.avatarUrl, resume = it.resume) }
+                    
+                    if (newManuals.isNotEmpty()) {
+                        institution.manualInstructors.addAll(newManuals)
+                        institutionRepository.save(institution)
+                        logger.info("Synced ${newManuals.size} manual instructors to institution $institutionId")
+                    }
+                }
+            } catch (e: Exception) {
+                logger.warn("Failed to sync manual instructors to institution: ${e.message}")
+            }
+        }
+    }
+
     @org.springframework.beans.factory.annotation.Autowired
     lateinit var jdbcTemplate: org.springframework.jdbc.core.JdbcTemplate
 
@@ -213,6 +265,9 @@ class CourseService(
             name = "گروه ${request.title}",
             description = "گروه بحث و گفتگو دوره ${request.title}",
             isPublic = false,
+            isOfficial = true,
+            officialCategory = OfficialGroupCategory.COURSE_GROUP,
+            displayMode = OfficialDisplayMode.TAB,
             createdBy = organizer
         )
         val savedGroup: Group = groupRepository.save(group)
@@ -260,7 +315,7 @@ class CourseService(
             fieldOfStudy = request.fieldOfStudy,
             educationLevel = request.educationLevel,
             startsAt = request.startsAt,
-            endsAt = request.endsAt ?: request.startsAt.plusSeconds(30 * 24 * 3600L),
+            endsAt = request.endsAt,
             enrollmentLimit = request.enrollmentLimit,
             capacity = request.capacity,
             discountPercentage = request.discountPercentage ?: 0,
@@ -271,12 +326,17 @@ class CourseService(
             priceRials = request.priceRials,
             tags = request.tags.toMutableList(),
             suitableFor = request.suitableFor.toMutableList(),
-            chapters = request.chapters.map { CourseChapter(title = it.title, durationText = it.durationText) }.toMutableList(),
+            chapters = request.chapters.map { CourseChapter(title = it.title, durationText = it.durationText, sessionStartTime = it.sessionStartTime, sessionEndTime = it.sessionEndTime) }.toMutableList(),
+            manualInstructors = request.manualInstructors.map { ManualInstructor(name = it.name, avatarUrl = it.avatarUrl, resume = it.resume) }.toMutableList(),
             organizerDescription = request.organizerDescription,
             scientificAssociationName = request.scientificAssociationName,
             isVerticalPoster = request.isVerticalPoster
         )
         val saved: Course = courseRepository.save(course)
+        
+        // Sync manual instructors to institution
+        syncManualInstructorsToInstitution(request.institutionId, request.manualInstructors)
+        
         return mapCourseToResponse(saved)
     }
 
@@ -302,13 +362,21 @@ class CourseService(
         request.suitableFor?.let { course.suitableFor = it.toMutableList() }
         request.chapters?.let { dtos ->
             course.chapters.clear()
-            course.chapters.addAll(dtos.map { CourseChapter(title = it.title, durationText = it.durationText) })
+            course.chapters.addAll(dtos.map { CourseChapter(title = it.title, durationText = it.durationText, sessionStartTime = it.sessionStartTime, sessionEndTime = it.sessionEndTime) })
         }
         request.organizerDescription?.let { course.organizerDescription = it }
+        request.manualInstructors?.let { dtos ->
+            course.manualInstructors.clear()
+            course.manualInstructors.addAll(dtos.map { ManualInstructor(name = it.name, avatarUrl = it.avatarUrl, resume = it.resume) })
+        }
         request.scientificAssociationName?.let { course.scientificAssociationName = it }
         request.isVerticalPoster?.let { course.isVerticalPoster = it }
         course.updatedAt = Instant.now()
         val saved: Course = courseRepository.save(course)
+        
+        // Sync manual instructors to institution
+        request.manualInstructors?.let { syncManualInstructorsToInstitution(course.institutionId, it) }
+        
         return mapCourseToResponse(saved)
     }
 
@@ -372,6 +440,74 @@ class CourseService(
         return mapCourseToResponse(course)
     }
 
+    /**
+     * Explicitly creates a Kelasor Online (BBB) room for a course.
+     * Only the organizer/admin can call this.
+     */
+    @Transactional
+    fun createKelasorOnline(courseId: UUID, organizerId: UUID): CourseResponse {
+        val course: Course = getOwnedCourse(courseId, organizerId)
+        if (course.bbbMeetingId != null) {
+            return mapCourseToResponse(course)
+        }
+        course.bbbMeetingId = "kelasor-${course.id}"
+        course.bbbAttendeePassword = UUID.randomUUID().toString().substring(0, 8)
+        course.bbbModeratorPassword = UUID.randomUUID().toString().substring(0, 8)
+        course.updatedAt = Instant.now()
+        val saved: Course = courseRepository.save(course)
+        logger.info("Kelasor Online created for course ${course.title} (${course.id})")
+        return mapCourseToResponse(saved)
+    }
+
+    @Transactional
+    fun getJoinClassUrl(courseId: UUID, userId: UUID, fullName: String): String {
+        val course = courseRepository.findById(courseId)
+            .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found") }
+        if (course.bbbMeetingId == null) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "کلاسور آنلاین هنوز ساخته نشده است")
+        }
+        // Check if user is teacher, admin, or organizer (moderator)
+        val isModerator = course.teachers.any { it.id == userId } ||
+                          course.admins.any { it.id == userId } ||
+                          course.organizer?.id == userId
+        if (!isModerator) {
+            if (!isEnrolled(courseId, userId)) {
+                throw ResponseStatusException(HttpStatus.FORBIDDEN, "شما در این دوره ثبت‌نام نکرده‌اید")
+            }
+        }
+        if (isModerator) {
+            // Moderator: create the BBB meeting (idempotent) and join as moderator
+            val success = bigBlueButtonService.createMeeting(
+                meetingId = course.bbbMeetingId!!,
+                name = course.title,
+                attendeePw = course.bbbAttendeePassword!!,
+                moderatorPw = course.bbbModeratorPassword!!,
+                record = true
+            )
+            if (!success) {
+                throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "خطا در اتصال به سرور کلاس آنلاین")
+            }
+            return bigBlueButtonService.getJoinUrl(
+                meetingId = course.bbbMeetingId!!,
+                fullName = fullName,
+                password = course.bbbModeratorPassword!!,
+                isFarsi = true
+            )
+        } else {
+            // Student: check if meeting is running (SkyRoom behavior)
+            val isRunning = bigBlueButtonService.isMeetingRunning(course.bbbMeetingId!!)
+            if (!isRunning) {
+                throw ResponseStatusException(HttpStatus.CONFLICT, "برگزارکننده هنوز کلاس را شروع نکرده است. لطفاً دقایقی دیگر تلاش کنید.")
+            }
+            return bigBlueButtonService.getJoinUrl(
+                meetingId = course.bbbMeetingId!!,
+                fullName = fullName,
+                password = course.bbbAttendeePassword!!,
+                isFarsi = true
+            )
+        }
+    }
+
     fun getMyCourses(organizerId: UUID, pageable: Pageable): Page<CourseResponse> {
         return courseRepository.findByOrganizerId(organizerId, pageable)
             .map { mapCourseToResponse(it) }
@@ -393,8 +529,15 @@ class CourseService(
     }
 
     fun getInstitutionCourses(institutionId: UUID, pageable: Pageable): Page<CourseResponse> {
-        return courseRepository.findByInstitutionId(institutionId, pageable)
-            .map { mapCourseToResponse(it) }
+        // Find the institution owner to also include courses created by them (before institutionId was set)
+        val institution: Institution? = institutionRepository.findById(institutionId).orElse(null)
+        return if (institution != null && institution.owner != null) {
+            courseRepository.findByInstitutionIdOrOrganizerId(institutionId, institution.owner!!.id!!, pageable)
+                .map { mapCourseToResponse(it) }
+        } else {
+            courseRepository.findByInstitutionId(institutionId, pageable)
+                .map { mapCourseToResponse(it) }
+        }
     }
 
     @Transactional
@@ -420,7 +563,7 @@ class CourseService(
     // ── Enrollment ──
 
     @Transactional
-    fun enroll(courseId: UUID, userId: UUID): EnrollmentResponse {
+    fun enroll(courseId: UUID, userId: UUID, paymentType: String = "WALLET"): EnrollmentResponse {
         val course: Course = courseRepository.findById(courseId)
             .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found") }
         if (course.status != CourseStatus.APPROVED && course.status != CourseStatus.ACTIVE) {
@@ -433,18 +576,23 @@ class CourseService(
         if (course.enrollmentLimit != null && currentCount >= course.enrollmentLimit!!) {
             throw ResponseStatusException(HttpStatus.CONFLICT, "Course enrollment limit reached")
         }
-        // Charge if paid course
-        if (course.priceRials > 0) {
-            walletService.executeInternalPurchase(
-                userId = userId,
-                amount = course.priceRials,
-                description = "Course enrollment: ${course.title}",
-                referenceId = courseId,
-                referenceType = "COURSE"
-            )
-        }
         val user: User = userRepository.findById(userId)
             .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "User not found") }
+        // Charge if paid course
+        if (course.priceRials > 0) {
+            if (paymentType == "WALLET") {
+                walletService.executeInternalPurchase(
+                    userId = user.id!!,
+                    amount = course.priceRials,
+                    description = "ثبت‌نام در دوره: ${course.title}",
+                    referenceId = course.id!!,
+                    referenceType = "COURSE"
+                )
+            } else {
+                // Online Payment Simulation
+                logger.info("User $userId selected ONLINE payment for course $courseId. Simulating success.")
+            }
+        }
         val enrollment = CourseEnrollment(
             course = course,
             user = user,
@@ -463,6 +611,23 @@ class CourseService(
                 groupMemberRepository.save(member)
             }
         }
+        // Send bot notification
+        try {
+            sendEnrollmentBotNotification(user, course)
+        } catch (e: Exception) {
+            logger.warn("Failed to send enrollment bot notification: ${e.message}")
+        }
+        
+        // Broadcast course capacity update
+        try {
+            enrollmentRepository.flush()
+            val newCount = enrollmentRepository.countByCourseIdAndIsActiveTrue(courseId).toInt()
+            val capacity = course.enrollmentLimit?.toInt() ?: -1
+            webSocketMessageHandler.broadcastCourseCapacityUpdate(courseId, newCount, capacity)
+        } catch (e: Exception) {
+            logger.warn("Failed to broadcast course capacity update: ${e.message}")
+        }
+        
         return mapEnrollmentToResponse(saved)
     }
 
@@ -472,6 +637,17 @@ class CourseService(
             ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Enrollment not found")
         enrollment.isActive = false
         enrollmentRepository.save(enrollment)
+        
+        // Broadcast course capacity update
+        try {
+            enrollmentRepository.flush()
+            val course = courseRepository.findById(courseId).orElse(null)
+            val newCount = enrollmentRepository.countByCourseIdAndIsActiveTrue(courseId).toInt()
+            val capacity = course?.enrollmentLimit?.toInt() ?: -1
+            webSocketMessageHandler.broadcastCourseCapacityUpdate(courseId, newCount, capacity)
+        } catch (e: Exception) {
+            logger.warn("Failed to broadcast course capacity update: ${e.message}")
+        }
     }
 
     fun getMyEnrollments(userId: UUID, pageable: Pageable): Page<EnrollmentResponse> {
@@ -498,6 +674,14 @@ class CourseService(
         val user: User = userRepository.findById(userId)
             .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "User not found") }
         return user.favoriteCourseIds.contains(courseId)
+    }
+
+    fun getFavoriteCourses(userId: UUID): List<CourseResponse> {
+        val user: User = userRepository.findById(userId)
+            .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "User not found") }
+        if (user.favoriteCourseIds.isEmpty()) return emptyList()
+        val courses = courseRepository.findAllById(user.favoriteCourseIds)
+        return courses.map { mapCourseToResponse(it) }
     }
 
     // ── Materials ──
@@ -563,14 +747,54 @@ class CourseService(
             replyToCommentId = request.replyToCommentId
         )
         val saved: CourseComment = commentRepository.save(comment)
-        
         if (saved.rating > 0) {
             val oldRatingSum = course.averageRating * course.reviewCount
             course.reviewCount += 1
             course.averageRating = (oldRatingSum + saved.rating) / course.reviewCount
             courseRepository.save(course)
+            courseRepository.flush() // Force flush so the native/JPQL query below sees the updated course rating
+            // Also update the institution's aggregated rating or organizer's rating
+            if (course.institutionId != null) {
+                try {
+                    val institution: Institution? = institutionRepository.findById(course.institutionId!!).orElse(null)
+                    if (institution != null) {
+                        // Recalculate from all courses instead of incremental (fixes averaging bug)
+                        val avgFromCourses: Double = courseRepository.calculateAverageRatingForInstitution(course.institutionId!!) ?: 0.0
+                        val totalReviews: Int = courseRepository.findByInstitutionId(course.institutionId!!, org.springframework.data.domain.Pageable.unpaged())
+                            .content.sumOf { it.reviewCount }
+                        institution.averageRating = avgFromCourses
+                        institution.reviewCount = totalReviews
+                        institutionRepository.save(institution)
+                    }
+                } catch (e: Exception) {
+                    logger.warn("Failed to update institution rating: ${e.message}")
+                }
+            } else if (course.organizer != null) {
+                try {
+                    val organizer: User = course.organizer!!
+                    val oldOrgRatingSum = organizer.averageRating * organizer.reviewCount
+                    organizer.reviewCount += 1
+                    organizer.averageRating = (oldOrgRatingSum + saved.rating) / organizer.reviewCount
+                    userRepository.save(organizer)
+                } catch (e: Exception) {
+                    logger.warn("Failed to update organizer rating: ${e.message}")
+                }
+            }
+
+            // Update rating for all teachers of the course
+            try {
+                if (course.teachers.isNotEmpty()) {
+                    course.teachers.forEach { teacher ->
+                        val oldTeacherRatingSum = teacher.averageRating * teacher.reviewCount
+                        teacher.reviewCount += 1
+                        teacher.averageRating = (oldTeacherRatingSum + saved.rating) / teacher.reviewCount
+                        userRepository.save(teacher)
+                    }
+                }
+            } catch (e: Exception) {
+                logger.warn("Failed to update teachers rating: ${e.message}")
+            }
         }
-        
         return mapCommentToResponse(saved)
     }
 
@@ -610,6 +834,12 @@ class CourseService(
 
     private fun mapCourseToResponse(course: Course): CourseResponse {
         val enrolledCount: Long = enrollmentRepository.countByCourseIdAndIsActiveTrue(course.id!!)
+        // Use Institution (academy) name/logo if available, otherwise fall back to organizer User profile
+        val institution: Institution? = course.institutionId?.let { instId ->
+            try { institutionRepository.findById(instId).orElse(null) } catch (e: Exception) { null }
+        } ?: try { institutionRepository.findByOwnerId(course.organizer!!.id!!).firstOrNull() } catch (e: Exception) { null }
+        val resolvedOrganizerName: String? = institution?.name ?: course.organizer?.institutionName ?: course.organizer?.displayName
+        val resolvedOrganizerAvatarUrl: String? = institution?.logoUrl ?: course.organizer?.institutionLogoUrl ?: course.organizer?.avatarUrl
         return CourseResponse(
             id = course.id!!,
             title = course.title,
@@ -619,9 +849,10 @@ class CourseService(
             teachers = course.teachers.map { it.toDto() },
             admins = course.admins.map { it.toDto() },
             organizerId = course.organizer!!.id!!,
-            organizerName = course.organizer!!.displayName,
-            organizerAvatarUrl = course.organizer!!.avatarUrl,
-            institutionId = course.institutionId,
+            organizerName = resolvedOrganizerName,
+            organizerAvatarUrl = resolvedOrganizerAvatarUrl,
+            institutionId = institution?.id,
+            academyUniversities = institution?.universities ?: emptyList(),
             channelId = course.channel?.id,
             groupId = course.group?.id,
             coverImageUrl = course.coverImageUrl,
@@ -641,22 +872,31 @@ class CourseService(
             priceRials = course.priceRials,
             tags = course.tags,
             suitableFor = course.suitableFor,
-            chapters = course.chapters.map { CourseChapterDto(title = it.title, durationText = it.durationText) },
+            chapters = course.chapters.map { CourseChapterDto(title = it.title, durationText = it.durationText, sessionStartTime = it.sessionStartTime, sessionEndTime = it.sessionEndTime) },
+            manualInstructors = course.manualInstructors.map { ManualInstructorDto(name = it.name, avatarUrl = it.avatarUrl, resume = it.resume) },
             organizerDescription = course.organizerDescription,
             scientificAssociationName = course.scientificAssociationName,
             isVerticalPoster = course.isVerticalPoster,
+            hasOnlineClass = course.bbbMeetingId != null,
+            organizerType = institution?.type?.name,
+            managerId = course.organizer?.id ?: java.util.UUID.randomUUID(),
+            managerName = course.organizer?.displayName ?: "Unknown",
+            managerAvatarUrl = course.organizer?.avatarUrl,
             createdAt = course.createdAt
         )
     }
 
+
     private fun mapEnrollmentToResponse(enrollment: CourseEnrollment): EnrollmentResponse {
+        val course = enrollment.course!!
         return EnrollmentResponse(
             id = enrollment.id!!,
-            courseId = enrollment.course!!.id!!,
-            courseTitle = enrollment.course!!.title,
+            courseId = course.id!!,
+            courseTitle = course.title,
             userId = enrollment.user!!.id!!,
             enrolledAt = enrollment.enrolledAt,
-            isActive = enrollment.isActive
+            isActive = enrollment.isActive,
+            course = mapCourseToResponse(course)
         )
     }
 
@@ -672,5 +912,173 @@ class CourseService(
             isLocked = material.isLocked,
             createdAt = material.createdAt
         )
+    }
+    /**
+     * Sends an automated notification message to the user via the Mosbat Elm Bot
+     * after successful course enrollment.
+     */
+    private fun sendEnrollmentBotNotification(user: User, course: Course) {
+        val botUserId = UUID.fromString("00000000-0000-0000-0000-000000000001")
+        val botUser = userRepository.findById(botUserId).orElse(null) ?: run {
+            logger.error("System Bot User not found! Check migration.")
+            return
+        }
+        
+        val priceToman: Long = course.priceRials / 10
+        val priceText: String = if (course.priceRials > 0) {
+            "مبلغ ${java.text.NumberFormat.getNumberInstance(java.util.Locale.forLanguageTag("fa")).format(priceToman)} تومان از کیف پول شما کسر شد."
+        } else {
+            "این دوره رایگان بود و مبلغی کسر نشد."
+        }
+        val groupText: String = if (course.group != null) {
+            "\n\n📂 شما به گروه «${course.group!!.name}» اضافه شدید. از بخش پیام‌ها به گروه دسترسی داشته باشید."
+        } else ""
+        
+        val firstChapter = course.chapters.firstOrNull()
+        val sessionInfo = if (firstChapter?.sessionStartTime != null) {
+            val start = firstChapter.sessionStartTime!!
+            val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm")
+                .withZone(java.time.ZoneId.of("Asia/Tehran"))
+            "\n\n📅 اولین جلسه: ${formatter.format(start)}\n📖 سرفصل: ${firstChapter.title}"
+        } else ""
+
+        val messageContent: String = """
+✅ ثبت‌نام موفق!
+
+سلام ${user.displayName} عزیز،
+شما با موفقیت در دوره «${course.title}» ثبت‌نام کردید.
+
+💰 $priceText$groupText$sessionInfo
+
+⏰ مدت کل دوره: ${course.syllabusDuration ?: "نامشخص"}
+
+با آرزوی موفقیت — اطلاع‌رسانی مثبت علم 🎓
+        """.trimIndent()
+
+        // Find or Create Chat
+        var chats = chatRepository.findPrivateChatBetween(botUserId, user.id!!)
+        val chat = if (chats.isNotEmpty()) {
+            chats.first()
+        } else {
+            val newChat = Chat(
+                type = ChatType.PRIVATE,
+                participants = mutableListOf(botUser, user),
+                createdAt = Instant.now(),
+                updatedAt = Instant.now()
+            )
+            chatRepository.save(newChat)
+        }
+        
+        // Send Standard Message
+        val message = Message(
+            chat = chat,
+            sender = botUser,
+            content = messageContent,
+            type = MessageType.TEXT,
+            status = MessageStatus.SENT,
+            createdAt = Instant.now(),
+            actionLabel = "مشاهده جزئیات دوره",
+            actionUrl = "course_details/${course.id}",
+            timerTargetAt = firstChapter?.sessionStartTime
+        )
+        val savedMessage = messageRepository.save(message)
+        
+        // Update chat for sorting
+        chat.updatedAt = Instant.now()
+        chatRepository.save(chat)
+
+        // Notify via WebSocket for real-time delivery
+        try {
+            val wsMessage = WsMessage(
+                id = savedMessage.id!!,
+                chatId = chat.id!!,
+                senderId = botUserId,
+                senderName = botUser.displayName,
+                senderAvatar = botUser.avatarUrl,
+                content = messageContent,
+                type = MessageType.TEXT,
+                timestamp = savedMessage.createdAt,
+                actionLabel = savedMessage.actionLabel,
+                actionUrl = savedMessage.actionUrl,
+                timerTargetAt = savedMessage.timerTargetAt
+            )
+            webSocketMessageHandler.sendPrivateMessage(user.id!!, wsMessage)
+        } catch (e: Exception) {
+            logger.warn("Failed to send WebSocket notification for bot message: ${e.message}")
+        }
+
+        logger.info("Enrollment notification sent from Bot User to user ${user.id} for course ${course.title}")
+    }
+
+    /**
+     * Periodically check for courses starting in ~1 hour and send reminders.
+     * Runs every 5 minutes.
+     */
+    @Scheduled(fixedRate = 300000)
+    @Transactional
+    fun checkAndSendCourseReminders() {
+        val now = Instant.now()
+        val oneHourLater = now.plusSeconds(3600)
+        
+        val soonStartingEnrollments = enrollmentRepository.findEnrollmentsForSoonStartingCourses(now, oneHourLater)
+        if (soonStartingEnrollments.isEmpty()) return
+        
+        val botUserId = UUID.fromString("00000000-0000-0000-0000-000000000001")
+        val botUser = userRepository.findById(botUserId).orElse(null) ?: return
+        
+        logger.info("⏰ Found ${soonStartingEnrollments.size} enrollments for courses starting soon. Sending reminders...")
+        
+        soonStartingEnrollments.forEach { enrollment ->
+            val user = enrollment.user ?: return@forEach
+            val course = enrollment.course ?: return@forEach
+            
+            val reminderContent = """
+🔔 یادآوری شروع دوره!
+
+دوره «${course.title}» کمتر از یک ساعت دیگر شروع می‌شود.
+آماده‌ای؟ 🚀
+
+📍 جزییات دوره را بررسی کنید.
+            """.trimIndent()
+            
+            // Find or Create Chat
+            val chats = chatRepository.findPrivateChatBetween(botUserId, user.id!!)
+            val chat = if (chats.isNotEmpty()) chats.first() else {
+                chatRepository.save(Chat(type = ChatType.PRIVATE, participants = mutableListOf(botUser, user)))
+            }
+            
+            val message = messageRepository.save(Message(
+                chat = chat,
+                sender = botUser,
+                content = reminderContent,
+                type = MessageType.TEXT,
+                status = MessageStatus.SENT,
+                createdAt = Instant.now(),
+                actionLabel = "ورود به دوره / جزییات",
+                actionUrl = "course_details/${course.id}"
+            ))
+            
+            chat.updatedAt = Instant.now()
+            chatRepository.save(chat)
+            
+            // Mark as sent (removed reminderSent logic)
+            enrollmentRepository.save(enrollment)
+            
+            // Notify via WebSocket
+            try {
+                webSocketMessageHandler.sendPrivateMessage(user.id!!, WsMessage(
+                    id = message.id!!,
+                    chatId = chat.id!!,
+                    senderId = botUserId,
+                    senderName = botUser.displayName,
+                    senderAvatar = botUser.avatarUrl,
+                    content = reminderContent,
+                    timestamp = message.createdAt,
+                    actionLabel = message.actionLabel,
+                    actionUrl = message.actionUrl,
+                    timerTargetAt = course.startsAt
+                ))
+            } catch (e: Exception) {}
+        }
     }
 }

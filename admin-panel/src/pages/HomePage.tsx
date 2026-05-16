@@ -68,8 +68,8 @@ const HomePage = () => {
                 const res = await adminApi.getBanners();
                 if (res.data.success) setBanners(res.data.data || []);
             } else if (activeTab === 'science') {
-                const res = await adminApi.getUniversities();
-                if (res.data.success) setUniversities(res.data.data || []);
+                const res = await adminApi.getUniversities(0, 9999);
+                if (res.data.success) setUniversities(res.data.data?.content || []);
             } else if (activeTab === 'entertainment') {
                 const res = await adminApi.getMovies();
                 if (res.data.success) setMovies(res.data.data || []);

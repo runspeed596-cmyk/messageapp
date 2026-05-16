@@ -63,7 +63,7 @@ import com.Kelasor.app.ui.components.AvatarSize
 import com.Kelasor.app.ui.theme.CardShapes
 import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.theme.MessageAppTypography
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import com.Kelasor.app.ui.viewmodel.GroupDetailViewModel
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -133,7 +133,7 @@ fun GroupDetailScreen(
             title = {
                 Text(
                     text = stringResource(R.string.group_info),
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     fontWeight = FontWeight.Bold
                 )
             },
@@ -197,7 +197,7 @@ fun GroupDetailScreen(
                         Text(
                             text = group.name,
                             style = MaterialTheme.typography.headlineSmall,
-                            fontFamily = VazirFontFamily,
+                            fontFamily = DanaFontFamily,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(4.dp))
@@ -328,7 +328,7 @@ fun GroupDetailScreen(
                             Text(
                                 text = if (state.isOwner) "حذف گروه" else "ترک گروه",
                                 style = MaterialTheme.typography.bodyLarge,
-                                fontFamily = VazirFontFamily,
+                                fontFamily = DanaFontFamily,
                                 color = MaterialTheme.colorScheme.error
                             )
                         }
@@ -349,8 +349,8 @@ fun GroupDetailScreen(
         
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { showLeaveDeleteDialog = false },
-            title = { Text(title, fontFamily = VazirFontFamily) },
-            text = { Text(message, fontFamily = VazirFontFamily) },
+            title = { Text(title, fontFamily = DanaFontFamily) },
+            text = { Text(message, fontFamily = DanaFontFamily) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -361,13 +361,13 @@ fun GroupDetailScreen(
                     Text(
                         if (state.isOwner) "حذف" else "ترک گروه",
                         color = MaterialTheme.colorScheme.error,
-                        fontFamily = VazirFontFamily
+                        fontFamily = DanaFontFamily
                     )
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showLeaveDeleteDialog = false }) {
-                    Text(stringResource(R.string.cancel), fontFamily = VazirFontFamily)
+                    Text(stringResource(R.string.cancel), fontFamily = DanaFontFamily)
                 }
             }
         )
@@ -470,7 +470,7 @@ private fun SectionCard(
         Text(
             text = content,
             style = MaterialTheme.typography.bodyMedium,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             color = MaterialTheme.colorScheme.onSurface
         )
     }
@@ -692,7 +692,7 @@ private fun AddMemberDialog(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("لغو", fontFamily = VazirFontFamily)
+                        Text("لغو", fontFamily = DanaFontFamily)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -702,7 +702,7 @@ private fun AddMemberDialog(
                         },
                         enabled = selectedUserIds.isNotEmpty()
                     ) {
-                        Text("افزودن (${selectedUserIds.size})", fontFamily = VazirFontFamily)
+                        Text("افزودن (${selectedUserIds.size})", fontFamily = DanaFontFamily)
                     }
                 }
             }
@@ -776,7 +776,7 @@ private fun PromoteAdminDialog(
                     text = "تنظیم دسترسی‌های مدیر",
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontFamily = VazirFontFamily
+                    fontFamily = DanaFontFamily
                 )
                 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -809,7 +809,7 @@ private fun PromoteAdminDialog(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("لغو", fontFamily = VazirFontFamily)
+                        Text("لغو", fontFamily = DanaFontFamily)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -817,7 +817,7 @@ private fun PromoteAdminDialog(
                             onConfirm(canEditInfo, canPostStory, canAddMembers, canRemoveMembers)
                         }
                     ) {
-                        Text("تایید و ارتقا", fontFamily = VazirFontFamily)
+                        Text("تایید و ارتقا", fontFamily = DanaFontFamily)
                     }
                 }
             }
@@ -847,7 +847,7 @@ private fun PermissionItem(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
-            fontFamily = VazirFontFamily
+            fontFamily = DanaFontFamily
         )
     }
 }

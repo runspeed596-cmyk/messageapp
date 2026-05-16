@@ -65,7 +65,7 @@ import com.Kelasor.app.ui.components.TextButton
 import com.Kelasor.app.ui.theme.AppAnimations
 import com.Kelasor.app.ui.theme.CardShapes
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import com.Kelasor.app.ui.viewmodel.AuthEvent
 import com.Kelasor.app.ui.viewmodel.AuthViewModel
 import kotlinx.coroutines.delay
@@ -161,7 +161,7 @@ fun OtpScreen(
             title = {
                 Text(
                     text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.verify_number),
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -191,7 +191,7 @@ fun OtpScreen(
             Text(
                 text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.verification_code_sent),
                 style = MaterialTheme.typography.headlineSmall,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.graphicsLayer {
@@ -203,7 +203,7 @@ fun OtpScreen(
             Text(
                 text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.enter_verification_code, phoneNumber),
                 style = MaterialTheme.typography.bodyMedium,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.graphicsLayer {
@@ -260,7 +260,7 @@ fun OtpScreen(
                 Text(
                     text = state.error ?: "",
                     style = MaterialTheme.typography.bodySmall,
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(top = 16.dp)
                 )
@@ -307,7 +307,7 @@ fun OtpScreen(
                         Text(
                             text = androidx.compose.ui.res.stringResource(com.Kelasor.app.R.string.resend_code_timer, resendTimer),
                             style = MaterialTheme.typography.bodyMedium,
-                            fontFamily = VazirFontFamily,
+                            fontFamily = DanaFontFamily,
                             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f)
                         )
                     }
@@ -368,7 +368,7 @@ private fun RowScope.OtpDigitBox(
         Text(
             text = digit,
             style = MaterialTheme.typography.headlineMedium,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             fontWeight = FontWeight.Bold,
             color = if (hasError) {
                 MaterialTheme.colorScheme.error

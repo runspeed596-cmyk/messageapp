@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { adminApi, getMediaUrl } from '../api/adminApi';
 import type { FieldOfStudy, EducationLevel, Faculty, EducationalRoleOption, ReferenceClub, ReferenceStudentOrg, HomeBanner } from '../api/adminApi';
 import { Users, Image as ImageIcon, Upload } from 'lucide-react';
+import Pagination from '../components/Pagination';
 import {
     BookOpen, GraduationCap, Building2, Plus, Trash2, Check, X, Loader2,
     Pencil, ArrowRight, AlertTriangle, Shield, Layers
@@ -22,6 +23,12 @@ const WorldOfScienceSettings = () => {
     const [sliderBanners, setSliderBanners] = useState<HomeBanner[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
+    const [currentPage, setCurrentPage] = useState<number>(0);
+    const PAGE_SIZE = 20;
+
+    useEffect(() => {
+        setCurrentPage(0);
+    }, [activeTab]);
 
     // Field form
     const [showFieldForm, setShowFieldForm] = useState<boolean>(false);
@@ -35,7 +42,7 @@ const WorldOfScienceSettings = () => {
 
     // Faculty form
     const [showFacultyForm, setShowFacultyForm] = useState<boolean>(false);
-    const [facultyForm, setFacultyForm] = useState<Faculty>({ name: '', educationLevel: '', displayOrder: 0 });
+    const [facultyForm, setFacultyForm] = useState<Faculty>({ name: '', displayOrder: 0 });
     const [editingFacultyId, setEditingFacultyId] = useState<string | null>(null);
 
     // Role form
@@ -175,7 +182,7 @@ const WorldOfScienceSettings = () => {
                 return;
             }
             setShowFacultyForm(false);
-            setFacultyForm({ name: '', educationLevel: '', displayOrder: 0 });
+            setFacultyForm({ name: '', displayOrder: 0 });
             setEditingFacultyId(null);
             loadData();
         } catch (err: any) {
@@ -185,7 +192,7 @@ const WorldOfScienceSettings = () => {
     };
 
     const handleEditFaculty = (faculty: Faculty): void => {
-        setFacultyForm({ id: faculty.id, name: faculty.name, educationLevel: faculty.educationLevel, displayOrder: faculty.displayOrder });
+        setFacultyForm({ id: faculty.id, name: faculty.name, displayOrder: faculty.displayOrder });
         setEditingFacultyId(faculty.id!);
         setShowFacultyForm(true);
     };
@@ -403,6 +410,7 @@ const WorldOfScienceSettings = () => {
                             <tbody>
                                 {fieldsOfStudy
                                     .sort((a, b) => a.displayOrder - b.displayOrder)
+                                    .slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
                                     .map((field, index) => (
                                         <tr key={field.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                                             <td className="p-4 text-sm text-slate-600">{index + 1}</td>
@@ -441,6 +449,17 @@ const WorldOfScienceSettings = () => {
                             </tbody>
                         </table>
                     </div>
+                    {fieldsOfStudy.length > PAGE_SIZE && (
+                        <div className="mt-4 p-4">
+                            <Pagination
+                                currentPage={currentPage}
+                                totalPages={Math.ceil(fieldsOfStudy.length / PAGE_SIZE)}
+                                totalElements={fieldsOfStudy.length}
+                                pageSize={PAGE_SIZE}
+                                onPageChange={setCurrentPage}
+                            />
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -466,7 +485,7 @@ const WorldOfScienceSettings = () => {
                     {showFacultyForm && (
                         <div className="glass p-6 rounded-2xl border-amber-500/20 animate-in fade-in slide-in-from-top-4 duration-300">
                             <h3 className="text-sm font-black text-amber-400 mb-4">{editingFacultyId ? '✏️ ویرایش دانشکده' : 'ثبت دانشکده جدید'}</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 items-end">
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">نام دانشکده *</label>
                                     <input
@@ -478,21 +497,6 @@ const WorldOfScienceSettings = () => {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">مقطع مرتبط *</label>
-                                    <select
-                                        value={facultyForm.educationLevel || ''}
-                                        onChange={(e) => setFacultyForm({ ...facultyForm, educationLevel: e.target.value })}
-                                        className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-amber-500 outline-none appearance-none"
-                                    >
-                                        <option value="" className="bg-slate-900">انتخاب مقطع...</option>
-                                        {educationLevels.map(level => (
-                                            <option key={level.id} value={level.name} className="bg-slate-900">
-                                                {level.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="space-y-2">
                                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">ترتیب</label>
                                     <input
                                         type="number"
@@ -501,7 +505,7 @@ const WorldOfScienceSettings = () => {
                                         className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-amber-500 outline-none"
                                     />
                                 </div>
-                                <div className="flex gap-2 lg:col-span-3 justify-end pt-2">
+                                <div className="flex gap-2 lg:col-span-2 justify-end pt-2">
                                     <button
                                         onClick={handleSaveFaculty}
                                         className="flex items-center gap-2 bg-amber-600 hover:bg-amber-500 text-white px-5 py-4 rounded-xl font-bold text-sm transition-all"
@@ -534,6 +538,7 @@ const WorldOfScienceSettings = () => {
                             <tbody>
                                 {faculties
                                     .sort((a, b) => a.displayOrder - b.displayOrder)
+                                    .slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
                                     .map((faculty, index) => (
                                         <tr key={faculty.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                                             <td className="p-4 text-sm text-slate-600">{index + 1}</td>
@@ -567,6 +572,17 @@ const WorldOfScienceSettings = () => {
                             </tbody>
                         </table>
                     </div>
+                    {faculties.length > PAGE_SIZE && (
+                        <div className="mt-4 p-4">
+                            <Pagination
+                                currentPage={currentPage}
+                                totalPages={Math.ceil(faculties.length / PAGE_SIZE)}
+                                totalElements={faculties.length}
+                                pageSize={PAGE_SIZE}
+                                onPageChange={setCurrentPage}
+                            />
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -661,6 +677,7 @@ const WorldOfScienceSettings = () => {
                             <tbody>
                                 {educationLevels
                                     .sort((a, b) => a.displayOrder - b.displayOrder)
+                                    .slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
                                     .map((level, index) => (
                                         <tr key={level.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                                             <td className="p-4 text-sm text-slate-600">{index + 1}</td>
@@ -697,6 +714,17 @@ const WorldOfScienceSettings = () => {
                             </tbody>
                         </table>
                     </div>
+                    {educationLevels.length > PAGE_SIZE && (
+                        <div className="mt-4 p-4">
+                            <Pagination
+                                currentPage={currentPage}
+                                totalPages={Math.ceil(educationLevels.length / PAGE_SIZE)}
+                                totalElements={educationLevels.length}
+                                pageSize={PAGE_SIZE}
+                                onPageChange={setCurrentPage}
+                            />
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -805,6 +833,7 @@ const WorldOfScienceSettings = () => {
                             <tbody>
                                 {educationalRoles
                                     .sort((a, b) => a.displayOrder - b.displayOrder)
+                                    .slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
                                     .map((role, index) => (
                                         <tr key={role.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                                             <td className="p-4 text-sm text-slate-600">{index + 1}</td>
@@ -849,6 +878,17 @@ const WorldOfScienceSettings = () => {
                             </tbody>
                         </table>
                     </div>
+                    {educationalRoles.length > PAGE_SIZE && (
+                        <div className="mt-4 p-4">
+                            <Pagination
+                                currentPage={currentPage}
+                                totalPages={Math.ceil(educationalRoles.length / PAGE_SIZE)}
+                                totalElements={educationalRoles.length}
+                                pageSize={PAGE_SIZE}
+                                onPageChange={setCurrentPage}
+                            />
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -893,7 +933,9 @@ const WorldOfScienceSettings = () => {
                         <table className="w-full">
                             <thead><tr className="border-b border-white/5"><th className="p-4 text-right text-xs font-black text-slate-500 uppercase tracking-widest">ردیف</th><th className="p-4 text-right text-xs font-black text-slate-500 uppercase tracking-widest">نام کانون</th><th className="p-4 text-center text-xs font-black text-slate-500 uppercase tracking-widest">ترتیب</th><th className="p-4 text-center text-xs font-black text-slate-500 uppercase tracking-widest">عملیات</th></tr></thead>
                             <tbody>
-                                {clubs.sort((a, b) => a.displayOrder - b.displayOrder).map((club, index) => (
+                                {clubs.sort((a, b) => a.displayOrder - b.displayOrder)
+                                .slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
+                                .map((club, index) => (
                                     <tr key={club.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                                         <td className="p-4 text-sm text-slate-600">{index + 1}</td>
                                         <td className="p-4 text-sm font-bold text-white">{club.name}</td>
@@ -905,6 +947,17 @@ const WorldOfScienceSettings = () => {
                             </tbody>
                         </table>
                     </div>
+                    {clubs.length > PAGE_SIZE && (
+                        <div className="mt-4 p-4 border-t border-white/5">
+                            <Pagination
+                                currentPage={currentPage}
+                                totalPages={Math.ceil(clubs.length / PAGE_SIZE)}
+                                totalElements={clubs.length}
+                                pageSize={PAGE_SIZE}
+                                onPageChange={setCurrentPage}
+                            />
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -949,7 +1002,9 @@ const WorldOfScienceSettings = () => {
                         <table className="w-full">
                             <thead><tr className="border-b border-white/5"><th className="p-4 text-right text-xs font-black text-slate-500 uppercase tracking-widest">ردیف</th><th className="p-4 text-right text-xs font-black text-slate-500 uppercase tracking-widest">نام تشکل</th><th className="p-4 text-center text-xs font-black text-slate-500 uppercase tracking-widest">ترتیب</th><th className="p-4 text-center text-xs font-black text-slate-500 uppercase tracking-widest">عملیات</th></tr></thead>
                             <tbody>
-                                {studentOrgs.sort((a, b) => a.displayOrder - b.displayOrder).map((org, index) => (
+                                {studentOrgs.sort((a, b) => a.displayOrder - b.displayOrder)
+                                .slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
+                                .map((org, index) => (
                                     <tr key={org.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                                         <td className="p-4 text-sm text-slate-600">{index + 1}</td>
                                         <td className="p-4 text-sm font-bold text-white">{org.name}</td>
@@ -961,6 +1016,17 @@ const WorldOfScienceSettings = () => {
                             </tbody>
                         </table>
                     </div>
+                    {studentOrgs.length > PAGE_SIZE && (
+                        <div className="mt-4 p-4 border-t border-white/5">
+                            <Pagination
+                                currentPage={currentPage}
+                                totalPages={Math.ceil(studentOrgs.length / PAGE_SIZE)}
+                                totalElements={studentOrgs.length}
+                                pageSize={PAGE_SIZE}
+                                onPageChange={setCurrentPage}
+                            />
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -1024,7 +1090,9 @@ const WorldOfScienceSettings = () => {
                     )}
                     {sliderBanners.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {sliderBanners.map((banner) => (
+                            {sliderBanners.sort((a, b) => a.displayOrder - b.displayOrder)
+                                .slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
+                                .map((banner) => (
                                 <div key={banner.id} className="glass rounded-2xl overflow-hidden group border-white/5 hover:border-orange-500/30 transition-all duration-500 shadow-xl">
                                     <div className="aspect-video bg-slate-800 relative overflow-hidden">
                                         {banner.imageUrl ? (<img src={getMediaUrl(banner.imageUrl)} alt={banner.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />) : (

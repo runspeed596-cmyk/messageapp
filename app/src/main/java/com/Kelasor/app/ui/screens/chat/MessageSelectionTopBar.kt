@@ -31,7 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 
 /**
  * Selection top bar specifically for message selection.
@@ -58,7 +58,7 @@ fun MessageSelectionTopBar(
             title = { 
                 Text(
                     text = "حذف پیام",
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     fontWeight = FontWeight.Bold
                 ) 
             },
@@ -66,7 +66,7 @@ fun MessageSelectionTopBar(
                 Column {
                     Text(
                         text = "آیا مطمئن هستید که می‌خواهید ${selectedCount} پیام را حذف کنید؟",
-                        fontFamily = VazirFontFamily
+                        fontFamily = DanaFontFamily
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(
@@ -78,7 +78,7 @@ fun MessageSelectionTopBar(
                         )
                         Text(
                             text = "برای همه حذف شود",
-                            fontFamily = VazirFontFamily,
+                            fontFamily = DanaFontFamily,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -95,7 +95,7 @@ fun MessageSelectionTopBar(
                     Text(
                         text = "حذف",
                         color = MaterialTheme.colorScheme.error,
-                        fontFamily = VazirFontFamily
+                        fontFamily = DanaFontFamily
                     )
                 }
             },
@@ -106,7 +106,7 @@ fun MessageSelectionTopBar(
                 }) {
                     Text(
                         text = "انصراف",
-                        fontFamily = VazirFontFamily
+                        fontFamily = DanaFontFamily
                     )
                 }
             }

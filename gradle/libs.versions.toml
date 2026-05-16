@@ -26,6 +26,7 @@ accompanist = "0.34.0"
 osmdroid = "6.1.18"
 workmanager = "2.11.1"
 mapbox = "10.16.4"
+mapir = "3.1.0"
 firebaseBom = "33.9.0"
 googleServices = "4.4.2"
 foundationLayout = "1.10.2"
@@ -37,6 +38,7 @@ roomPaging = "2.7.2"
 
 [libraries]
 mapbox-maps = { group = "com.mapbox.maps", name = "android", version.ref = "mapbox" }
+mapir-sdk = { group = "ir.map", name = "map-sdk", version.ref = "mapir" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }

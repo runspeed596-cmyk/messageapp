@@ -26,13 +26,14 @@ class SecurityConfig(
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { auth ->
                 auth
-                    .requestMatchers("/api/admin/auth").permitAll()
+                    .requestMatchers("/api/health").permitAll()
+                    .requestMatchers("/api/admin/auth/**").permitAll()
                     .requestMatchers("/api/home").permitAll()
                     .requestMatchers("/api/auth/**").permitAll()
                     .requestMatchers("/api/entertainment").permitAll()
                     .requestMatchers("/api/entertainment/media/**").permitAll()
                     .requestMatchers("/api/media/**").permitAll()
-                    .requestMatchers("/api/admin/**").permitAll()
+                    .requestMatchers("/api/admin/**").authenticated()
                     .requestMatchers("/api/elm-peak/events").permitAll()
                     .requestMatchers("/api/elm-peak/universities").permitAll()
                     .requestMatchers("/swagger-ui/**").permitAll()
@@ -40,7 +41,10 @@ class SecurityConfig(
                     .requestMatchers("/uploads/**").permitAll()
                     .requestMatchers("/api/files/thumbnail/**").permitAll()
                     .requestMatchers("/api/reference-data/**").permitAll()
+                    .requestMatchers("/api/locations/**").permitAll()
+                    .requestMatchers("/api/health").permitAll()
                     .requestMatchers("/ws/**").permitAll()
+                    .requestMatchers("/api/kelasor-online/**").permitAll()
                     .anyRequest().authenticated()
             }
             .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter::class.java)

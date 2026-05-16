@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -184,17 +184,17 @@ fun ShamsiDatePickerDialog(
             ) {
                 Text(
                     text = "انتخاب تاریخ (شمسی)",
-                    fontFamily = VazirFontFamily,
-                    fontSize = 20.sp,
+                    fontFamily = DanaFontFamily,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 // Show selected date preview with month name
                 val monthName = ShamsiConverter.shamsiMonthNames.getOrNull(selectedMonth - 1) ?: ""
                 Text(
                     text = "$selectedDay $monthName $selectedYear",
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     fontSize = 16.sp,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -225,10 +225,11 @@ fun ShamsiDatePickerDialog(
                     Text("/", fontSize = 24.sp, color = MaterialTheme.colorScheme.outline)
                     // Year
                     NumberPickerColumn(
-                        range = currentShamsiYear..(currentShamsiYear + 17),
+                        range = currentShamsiYear..(currentShamsiYear + 10),
                         selectedValue = selectedYear,
                         onValueChange = { selectedYear = it },
-                        label = "سال"
+                        label = "سال",
+                        isHighlight = selectedYear == currentShamsiYear
                     )
                 }
                 Spacer(modifier = Modifier.height(32.dp))
@@ -237,7 +238,7 @@ fun ShamsiDatePickerDialog(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismissRequest) {
-                        Text("انصراف", fontFamily = VazirFontFamily, color = MaterialTheme.colorScheme.outline)
+                        Text("انصراف", fontFamily = DanaFontFamily, color = MaterialTheme.colorScheme.outline)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -248,7 +249,7 @@ fun ShamsiDatePickerDialog(
                         },
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text("تایید", fontFamily = VazirFontFamily)
+                        Text("تایید", fontFamily = DanaFontFamily)
                     }
                 }
             }
@@ -270,8 +271,16 @@ fun ShamsiDateTimePickerDialog(
     var selectedYear by remember { mutableIntStateOf(currentShamsiYear) }
     var selectedMonth by remember { mutableIntStateOf(currentShamsiMonth) }
     var selectedDay by remember { mutableIntStateOf(currentShamsiDay) }
-    var selectedHour by remember { mutableIntStateOf(initialHour) }
+    
+    // Calculate current hour/minute for restriction
+    val nowDateTime = LocalDateTime.now(ZoneId.of("Asia/Tehran"))
+    val currentHour = nowDateTime.hour
+    val currentMinute = nowDateTime.minute
+
+    var selectedHour by remember { mutableIntStateOf(maxOf(initialHour, if (selectedYear == currentShamsiYear && selectedMonth == currentShamsiMonth && selectedDay == currentShamsiDay) currentHour else 0)) }
     var selectedMinute by remember { mutableIntStateOf(initialMinute) }
+    
+    val context = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(initialDate) {
         if (!initialDate.isNullOrEmpty() && initialDate.contains("/")) {
             val parts = initialDate.split("/")
@@ -298,11 +307,11 @@ fun ShamsiDateTimePickerDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "انتخاب تاریخ و ساعت",
-                    fontFamily = VazirFontFamily,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    text = "انتخاب زمان برگزاری",
+                    fontFamily = DanaFontFamily,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 // Show preview
@@ -311,68 +320,87 @@ fun ShamsiDateTimePickerDialog(
                 val minuteStr = selectedMinute.toString().padStart(2, '0')
                 Text(
                     text = "$selectedDay $monthName $selectedYear - ساعت $hourStr:$minuteStr",
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     fontSize = 15.sp,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Medium
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 // Date Pickers
-                Text("تاریخ", fontFamily = VazirFontFamily, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Text("تاریخ", fontFamily = DanaFontFamily, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val minDay = if (selectedYear == currentShamsiYear && selectedMonth == currentShamsiMonth) currentShamsiDay else 1
                     val maxDay = ShamsiConverter.getDaysInShamsiMonth(selectedMonth, selectedYear)
+                    if (selectedDay < minDay) selectedDay = minDay
                     if (selectedDay > maxDay) selectedDay = maxDay
+                    
                     NumberPickerColumn(
-                        range = 1..maxDay,
+                        range = minDay..maxDay,
                         selectedValue = selectedDay,
                         onValueChange = { selectedDay = it },
-                        label = "روز"
+                        label = "روز",
+                        isHighlight = selectedYear == currentShamsiYear && selectedMonth == currentShamsiMonth && selectedDay == currentShamsiDay
                     )
-                    Text("/", fontSize = 24.sp, color = MaterialTheme.colorScheme.outline)
+                    Text("/", fontSize = 24.sp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+                    
+                    val minMonth = if (selectedYear == currentShamsiYear) currentShamsiMonth else 1
                     NumberPickerColumn(
-                        range = 1..12,
+                        range = minMonth..12,
                         selectedValue = selectedMonth,
-                        onValueChange = { selectedMonth = it },
-                        label = "ماه"
+                        onValueChange = { 
+                            selectedMonth = it
+                        },
+                        label = "ماه",
+                        isHighlight = selectedYear == currentShamsiYear && selectedMonth == currentShamsiMonth
                     )
-                    Text("/", fontSize = 24.sp, color = MaterialTheme.colorScheme.outline)
+                    Text("/", fontSize = 24.sp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
                     NumberPickerColumn(
-                        range = currentShamsiYear..(currentShamsiYear + 17),
+                        range = currentShamsiYear..(currentShamsiYear + 5),
                         selectedValue = selectedYear,
                         onValueChange = { selectedYear = it },
-                        label = "سال"
+                        label = "سال",
+                        isHighlight = selectedYear == currentShamsiYear
                     )
                 }
                 Spacer(modifier = Modifier.height(20.dp))
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 Spacer(modifier = Modifier.height(16.dp))
                 // Time Pickers
-                Text("ساعت", fontFamily = VazirFontFamily, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Text("ساعت", fontFamily = DanaFontFamily, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val minHour = if (selectedYear == currentShamsiYear && selectedMonth == currentShamsiMonth && selectedDay == currentShamsiDay) currentHour else 0
+                    if (selectedHour < minHour) selectedHour = minHour
+                    
                     NumberPickerColumn(
-                        range = 0..23,
+                        range = minHour..23,
                         selectedValue = selectedHour,
                         onValueChange = { selectedHour = it },
-                        label = "ساعت"
+                        label = "ساعت",
+                        isHighlight = selectedYear == currentShamsiYear && selectedMonth == currentShamsiMonth && selectedDay == currentShamsiDay && selectedHour == currentHour
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(":", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                     Spacer(modifier = Modifier.width(16.dp))
+                    
+                    val minMinute = if (selectedYear == currentShamsiYear && selectedMonth == currentShamsiMonth && selectedDay == currentShamsiDay && selectedHour == currentHour) currentMinute else 0
+                    if (selectedMinute < minMinute) selectedMinute = minMinute
+                    
                     NumberPickerColumn(
-                        range = 0..59,
+                        range = minMinute..59,
                         selectedValue = selectedMinute,
                         onValueChange = { selectedMinute = it },
-                        label = "دقیقه"
+                        label = "دقیقه",
+                        isHighlight = selectedYear == currentShamsiYear && selectedMonth == currentShamsiMonth && selectedDay == currentShamsiDay && selectedHour == currentHour && selectedMinute == currentMinute
                     )
                 }
                 Spacer(modifier = Modifier.height(24.dp))
@@ -381,15 +409,23 @@ fun ShamsiDateTimePickerDialog(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismissRequest) {
-                        Text("انصراف", fontFamily = VazirFontFamily, color = MaterialTheme.colorScheme.outline)
+                        Text("انصراف", fontFamily = DanaFontFamily, color = MaterialTheme.colorScheme.outline)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = {
+                            val instant = ShamsiConverter.shamsiToInstant(selectedYear, selectedMonth, selectedDay, selectedHour, selectedMinute)
+                            
+                            // Prevent past dates
+                            if (instant.isBefore(java.time.Instant.now().minusSeconds(10))) {
+                                android.widget.Toast.makeText(context, "امکان انتخاب زمان در گذشته وجود ندارد", android.widget.Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+
                             val formattedMonth = selectedMonth.toString().padStart(2, '0')
                             val formattedDay = selectedDay.toString().padStart(2, '0')
                             val displayString = "$selectedYear/$formattedMonth/$formattedDay"
-                            val instant = ShamsiConverter.shamsiToInstant(selectedYear, selectedMonth, selectedDay, selectedHour, selectedMinute)
+                            
                             val result = ShamsiDateTimeResult(
                                 displayString = displayString,
                                 isoInstantString = instant.toString(),
@@ -401,9 +437,9 @@ fun ShamsiDateTimePickerDialog(
                             )
                             onDateTimeSelected(result)
                         },
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("تایید", fontFamily = VazirFontFamily)
+                        Text("تایید و ثبت", fontFamily = DanaFontFamily)
                     }
                 }
             }
@@ -416,10 +452,17 @@ private fun NumberPickerColumn(
     range: IntRange,
     selectedValue: Int,
     onValueChange: (Int) -> Unit,
-    label: String
+    label: String,
+    isHighlight: Boolean = false
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = label, fontFamily = VazirFontFamily, fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
+        Text(
+            text = label, 
+            fontFamily = DanaFontFamily, 
+            fontSize = 11.sp, 
+            color = if (isHighlight) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+            fontWeight = if (isHighlight) FontWeight.Bold else FontWeight.Normal
+        )
         Spacer(modifier = Modifier.height(4.dp))
         // AndroidView with native NumberPicker
         androidx.compose.ui.viewinterop.AndroidView(

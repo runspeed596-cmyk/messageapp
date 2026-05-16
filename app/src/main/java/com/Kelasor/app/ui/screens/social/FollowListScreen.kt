@@ -48,7 +48,7 @@ import com.Kelasor.app.data.remote.dto.FollowDto
 import com.Kelasor.app.ui.components.AvatarImage
 import com.Kelasor.app.ui.components.AvatarSize
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import com.Kelasor.app.ui.viewmodel.FollowListViewModel
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -84,7 +84,7 @@ fun FollowListScreen(
             title = {
                 Text(
                     text = if (selectedTab == 0) "دنبال‌کننده‌ها" else "دنبال‌شده‌ها",
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     fontWeight = FontWeight.Bold
                 )
             },
@@ -121,7 +121,7 @@ fun FollowListScreen(
                             Text(
                                 text = title,
                                 style = MaterialTheme.typography.labelLarge,
-                                fontFamily = VazirFontFamily,
+                                fontFamily = DanaFontFamily,
                                 fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
                             )
                             val count = if (index == 0) state.followerCount else state.followingCount
@@ -154,7 +154,7 @@ fun FollowListScreen(
                 Text(
                     text = if (selectedTab == 0) "هنوز دنبال‌کننده‌ای ندارد" else "هنوز کسی را دنبال نمی‌کند",
                     style = MaterialTheme.typography.bodyLarge,
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -192,7 +192,7 @@ fun FollowListScreen(
                                 }) {
                                     Text(
                                         text = "بارگذاری بیشتر",
-                                        fontFamily = VazirFontFamily,
+                                        fontFamily = DanaFontFamily,
                                         color = extendedColors.accent
                                     )
                                 }
@@ -228,7 +228,7 @@ private fun FollowUserItem(
             Text(
                 text = user.displayName,
                 style = MaterialTheme.typography.bodyMedium,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
@@ -237,7 +237,7 @@ private fun FollowUserItem(
             Text(
                 text = "@${user.username}",
                 style = MaterialTheme.typography.bodySmall,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

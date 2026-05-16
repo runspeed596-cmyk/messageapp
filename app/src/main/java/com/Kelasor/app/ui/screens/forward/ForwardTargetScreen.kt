@@ -58,7 +58,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.Kelasor.app.ui.theme.MessageAppTheme
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import com.Kelasor.app.ui.viewmodel.ForwardEvent
 import com.Kelasor.app.ui.viewmodel.ForwardTarget
 import com.Kelasor.app.ui.viewmodel.ForwardTargetViewModel
@@ -122,7 +122,7 @@ fun ForwardTargetScreen(
                 title = {
                     Text(
                         text = "ارسال مجدد",
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
@@ -180,7 +180,7 @@ fun ForwardTargetScreen(
                 placeholder = {
                     Text(
                         text = "جستجو...",
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         color = extendedColors.textSecondary
                     )
                 },
@@ -389,7 +389,7 @@ fun ForwardTargetScreen(
                             Text(
                                 text = if (state.searchQuery.isNotBlank()) "نتیجه\u200Cای یافت نشد"
                                        else "هیچ مقصدی موجود نیست",
-                                fontFamily = VazirFontFamily,
+                                fontFamily = DanaFontFamily,
                                 color = extendedColors.textSecondary,
                                 textAlign = TextAlign.Center
                             )
@@ -413,7 +413,7 @@ fun ForwardTargetScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = "در حال ارسال...",
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         color = Color.White,
                         fontSize = 14.sp
                     )
@@ -434,7 +434,7 @@ private fun SectionHeader(
 ) {
     Text(
         text = title,
-        fontFamily = VazirFontFamily,
+        fontFamily = DanaFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 14.sp,
         color = textColor,
@@ -492,7 +492,7 @@ private fun ForwardTargetItem(
             } else {
                 Text(
                     text = title.take(1).uppercase(),
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
                     color = accentColor
@@ -504,7 +504,7 @@ private fun ForwardTargetItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 15.sp,
                 color = textPrimary,
@@ -514,7 +514,7 @@ private fun ForwardTargetItem(
             if (subtitle.isNotBlank()) {
                 Text(
                     text = subtitle,
-                    fontFamily = VazirFontFamily,
+                    fontFamily = DanaFontFamily,
                     fontSize = 12.sp,
                     color = textSecondary,
                     maxLines = 1,
@@ -542,7 +542,7 @@ private fun SelectedTargetChip(
     ) {
         Text(
             text = name,
-            fontFamily = VazirFontFamily,
+            fontFamily = DanaFontFamily,
             fontSize = 12.sp,
             color = accentColor,
             maxLines = 1,

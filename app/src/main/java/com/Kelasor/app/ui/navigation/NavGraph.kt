@@ -42,7 +42,7 @@ import com.Kelasor.app.ui.screens.group.GroupSettingsScreen
 import com.Kelasor.app.ui.screens.main.MainScreen
 import com.Kelasor.app.ui.screens.profile.EditProfileScreen
 import com.Kelasor.app.ui.screens.profile.ProfileScreen
-import com.Kelasor.app.ui.screens.profile.SettingsScreen
+
 import com.Kelasor.app.ui.screens.profile.UserProfileScreen
 import com.Kelasor.app.ui.screens.profile.ComingSoonScreen
 import com.Kelasor.app.ui.screens.splash.SplashScreen
@@ -110,6 +110,11 @@ fun NavGraph(
             SplashScreen(
                 onNavigateToLogin = {
                     navController.navigate(Routes.Login.route) {
+                        popUpTo(Routes.Splash.route) { inclusive = true }
+                    }
+                },
+                onNavigateToUserInfo = {
+                    navController.navigate(Routes.UserInfo.route) {
                         popUpTo(Routes.Splash.route) { inclusive = true }
                     }
                 },
@@ -183,8 +188,14 @@ fun NavGraph(
                 onNavigateToGroupChat = { groupId -> navController.navigate(Routes.GroupConversation.createRoute(groupId)) },
                 onNavigateToGroupDetail = { groupId -> navController.navigate(Routes.GroupDetail.createRoute(groupId)) },
                 onNavigateToChannelView = { channelId -> navController.navigate("channelView/$channelId") },
-                onNavigateToProfile = { navController.navigate(Routes.Profile.route) },
-                onNavigateToSettings = { navController.navigate(Routes.Settings.route) },
+                onNavigateToProfile = { tab -> 
+                    if (tab == 0) {
+                        navController.navigate(Routes.MessengerSettings.route)
+                    } else {
+                        navController.navigate(Routes.MosbatElmSettings.route)
+                    }
+                },
+                onNavigateToSettings = { navController.navigate(Routes.GlobalSettings.route) },
                 onNavigateToUserProfile = { userId -> navController.navigate(Routes.UserProfile.createRoute(userId)) },
                 onNavigateToNotifications = { navController.navigate(Routes.Notifications.route) },
                 onNavigateToElm = { navController.navigate(Routes.Elm.route) },
@@ -197,6 +208,7 @@ fun NavGraph(
                 },
                 onNavigateToAiBotList = { navController.navigate(Routes.AiBotList.route) },
                 onNavigateToEditProfile = { navController.navigate(Routes.EditProfile.route) },
+                onNavigateToTeacherProfile = { teacherId -> navController.navigate(Routes.TeacherPublicProfile.createRoute(teacherId)) },
                 onLogout = { 
                     // context.getSharedPreferences("auth", android.content.Context.MODE_PRIVATE)
                     //     .edit().clear().apply()
@@ -241,30 +253,7 @@ fun NavGraph(
                 }
             )
         }
-        composable(Routes.Profile.route) {
-            com.Kelasor.app.ui.screens.profile.SettingsScreen(
-                onNavigateBack = { navController.popBackStack() },
-                onEditProfileClick = { navController.navigate(Routes.EditProfile.route) },
-                onEditAcademyProfileClick = { navController.navigate(Routes.OrganizerSetup.route) },
-                onAccountClick = { navController.navigate(Routes.SettingsAccount.route) },
-                onAppearanceClick = { navController.navigate(Routes.SettingsChat.route) },
-                onPrivacyClick = { navController.navigate(Routes.SettingsPrivacy.route) },
-                onNotificationsClick = { navController.navigate(Routes.SettingsNotifications.route) },
-                onDataStorageClick = { navController.navigate(Routes.SettingsDataStorage.route) },
-                onFoldersClick = { navController.navigate(Routes.SettingsFolders.route) },
-                onDevicesClick = { navController.navigate(Routes.SettingsDevices.route) },
-                onLanguageClick = { navController.navigate(Routes.SettingsLanguage.route) },
-                onWalletClick = { navController.navigate(Routes.Wallet.route) },
-                onAcademyProfileClick = { id ->
-                    navController.navigate(Routes.AcademyProfile.createRoute(id))
-                },
-                onLogoutClick = {
-                    navController.navigate(Routes.Login.route) {
-                        popUpTo(Routes.Main.route) { inclusive = true }
-                    }
-                }
-            )
-        }
+
         // ─────────────────────────────────────────────────────────────────────────
         // Chat Screens
         // ─────────────────────────────────────────────────────────────────────────
@@ -316,6 +305,9 @@ fun NavGraph(
                 },
                 onNavigateToForward = { messageIds, sourceType, sourceId ->
                     navController.navigate(Routes.ForwardTarget.createRoute(messageIds, sourceType, sourceId))
+                },
+                onNavigateToCourseDetail = { courseId ->
+                    navController.navigate(Routes.CourseDetail.createRoute(courseId))
                 }
             )
         }
@@ -336,7 +328,9 @@ fun NavGraph(
             com.Kelasor.app.ui.screens.course.CreateCourseScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onCourseCreated = { _ ->
-                    navController.popBackStack() 
+                    navController.navigate(Routes.MyCourses.route) {
+                        popUpTo(Routes.CreateCourse.route) { inclusive = true }
+                    }
                 },
                 onNavigateToEditAcademyProfile = {
                     navController.navigate(Routes.OrganizerSetup.route)
@@ -441,6 +435,9 @@ fun NavGraph(
                 },
                 onNavigateToExamCreation = {
                     navController.navigate(Routes.ExamCreation.createRoute(null))
+                },
+                onNavigateToCourseDetail = { courseId ->
+                    navController.navigate(Routes.CourseDetail.createRoute(courseId))
                 }
             )
         }
@@ -570,6 +567,9 @@ fun NavGraph(
                 },
                 onNavigateToExamCreation = {
                     navController.navigate(Routes.ExamCreation.createRoute(channelId))
+                },
+                onNavigateToCourseDetail = { courseId ->
+                    navController.navigate(Routes.CourseDetail.createRoute(courseId))
                 }
             )
         }
@@ -636,7 +636,13 @@ fun NavGraph(
                 botId = botId,
                 botName = botName,
                 botType = botType,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onActionClick = { actionUrl ->
+                    if (actionUrl.startsWith("course_details/")) {
+                        val cId = actionUrl.substringAfter("course_details/")
+                        navController.navigate(com.Kelasor.app.ui.navigation.Routes.CourseDetail.createRoute(cId))
+                    }
+                }
             )
         }
         // ─────────────────────────────────────────────────────────────────────────
@@ -647,28 +653,60 @@ fun NavGraph(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
-        composable(Routes.Settings.route) {
-            com.Kelasor.app.ui.screens.profile.SettingsScreen(
+        composable(Routes.GlobalSettings.route) {
+            com.Kelasor.app.ui.screens.settings.GlobalSettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onWalletClick = { navController.navigate(Routes.Wallet.route) },
+                onMessengerSettingsClick = { navController.navigate(Routes.MessengerSettings.route) },
+                onMosbatElmSettingsClick = { navController.navigate(Routes.MosbatElmSettings.route) },
+                onNotificationsClick = { navController.navigate(Routes.SettingsNotifications.route) },
+                onSupportClick = { navController.navigate(Routes.AiBotList.route) },
+                onFeedbackClick = { navController.navigate(Routes.Feedback.route) },
+                onAboutUsClick = { navController.navigate(Routes.ComingSoon.createRoute("درباره ما")) },
+                onEditProfileClick = { navController.navigate(Routes.EditProfile.route) },
+                onAddAccountClick = { navController.navigate(Routes.Login.route) },
+                onLogoutSuccess = {
+                    navController.navigate(Routes.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable(Routes.Feedback.route) {
+            com.Kelasor.app.ui.screens.settings.FeedbackScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(Routes.MessengerSettings.route) {
+            com.Kelasor.app.ui.screens.settings.MessengerSettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onEditProfileClick = { navController.navigate(Routes.EditProfile.route) },
-                onEditAcademyProfileClick = { navController.navigate(Routes.OrganizerSetup.route) },
-                onAcademyProfileClick = { institutionId -> 
-                    navController.navigate(Routes.AcademyProfile.createRoute(institutionId))
-                },
-                onAccountClick = { navController.navigate(Routes.SettingsAccount.route) },
+                onAccountClick = { navController.navigate(Routes.EditProfile.route) },
                 onAppearanceClick = { navController.navigate(Routes.SettingsChat.route) },
                 onPrivacyClick = { navController.navigate(Routes.SettingsPrivacy.route) },
                 onNotificationsClick = { navController.navigate(Routes.SettingsNotifications.route) },
                 onDataStorageClick = { navController.navigate(Routes.SettingsDataStorage.route) },
-                onFoldersClick = { navController.navigate(Routes.SettingsFolders.route) },
                 onDevicesClick = { navController.navigate(Routes.SettingsDevices.route) },
-                onLanguageClick = { navController.navigate(Routes.SettingsLanguage.route) },
-                onWalletClick = { navController.navigate(Routes.Wallet.route) },
                 onLogoutClick = {
                     navController.navigate(Routes.Login.route) {
                         popUpTo(Routes.Main.route) { inclusive = true }
                     }
                 }
+            )
+        }
+        composable(Routes.MosbatElmSettings.route) {
+            com.Kelasor.app.ui.screens.settings.MosbatElmSettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onEditAcademyProfileClick = { navController.navigate(Routes.OrganizerSetup.route) },
+                onAcademyProfileClick = { institutionId -> 
+                    navController.navigate(Routes.AcademyProfile.createRoute(institutionId))
+                },
+                onMyCoursesClick = { navController.navigate(Routes.MyCourses.route) },
+                onCollaborationsClick = { navController.navigate(Routes.Collaborations.route) },
+                onMosbatElmNotificationsClick = { navController.navigate(Routes.MosbatElmNotifications.route) },
+                onPurchasedCoursesClick = { navController.navigate(Routes.MyCourses.route) },
+                onCertificatesClick = { navController.navigate(Routes.ComingSoon.createRoute("مدرک‌های دریافت شده")) },
+                onLikedPostsClick = { navController.navigate(Routes.LikedPosts.route) }
             )
         }
         composable(
@@ -697,6 +735,25 @@ fun NavGraph(
             )
         }
         composable(
+            route = Routes.TeacherPublicProfile.route,
+            arguments = listOf(navArgument("teacherId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val teacherId = backStackEntry.arguments?.getString("teacherId") ?: ""
+            com.Kelasor.app.ui.screens.mosbat_elm.TeacherPublicProfileScreen(
+                teacherId = teacherId,
+                onBack = { navController.popBackStack() },
+                onNavigateToCourseDetail = { courseId ->
+                    navController.navigate(Routes.CourseDetail.createRoute(courseId))
+                },
+                onNavigateToChat = { userId ->
+                    navController.navigate(Routes.Conversation.createRoute(userId))
+                },
+                onNavigateToChannel = { channelId ->
+                    navController.navigate(Routes.ChannelView.createRoute(channelId))
+                }
+            )
+        }
+        composable(
             route = Routes.CourseDetail.route,
             arguments = listOf(navArgument("courseId") { type = NavType.StringType })
         ) { backStackEntry ->
@@ -715,6 +772,12 @@ fun NavGraph(
                 },
                 onNavigateToEditCourse = { cId ->
                     navController.navigate(Routes.EditCourse.createRoute(cId))
+                },
+                onNavigateToCourseDetail = { cId ->
+                    navController.navigate(Routes.CourseDetail.createRoute(cId))
+                },
+                onChannelClick = { channelId ->
+                    navController.navigate(Routes.ChannelView.createRoute(channelId))
                 }
             )
         }
@@ -737,27 +800,8 @@ fun NavGraph(
         }
         
         // ── Settings Sub-Pages ───────────────────────────────────────────
-        composable(Routes.SettingsAccount.route) {
-            ComingSoonScreen(title = "Account", onNavigateBack = { navController.popBackStack() })
-        }
-        composable(Routes.SettingsChat.route) {
-            ComingSoonScreen(title = "Chat Settings", onNavigateBack = { navController.popBackStack() })
-        }
-        composable(Routes.SettingsPrivacy.route) {
-            ComingSoonScreen(title = "Privacy & Security", onNavigateBack = { navController.popBackStack() })
-        }
-        composable(Routes.SettingsNotifications.route) {
-            ComingSoonScreen(title = "Notifications", onNavigateBack = { navController.popBackStack() })
-        }
-        composable(Routes.SettingsDataStorage.route) {
-            ComingSoonScreen(title = "Data and Storage", onNavigateBack = { navController.popBackStack() })
-        }
-        composable(Routes.SettingsFolders.route) {
-            ComingSoonScreen(title = "Chat Folders", onNavigateBack = { navController.popBackStack() })
-        }
-        composable(Routes.SettingsDevices.route) {
-            ComingSoonScreen(title = "Devices", onNavigateBack = { navController.popBackStack() })
-        }
+
+
         composable(Routes.SettingsLanguage.route) {
             ComingSoonScreen(title = "Language", onNavigateBack = { navController.popBackStack() })
         }
@@ -995,6 +1039,94 @@ fun NavGraph(
                 onExamClick = { examId ->
                     navController.navigate(Routes.ExamTaking.createRoute(examId))
                 }
+            )
+        }
+        composable(Routes.LikedPosts.route) {
+            com.Kelasor.app.ui.screens.mosbat_elm.LikedPostsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onCourseClick = { id -> navController.navigate(Routes.CourseDetail.createRoute(id)) }
+            )
+        }
+        composable(Routes.MyCourses.route) {
+            com.Kelasor.app.ui.screens.mosbat_elm.MyCoursesScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onCourseClick = { courseId ->
+                    navController.navigate(Routes.CourseDetail.createRoute(courseId))
+                },
+                onEditCourseClick = { courseId ->
+                    navController.navigate(Routes.EditCourse.createRoute(courseId))
+                },
+                onCreateCourseClick = {
+                    navController.navigate(Routes.CreateCourse.route)
+                }
+            )
+        }
+        // ─────────────────────────────────────────────────────────────────────────
+        // Settings Sub-Screens
+        // ─────────────────────────────────────────────────────────────────────────
+        composable(Routes.SettingsChat.route) {
+            com.Kelasor.app.ui.screens.settings.ChatSettingsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(Routes.SettingsPrivacy.route) {
+            com.Kelasor.app.ui.screens.settings.PrivacySecurityScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToBlockedUsers = { navController.navigate(Routes.BlockedUsers.route) },
+                onNavigateToPrivacyExceptions = { type ->
+                    navController.navigate(Routes.PrivacyExceptions.createRoute(type))
+                }
+            )
+        }
+        composable(Routes.BlockedUsers.route) {
+            com.Kelasor.app.ui.screens.settings.BlockedUsersScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToAddBlock = { navController.navigate(Routes.PrivacyExceptions.createRoute("blocked_users")) }
+            )
+        }
+        composable(
+            route = Routes.PrivacyExceptions.route,
+            arguments = listOf(navArgument("type") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val type = backStackEntry.arguments?.getString("type") ?: ""
+            com.Kelasor.app.ui.screens.settings.PrivacyExceptionsScreen(
+                type = type,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = Routes.ComingSoon.route,
+            arguments = listOf(navArgument("feature") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val feature = backStackEntry.arguments?.getString("feature") ?: ""
+            com.Kelasor.app.ui.screens.profile.ComingSoonScreen(
+                title = feature,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(Routes.SettingsNotifications.route) {
+            com.Kelasor.app.ui.screens.settings.NotificationSettingsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(Routes.SettingsDataStorage.route) {
+            com.Kelasor.app.ui.screens.settings.DataStorageScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(Routes.SettingsDevices.route) {
+            com.Kelasor.app.ui.screens.settings.DevicesScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(Routes.MosbatElmNotifications.route) {
+            com.Kelasor.app.ui.screens.mosbat_elm.MosbatElmNotificationsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(Routes.Collaborations.route) {
+            com.Kelasor.app.ui.screens.mosbat_elm.CollaborationsScreen(
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }

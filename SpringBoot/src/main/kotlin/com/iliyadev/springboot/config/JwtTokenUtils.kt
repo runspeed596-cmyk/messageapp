@@ -20,6 +20,9 @@ class JwtTokenUtils : Serializable {
     fun getUserIdFromToken(token: String): String {
         return getClaimFromToken(token, Function { it.subject })
     }
+    fun getSessionIdFromToken(token: String): String? {
+        return getClaimFromToken(token, Function { it["sessionId"] as? String })
+    }
     fun getExpirationDateFromToken(token: String): Date {
         return getClaimFromToken(token, Function { it.expiration })
     }
@@ -44,8 +47,11 @@ class JwtTokenUtils : Serializable {
             true
         }
     }
-    fun generateToken(userId: String): String {
-        val claims: Map<String, Any> = HashMap()
+    fun generateToken(userId: String, sessionId: String? = null): String {
+        val claims: MutableMap<String, Any> = HashMap()
+        if (sessionId != null) {
+            claims["sessionId"] = sessionId
+        }
         return doGenerateToken(claims, userId)
     }
     private fun doGenerateToken(claims: Map<String, Any>, subject: String): String {

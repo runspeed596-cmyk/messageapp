@@ -589,23 +589,7 @@ private fun GroupListItem(
                     }
                 )
             
-            // Selection indicator overlay
-            if (isSelected) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(MessageAppTheme.extendedColors.accent.copy(alpha = 0.8f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "Selected",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
+            
         }
         
         Spacer(modifier = Modifier.width(12.dp))
@@ -691,3 +675,4 @@ private fun GroupListItem(
         }
     }
 }
+

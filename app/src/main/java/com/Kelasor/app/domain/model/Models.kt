@@ -30,6 +30,9 @@ data class User(
     // Profile Enhancements
     val university: String? = null,
     val fieldOfStudy: String? = null,
+    val universities: List<String> = emptyList(),
+    val fieldsOfStudy: List<String> = emptyList(),
+    val isGraduated: Boolean = false,
     val education: String? = null,
     val skills: String? = null,
     val interests: String? = null,
@@ -60,7 +63,13 @@ data class User(
     val displayPhoneNumber: String = phoneNumber, // Phone for display (may be "مخفی")
     val institutionId: String? = null,
     val institutionLogoUrl: String? = null,
-    val institutionName: String? = null
+    val institutionName: String? = null,
+    val role: String = "NORMAL",
+
+    // Rating & Channel fields
+    val averageRating: Double = 0.0,
+    val reviewCount: Int = 0,
+    val officialChannelId: String? = null
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -138,7 +147,10 @@ data class Message(
     val amplitudes: List<Int>? = null,
     val isPinned: Boolean = false,
     val pinnedAt: Instant? = null,
-    val scheduledAt: Instant? = null
+    val scheduledAt: Instant? = null,
+    val actionLabel: String? = null,
+    val actionUrl: String? = null,
+    val timerTargetAt: Instant? = null
 ) {
     val isFromMe: Boolean
         get() = senderId == "current_user_id"
@@ -235,7 +247,13 @@ data class ChannelPost(
     val pinnedAt: Instant? = null,
     val scheduledAt: Instant? = null,
     val forwardedFrom: String? = null,
-    val isEdited: Boolean = false
+    val isEdited: Boolean = false,
+    val actionLabel: String? = null,
+    val actionUrl: String? = null,
+    val timerTargetAt: Instant? = null,
+    val isAd: Boolean = false,
+    val adLabel: String? = null,
+    val adSourceChannelId: String? = null
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -293,6 +311,8 @@ data class Institution(
     val type: String,
     val logoUrl: String?,
     val description: String?,
+    val isSubsidiary: Boolean = false,
+    val dependencyDescription: String? = null,
     val province: String?,
     val city: String?,
     val verificationStatus: String,
@@ -307,13 +327,20 @@ data class Institution(
     val associatedFieldOfStudyIds: List<String> = emptyList(),
     val associatedStudentOrgIds: List<String> = emptyList(),
     val instructorIds: List<String> = emptyList(),
+    val manualInstructors: List<ManualInstructor> = emptyList(),
     val adminIds: List<String> = emptyList(),
     val followerCount: Int = 0,
     val followingCount: Int = 0,
     val courseCount: Int = 0,
     val studentCount: Int = 0,
     val totalTrainingHours: Int = 0,
+    val totalPersonHours: Int = 0,
+    val totalTeachersCount: Int = 0,
+    val totalCollaborations: Int = 0,
+    val totalRevenue: Long? = null,
     val rating: Double = 0.0,
+    val averageRating: Double = 0.0,
+    val reviewCount: Int = 0,
     val honors: List<InstitutionHonor> = emptyList()
 )
 
@@ -331,7 +358,15 @@ data class InstitutionHonor(
 
 data class CourseChapter(
     val title: String,
-    val durationText: String
+    val durationText: String,
+    val sessionStartTime: Instant? = null,
+    val sessionEndTime: Instant? = null
+)
+
+data class ManualInstructor(
+    val name: String,
+    val avatarUrl: String? = null,
+    val resume: String? = null
 )
 
 data class Course(
@@ -342,7 +377,9 @@ data class Course(
     val posterUrl: String?,
     val channelId: String?,
     val groupId: String?,
-    val creatorId: String,
+    val managerId: String,
+    val managerName: String,
+    val managerAvatarUrl: String?,
     val organizerName: String?,
     val organizerAvatarUrl: String?,
     val organizerDescription: String? = null,
@@ -353,6 +390,7 @@ data class Course(
     val isFree: Boolean = true,
     val priceRials: Long = 0,
     val instructors: List<User> = emptyList(),
+    val manualInstructors: List<ManualInstructor> = emptyList(),
     val admins: List<User> = emptyList(),
     val durationMinutes: Int = 0,
     val studentCount: Int = 0,
@@ -360,6 +398,7 @@ data class Course(
     val capacity: Int? = null,
     val enrollmentLimit: Int? = null,
     val rating: Double = 0.0,
+    val reviewCount: Int = 0,
     val favoritesCount: Int = 0,
     val status: String = "DRAFT",
     val adminNote: String? = null,
@@ -372,5 +411,7 @@ data class Course(
     val startsAt: Instant,
     val endsAt: Instant,
     val isVerticalPoster: Boolean = false,
+    val hasOnlineClass: Boolean = false,
+    val organizerType: String? = null,
     val createdAt: Instant
 )

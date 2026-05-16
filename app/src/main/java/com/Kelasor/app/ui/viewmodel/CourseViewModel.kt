@@ -187,6 +187,10 @@ class CourseViewModel @Inject constructor(
         return courseRepository.uploadPoster(file)
     }
 
+    suspend fun uploadAvatar(file: File): Result<String> {
+        return institutionRepository.uploadLogo(file)
+    }
+
     fun resetCreateState() {
         _createCourseState.value = CreateCourseState.Idle
     }

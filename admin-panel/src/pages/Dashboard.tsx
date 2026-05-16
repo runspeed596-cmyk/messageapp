@@ -9,7 +9,8 @@ import {
     ArrowDownRight,
     Activity,
     Calendar,
-    Globe
+    Globe,
+    ShieldAlert
 } from 'lucide-react';
 
 const DashboardCard = ({ title, value, icon: Icon, trend, trendValue, color }: any) => (
@@ -40,12 +41,19 @@ const DashboardCard = ({ title, value, icon: Icon, trend, trendValue, color }: a
 const Dashboard = () => {
     const [userCount, setUserCount] = useState(0);
 
+    const isSuperAdmin = localStorage.getItem('isSuperAdmin') === 'true';
+    let permissions: string[] = [];
+    try {
+        permissions = JSON.parse(localStorage.getItem('permissions') || '[]');
+    } catch(e) {}
+    const hasPermission = isSuperAdmin || permissions.includes('DASHBOARD');
+
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const response = await adminApi.getUsers();
+                const response = await adminApi.getUsers(0, 1);
                 if (response.data.success) {
-                    setUserCount(response.data.data.length);
+                    setUserCount(response.data.data.totalElements);
                 }
             } catch (error) {
                 console.error('Error fetching dashboard stats:', error);
@@ -53,6 +61,18 @@ const Dashboard = () => {
         };
         fetchStats();
     }, []);
+
+    if (!hasPermission) {
+        return (
+            <div className="flex flex-col items-center justify-center h-[60vh] space-y-4 rtl font-[Vazirmatn]">
+                <div className="w-20 h-20 bg-rose-500/10 rounded-full flex items-center justify-center mb-6">
+                    <ShieldAlert size={40} className="text-rose-500" />
+                </div>
+                <h1 className="text-3xl font-black text-white">دسترسی غیرمجاز</h1>
+                <p className="text-slate-400">شما مجوز مشاهده پیشخوان را ندارید.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-8 rtl font-[Vazirmatn]">

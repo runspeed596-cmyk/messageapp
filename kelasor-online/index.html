@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="کلاسور آنلاین — سامانه برگزاری کلاس‌های آنلاین">
+    <title>کلاسور آنلاین</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="bg-gradient"></div>
+    <div class="bg-particles" id="particles"></div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Logo & Brand -->
+        <header class="brand">
+            <div class="logo-icon">
+                <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="64" height="64" rx="16" fill="url(#logo-grad)"/>
+                    <path d="M32 16L18 24v16l14 8 14-8V24L32 16z" stroke="white" stroke-width="2.5" fill="none"/>
+                    <circle cx="32" cy="30" r="5" fill="white" opacity="0.9"/>
+                    <path d="M24 38c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    <circle cx="44" cy="22" r="3" fill="#4ADE80"/>
+                    <defs>
+                        <linearGradient id="logo-grad" x1="0" y1="0" x2="64" y2="64">
+                            <stop offset="0%" stop-color="#6366F1"/>
+                            <stop offset="100%" stop-color="#8B5CF6"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <h1 class="brand-title">کلاسور آنلاین</h1>
+            <p class="brand-subtitle">سامانه برگزاری کلاس‌های آنلاین</p>
+        </header>
+
+        <!-- Tab Switcher -->
+        <div class="tab-switcher">
+            <button class="tab active" id="tab-organizer" onclick="switchTab('organizer')">
+                <span class="tab-icon">👨‍🏫</span>
+                برگزارکننده
+            </button>
+            <button class="tab" id="tab-guest" onclick="switchTab('guest')">
+                <span class="tab-icon">👤</span>
+                ورود مهمان
+            </button>
+        </div>
+
+        <!-- Organizer Login Form -->
+        <div class="form-panel active" id="panel-organizer">
+            <div class="form-header">
+                <h2>ورود برگزارکننده</h2>
+                <p>با حساب کاربری خود وارد شوید و کلاس را شروع کنید</p>
+            </div>
+            <form id="organizer-form" onsubmit="handleOrganizerLogin(event)">
+                <div class="input-group">
+                    <label for="username">نام کاربری</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">👤</span>
+                        <input type="text" id="username" placeholder="نام کاربری خود را وارد کنید" required autocomplete="username">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="password">رمز عبور</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">🔒</span>
+                        <input type="password" id="password" placeholder="رمز عبور خود را وارد کنید" required autocomplete="current-password">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="room-name">نام کلاس <span class="optional">(اختیاری)</span></label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">📚</span>
+                        <input type="text" id="room-name" placeholder="مثلاً: ریاضی عمومی ۱" autocomplete="off">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary" id="btn-login">
+                    <span class="btn-text">ورود و شروع کلاس</span>
+                    <span class="btn-loader" style="display:none">
+                        <span class="spinner"></span>
+                        در حال ایجاد اتاق...
+                    </span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Guest Join Form -->
+        <div class="form-panel" id="panel-guest">
+            <div class="form-header">
+                <h2>ورود به صورت مهمان</h2>
+                <p>بدون نیاز به حساب کاربری، به کلاس فعال وارد شوید</p>
+            </div>
+            <form id="guest-form" onsubmit="handleGuestJoin(event)">
+                <div class="input-group">
+                    <label for="guest-name">نام شما</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">✏️</span>
+                        <input type="text" id="guest-name" placeholder="نام و نام خانوادگی خود را وارد کنید" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="room-id">کد اتاق</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">🔑</span>
+                        <input type="text" id="room-id" placeholder="کد اتاقی که از برگزارکننده دریافت کرده‌اید" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-secondary" id="btn-guest">
+                    <span class="btn-text">ورود به کلاس</span>
+                    <span class="btn-loader" style="display:none">
+                        <span class="spinner"></span>
+                        در حال بررسی...
+                    </span>
+                </button>
+            </form>
+            
+            <!-- Past Rooms Section -->
+            <div id="past-rooms-container" style="display: none; margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <h3 style="font-size: 1.1rem; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
+                    <span>📚 اتاق‌های اخیر شما</span>
+                    <button class="btn-clear-history" onclick="clearPastRooms()" style="background: none; border: none; color: #ff6b6b; font-size: 0.8rem; cursor: pointer; padding: 5px;">حذف تاریخچه</button>
+                </h3>
+                <div id="past-rooms-list" style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Room items will be injected here by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Panel (shown after organizer login) -->
+        <div class="form-panel" id="panel-success" style="display:none">
+            <div class="success-content">
+                <div class="success-icon">✅</div>
+                <h2>اتاق شما آماده است!</h2>
+                <p class="success-room-name" id="success-room-name"></p>
+                <div class="room-code-box" style="margin-bottom: 10px;">
+                    <span class="room-code-label">لینک ورود برگزارکننده (این لینک محرمانه است):</span>
+                    <div class="room-code-value" id="organizer-link-display" style="font-size:0.9rem; padding:8px; direction:ltr; text-align:left; overflow-x:hidden; text-overflow:ellipsis; white-space:nowrap; background: #FFFBEB; border-color: #FBBF24;"></div>
+                    <button class="btn-copy" onclick="copyOrganizerLink()" title="کپی لینک برگزارکننده">
+                        📋 کپی لینک
+                    </button>
+                </div>
+                <div class="room-code-box">
+                    <span class="room-code-label">لینک اشتراک دانشجویان:</span>
+                    <div class="room-code-value" id="room-link-display" style="font-size:0.9rem; padding:8px; direction:ltr; text-align:left; overflow-x:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
+                    <button class="btn-copy" onclick="copyRoomLink()" title="کپی لینک دانشجویان">
+                        🔗 کپی لینک
+                    </button>
+                </div>
+                <a href="#" id="join-link" class="btn btn-primary" target="_blank" style="margin-top: 15px;">
+                    <span class="btn-text">🎥 ورود به عنوان مدیر و برگزارکننده</span>
+                </a>
+                <p class="success-note">
+                    💡 لینک دانشجویان را برای افراد ارسال کنید تا بتوانند به صورت مهمان وارد شوند.
+                </p>
+            </div>
+        </div>
+
+        <!-- Error/Message Toast -->
+        <div class="toast" id="toast">
+            <span class="toast-icon" id="toast-icon">⚠️</span>
+            <span class="toast-text" id="toast-text"></span>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>کلاسور آنلاین — زیرمجموعه <a href="https://kelasorapp.ir" target="_blank">کلاسور</a></p>
+        </footer>
+    </div>
+
+    <script src="app.js?v=2"></script>
+</body>
+</html>

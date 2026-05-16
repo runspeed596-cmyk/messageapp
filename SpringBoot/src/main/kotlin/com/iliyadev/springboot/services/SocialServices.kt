@@ -29,6 +29,9 @@ class ProfileDetailsService(
         val details = existing ?: UserProfileDetails(user = user)
         request.university?.let { details.university = it }
         request.fieldOfStudy?.let { details.fieldOfStudy = it }
+        request.universities?.let { details.universities = it.toMutableSet() }
+        request.fieldsOfStudy?.let { details.fieldsOfStudy = it.toMutableSet() }
+        request.isGraduated?.let { details.isGraduated = it }
         request.education?.let { details.education = it }
         request.interests?.let { details.interests = it.joinToString(",") }
         request.achievements?.let { details.achievements = it.joinToString(",") }
@@ -61,7 +64,7 @@ class FollowService(
     @Transactional
     fun followUser(followerId: UUID, followingId: UUID): Boolean {
         if (followerId == followingId) return false
-        if (followRepository.existsByFollowerIdAndFollowingId(followerId, followingId)) return false
+        if (followRepository.existsByFollowerIdAndFollowingId(followerId, followingId)) return true
         val follower = userRepository.findById(followerId).orElseThrow { IllegalArgumentException("Follower not found") }
         val following = userRepository.findById(followingId).orElseThrow { IllegalArgumentException("User to follow not found") }
         val follow = UserFollow(
@@ -75,7 +78,7 @@ class FollowService(
     }
     @Transactional
     fun unfollowUser(followerId: UUID, followingId: UUID): Boolean {
-        if (!followRepository.existsByFollowerIdAndFollowingId(followerId, followingId)) return false
+        if (!followRepository.existsByFollowerIdAndFollowingId(followerId, followingId)) return true
         followRepository.deleteByFollowerIdAndFollowingId(followerId, followingId)
         return true
     }

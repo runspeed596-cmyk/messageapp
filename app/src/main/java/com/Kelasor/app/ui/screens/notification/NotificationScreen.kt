@@ -55,7 +55,7 @@ import com.Kelasor.app.ui.components.AvatarSize
 import com.Kelasor.app.ui.theme.CardShapes
 import com.Kelasor.app.ui.theme.MessageAppTheme
 import com.Kelasor.app.ui.theme.MessageAppTypography
-import com.Kelasor.app.ui.theme.VazirFontFamily
+import com.Kelasor.app.ui.theme.DanaFontFamily
 import com.Kelasor.app.ui.viewmodel.NotificationViewModel
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -84,7 +84,7 @@ fun NotificationScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "اعلان‌ها",
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         fontWeight = FontWeight.Bold
                     )
                     if (state.unreadCount > 0) {
@@ -119,7 +119,7 @@ fun NotificationScreen(
                     TextButton(onClick = { viewModel.markAllAsRead() }) {
                         Text(
                             text = "خواندن همه",
-                            fontFamily = VazirFontFamily,
+                            fontFamily = DanaFontFamily,
                             color = extendedColors.accent
                         )
                     }
@@ -150,7 +150,7 @@ fun NotificationScreen(
                     Text(
                         text = "اعلانی وجود ندارد",
                         style = MaterialTheme.typography.bodyLarge,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = DanaFontFamily,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -189,7 +189,7 @@ fun NotificationScreen(
                                 TextButton(onClick = { viewModel.loadMore() }) {
                                     Text(
                                         text = "بارگذاری بیشتر",
-                                        fontFamily = VazirFontFamily,
+                                        fontFamily = DanaFontFamily,
                                         color = extendedColors.accent
                                     )
                                 }
@@ -248,14 +248,14 @@ private fun NotificationItem(
             Text(
                 text = notification.title,
                 style = MaterialTheme.typography.bodyMedium,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 fontWeight = if (!notification.isRead) FontWeight.Bold else FontWeight.Normal,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = notification.body,
                 style = MaterialTheme.typography.bodySmall,
-                fontFamily = VazirFontFamily,
+                fontFamily = DanaFontFamily,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis

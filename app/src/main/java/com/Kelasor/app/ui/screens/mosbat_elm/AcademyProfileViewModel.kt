@@ -14,6 +14,8 @@ import com.Kelasor.app.data.repository.ReferenceDataResult
 import com.Kelasor.app.data.repository.UserRepository
 import com.Kelasor.app.data.repository.UserResult
 import com.Kelasor.app.domain.model.User
+import com.Kelasor.app.domain.model.ManualInstructor
+import com.Kelasor.app.data.remote.dto.ManualInstructorDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -26,13 +28,16 @@ data class AcademyProfileSetupState(
     val logoUrl: String? = null,
     val localLogoUri: String? = null, // Temporary local URI for preview while uploading
     val isUploadingLogo: Boolean = false,
-    val type: String = "INDEPENDENT",
+    val type: String = "ACADEMY",
+    val isSubsidiary: Boolean = false,
+    val dependencyDescription: String = "",
     val universities: List<String> = emptyList(),
     val specialties: List<String> = emptyList(),
     val associatedClubIds: List<String> = emptyList(),
     val associatedFieldOfStudyIds: List<String> = emptyList(),
     val associatedStudentOrgIds: List<String> = emptyList(),
     val instructors: List<User> = emptyList(),
+    val manualInstructors: List<ManualInstructor> = emptyList(),
     val admins: List<User> = emptyList(),
     val allUniversities: List<String> = emptyList(),
     val allClubs: List<String> = emptyList(),
@@ -82,6 +87,8 @@ class AcademyProfileViewModel @Inject constructor(
                         description = inst.description ?: "",
                         logoUrl = inst.logoUrl,
                         type = inst.type,
+                        isSubsidiary = inst.isSubsidiary,
+                        dependencyDescription = inst.dependencyDescription ?: "",
                         universities = inst.universities,
                         specialties = inst.specialties,
                         associatedClubIds = inst.associatedClubIds,
@@ -96,6 +103,9 @@ class AcademyProfileViewModel @Inject constructor(
                                 state = state.copy(instructors = result.data)
                             }
                         }
+                    }
+                    if (inst.manualInstructors.isNotEmpty()) {
+                        state = state.copy(manualInstructors = inst.manualInstructors)
                     }
                     if (inst.adminIds.isNotEmpty()) {
                         userRepository.getUsersByIds(inst.adminIds).collect { result ->
@@ -129,6 +139,8 @@ class AcademyProfileViewModel @Inject constructor(
     fun onNameChange(name: String) { state = state.copy(name = name) }
     fun onDescriptionChange(desc: String) { state = state.copy(description = desc) }
     fun onTypeChange(type: String) { state = state.copy(type = type) }
+    fun onIsSubsidiaryChange(isSubsidiary: Boolean) { state = state.copy(isSubsidiary = isSubsidiary) }
+    fun onDependencyDescriptionChange(desc: String) { state = state.copy(dependencyDescription = desc) }
 
     /**
      * Handles logo selection: immediately uploads the image to the server
@@ -164,6 +176,10 @@ class AcademyProfileViewModel @Inject constructor(
                 state = state.copy(isUploadingLogo = false, error = "خطا: ${e.message}")
             }
         }
+    }
+
+    suspend fun uploadAvatar(file: File): Result<String> {
+        return institutionRepository.uploadLogo(file)
     }
 
     private fun copyUriToTempFile(uri: Uri): File? {
@@ -222,6 +238,13 @@ class AcademyProfileViewModel @Inject constructor(
         state = state.copy(instructors = state.instructors - user)
     }
 
+    fun addManualInstructor(instructor: ManualInstructor) {
+        if (instructor !in state.manualInstructors) state = state.copy(manualInstructors = state.manualInstructors + instructor)
+    }
+    fun removeManualInstructor(instructor: ManualInstructor) {
+        state = state.copy(manualInstructors = state.manualInstructors - instructor)
+    }
+
     fun addAdmin(user: User) {
         if (user !in state.admins) state = state.copy(admins = state.admins + user)
     }
@@ -253,12 +276,21 @@ class AcademyProfileViewModel @Inject constructor(
                 type = state.type,
                 logoUrl = state.logoUrl,
                 description = state.description,
+                isSubsidiary = state.isSubsidiary,
+                dependencyDescription = state.dependencyDescription,
                 universities = state.universities,
                 specialties = state.specialties,
                 associatedClubIds = state.associatedClubIds,
                 associatedFieldOfStudyIds = state.associatedFieldOfStudyIds,
                 associatedStudentOrgIds = state.associatedStudentOrgIds,
                 instructorIds = state.instructors.map { it.id },
+                manualInstructors = state.manualInstructors.map { 
+                    ManualInstructorDto(
+                        name = it.name,
+                        resume = it.resume,
+                        avatarUrl = it.avatarUrl
+                    )
+                },
                 adminIds = state.admins.map { it.id }
             )
             val result: Result<*> = if (existingInstitutionId != null) {
