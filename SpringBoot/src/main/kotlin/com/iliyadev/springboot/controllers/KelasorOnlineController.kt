@@ -118,8 +118,9 @@ class KelasorOnlineController {
             roomName = roomId
         )
         
-        // Build join URL (Jitsi room URL with JWT). Organizer becomes moderator.
-        val joinUrl: String = "/${roomId}?jwt=${token}#config.subject=${java.net.URLEncoder.encode(roomDisplayName, "UTF-8")}"
+        // Build join URL — room.html wrapper for IFrame API control
+        val encodedSubject: String = java.net.URLEncoder.encode(roomDisplayName, "UTF-8").replace("+", "%20")
+        val joinUrl: String = "/room.html?room=${roomId}&jwt=${token}&subject=${encodedSubject}"
         
         logger.info("Kelasor Online room created: $roomId by ${account.username}")
         return ResponseEntity.ok(
@@ -148,10 +149,9 @@ class KelasorOnlineController {
                 .body(ApiResponse(success = false, message = "اتاق یافت نشد. لطفاً کد اتاق را بررسی کنید.", data = null))
         }
         
-        // Guests DO NOT get a JWT. If they had a JWT, they would become authenticated users (moderators).
-        // Instead, they get the URL with their name injected via URL params.
-        val encodedName = java.net.URLEncoder.encode(guestName, "UTF-8")
-        val joinUrl: String = "/${request.roomId}#userInfo.displayName=\"${encodedName}\""
+        // Guests DO NOT get a JWT — room.html wrapper with display name
+        val encodedName: String = java.net.URLEncoder.encode(guestName, "UTF-8").replace("+", "%20")
+        val joinUrl: String = "/room.html?room=${request.roomId}&name=${encodedName}"
         
         return ResponseEntity.ok(
             ApiResponse(

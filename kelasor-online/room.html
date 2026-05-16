@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>کلاسور آنلاین — اتاق کلاس</title>
+    <link rel="stylesheet" href="room.css">
+    <style>
+        /* ── Modern Premium Layout ── */
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; background: #0A0A0B;
+            font-family: 'Vazirmatn', Tahoma, sans-serif;
+            display: flex;
+        }
+        
+        #jitsi-container {
+            flex: 1;
+            height: 100%;
+            position: relative;
+        }
+        
+        #jitsi-iframe {
+            width: 100%; height: 100%; border: none;
+        }
+        
+        #kelasor-sidebar {
+            width: 340px;
+            height: 100%;
+            background: #111114;
+            border-right: 1px solid #27272A;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+        
+        /* ── Participants Section ── */
+        .kel-section-header {
+            padding: 16px;
+            background: #18181B;
+            border-bottom: 1px solid #27272A;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .kel-section-title {
+            color: #E4E4E7; font-weight: 700; font-size: 15px;
+        }
+        .kel-badge {
+            background: #3F3F46; color: #F4F4F5;
+            padding: 2px 8px; border-radius: 99px; font-size: 12px;
+        }
+        
+        #participants-list {
+            height: 200px;
+            overflow-y: auto;
+            background: #09090B;
+            border-bottom: 1px solid #27272A;
+        }
+        .participant-item {
+            padding: 10px 16px;
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid #18181B;
+            transition: background 0.2s;
+        }
+        .participant-item:hover { background: #18181B; }
+        .participant-info { display: flex; align-items: center; gap: 10px; }
+        .participant-avatar {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: #8B5CF6; color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: bold;
+        }
+        .participant-name { color: #D4D4D8; font-size: 13px; }
+        .participant-actions { color: #A1A1AA; cursor: pointer; padding: 4px; }
+        
+        /* ── Chat Section ── */
+        #chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        #chat-messages {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .message {
+            max-width: 85%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 13px;
+            line-height: 1.5;
+            position: relative;
+        }
+        .message.remote {
+            background: #27272A; color: #F4F4F5; align-self: flex-start;
+            border-bottom-right-radius: 4px;
+        }
+        .message.local {
+            background: #6366F1; color: white; align-self: flex-end;
+            border-bottom-left-radius: 4px;
+        }
+        .message-sender { font-weight: 700; font-size: 11px; margin-bottom: 4px; opacity: 0.8; }
+        
+        #chat-input-area {
+            padding: 16px;
+            background: #18181B;
+            border-top: 1px solid #27272A;
+            display: flex;
+            gap: 8px;
+        }
+        #chat-input {
+            flex: 1;
+            background: #09090B;
+            border: 1px solid #3F3F46;
+            color: #F4F4F5;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+        }
+        #chat-input:focus { border-color: #6366F1; }
+        #send-btn {
+            background: #6366F1; color: white;
+            border: none; padding: 0 16px;
+            border-radius: 8px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        
+        /* ── Custom Context Menu ── */
+        #custom-menu {
+            position: fixed;
+            background: #18181B;
+            border: 1px solid #3F3F46;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: none;
+            min-width: 180px;
+            overflow: hidden;
+        }
+        .menu-item {
+            padding: 10px 16px;
+            color: #D4D4D8;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .menu-item:hover { background: #27272A; color: white; }
+        .menu-item.danger { color: #EF4444; }
+        
+        /* ── Request Popup (Student Side) ── */
+        #request-popup {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: #1E1B4B; color: white;
+            padding: 16px 24px; border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);
+            z-index: 9999;
+            display: none;
+            align-items: center; gap: 16px;
+            border: 1px solid #4338CA;
+            animation: slideDown 0.3s ease-out;
+        }
+        @keyframes slideDown { from { transform: translate(-50%, -100%); } to { transform: translate(-50%, 0); } }
+        .popup-btn {
+            background: #6366F1; color: white; border: none;
+            padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading-overlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <h2>کلاسور آنلاین</h2>
+            <p>در حال آماده‌سازی کلاس...</p>
+        </div>
+    </div>
+
+    <div id="kelasor-sidebar">
+        <!-- Participants -->
+        <div class="kel-section-header">
+            <span class="kel-section-title">شرکت‌کنندگان</span>
+            <span id="p-count" class="kel-badge">0</span>
+        </div>
+        <div id="participants-list">
+            <!-- Dynamic -->
+        </div>
+        
+        <!-- Chat -->
+        <div id="chat-container">
+            <div class="kel-section-header">
+                <span class="kel-section-title">گپ کلاسی</span>
+            </div>
+            <div id="chat-messages">
+                <!-- Messages -->
+            </div>
+            <div id="chat-input-area">
+                <input type="text" id="chat-input" placeholder="پیامی بنویسید..." autocomplete="off">
+                <button id="send-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="jitsi-container">
+        <!-- Iframe will be injected here -->
+    </div>
+
+    <!-- Custom Context Menu -->
+    <div id="custom-menu"></div>
+
+    <!-- Request Popup -->
+    <div id="request-popup">
+        <span id="request-text"></span>
+        <button class="popup-btn" id="request-accept">باشه</button>
+    </div>
+
+    <!-- Load Jitsi External API -->
+    <script src="https://online.kelasorapp.ir/external_api.js"></script>
+    <script src="room.js"></script>
+</body>
+</html>

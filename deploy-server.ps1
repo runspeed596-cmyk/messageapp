@@ -243,6 +243,9 @@ Copy-Item (Join-Path $PROJECT_ROOT "kelasor-online\Dockerfile") $koDir
 Copy-Item (Join-Path $PROJECT_ROOT "kelasor-online\index.html") $koDir
 Copy-Item (Join-Path $PROJECT_ROOT "kelasor-online\style.css") $koDir
 Copy-Item (Join-Path $PROJECT_ROOT "kelasor-online\app.js") $koDir
+Copy-Item (Join-Path $PROJECT_ROOT "kelasor-online\room.html") $koDir
+Copy-Item (Join-Path $PROJECT_ROOT "kelasor-online\room.js") $koDir
+Copy-Item (Join-Path $PROJECT_ROOT "kelasor-online\room.css") $koDir
 
 # Jitsi Meet custom config files
 $jcDir = Join-Path $DEPLOY_DIR "jitsi-config"

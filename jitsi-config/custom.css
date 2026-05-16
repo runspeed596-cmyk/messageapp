@@ -1,100 +1,85 @@
-/* ══════════════════════════════════════════════════════════
-   کلاسور آنلاین — Custom Jitsi Meet Styles
-   ══════════════════════════════════════════════════════════ */
-/* Vazirmatn Font (CDN + Local Fallback) */
-@import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css');
+/* ══════════════════════════════════════════════════════════════
+   کلاسور آنلاین — Jitsi CSS (loaded by jitsi-web container)
+   ══════════════════════════════════════════════════════════════ */
 
+/* ── Local Fonts ── */
 @font-face {
-    font-family: 'Vazirmatn Local';
-    src: url('fonts/vazir/Vazirmatn-Regular.woff2') format('woff2');
-    font-weight: 400;
+    font-family: 'Vazirmatn';
+    src: url('/css/fonts/vazir/Vazirmatn-Regular.woff2') format('woff2');
+    font-weight: 100 600;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Vazirmatn';
+    src: url('/css/fonts/vazir/Vazirmatn-Bold.woff2') format('woff2');
+    font-weight: 700 900;
     font-style: normal;
     font-display: swap;
 }
 
-@font-face {
-    font-family: 'Vazirmatn Local';
-    src: url('fonts/vazir/Vazirmatn-Bold.woff2') format('woff2');
-    font-weight: 700;
-    font-style: normal;
-    font-display: swap;
+/* ── Global Font ── */
+*, *::before, *::after,
+body, html, input, button, textarea, select,
+div, span, p, h1, h2, h3, h4, h5, h6, a, label {
+    font-family: 'Vazirmatn', 'Vazir', 'Tahoma', 'Arial', sans-serif !important;
 }
 
-/* Global font override */
-* {
-    font-family: 'Vazirmatn', 'Vazirmatn Local', 'Vazir', 'Tahoma', 'Arial', sans-serif !important;
-}
-
-/* Force RTL for Persian */
-html[lang="fa"],
-html[lang="fa"] body {
-    direction: rtl !important;
-}
-
-/* Branding colors — match Kelasor Online theme */
-:root {
-    --primary-color: #6366F1;
-    --kelasor-primary-dark: #4F46E5;
-}
-
-/* Hide Jitsi default watermark images */
-.watermark.leftwatermark,
-.watermark.rightwatermark {
+/* ── Hide Watermarks ── */
+.watermark, .leftwatermark, .rightwatermark {
     display: none !important;
 }
 
-/* Add custom text watermark */
-.header-logo {
-    display: flex !important;
-    align-items: center;
-    padding-right: 20px;
-}
-.header-logo::after {
-    content: "کلاسور آنلاین";
-    color: white;
-    font-family: 'Vazirmatn', sans-serif;
-    font-size: 24px;
-    font-weight: bold;
-    text-shadow: 1px 1px 4px rgba(0,0,0,0.5);
-    background: linear-gradient(135deg, #FFF 0%, #E2E8F0 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+/* ── Hide Invite Button ── */
+button[aria-label*="invite" i],
+button[aria-label*="Invite"],
+button[aria-label*="دعوت"] {
+    display: none !important;
 }
 
-/* Welcome page customization */
-.welcome-page .header {
-    background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%) !important;
+/* ── Hide Chat and Participants Toggle Buttons from Toolbar ── */
+button[aria-label*="chat" i],
+button[aria-label*="Chat"],
+button[aria-label*="گپ"],
+button[aria-label*="participant" i],
+button[aria-label*="Participant"],
+button[aria-label*="شرکت‌کنند"] {
+    display: none !important;
 }
 
-/* Toolbar styling */
-.toolbox-background {
-    background: rgba(15, 11, 30, 0.85) !important;
+/* ── Hide Close (X) Buttons on Side Panels ── */
+/* Using very specific selectors for the X icon button in the header */
+#sideToolbarContainer button[aria-label*="Close" i],
+#sideToolbarContainer button[aria-label*="بستن"],
+[class*="sideToolbarContainer"] button[aria-label*="Close" i],
+[class*="sideToolbarContainer"] button[aria-label*="بستن"],
+[class*="ParticipantsPane"] button[aria-label*="Close" i],
+[class*="ParticipantsPane"] button[aria-label*="بستن"],
+[class*="Chat"] button[aria-label*="Close" i],
+[class*="Chat"] button[aria-label*="بستن"],
+button[class*="close-button"],
+button[class*="closebutton"] {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
 }
 
-/* Lobby page RTL fix */
-.lobby-screen {
-    direction: rtl;
-    text-align: right;
+/* ── Hide Filmstrip & Stage filmstrip ── */
+button[aria-label*="filmstrip" i],
+button[aria-label*="Toggle filmstrip"],
+#filmstripRemoteVideos,
+.filmstrip,
+[class*="filmstrip"] {
+    display: none !important;
 }
 
-/* Chat panel RTL */
-#chat-panel {
-    direction: rtl;
-    text-align: right;
+/* ── Fix Emoji Picker Positioning (RTL) ── */
+.oln8mhwp [class*="oln8mh"][style*="position: absolute"] {
+    left: auto !important;
+    right: 0 !important;
 }
 
-/* Prejoin screen */
-.prejoin-dialog {
-    direction: rtl;
-}
-
-/* Dialog boxes RTL */
-.jitsi-dialog {
-    direction: rtl;
-    text-align: right;
-}
-
-/* Filmstrip participant names */
-.displayname {
-    font-family: 'Vazirmatn', 'Vazir', 'Tahoma', sans-serif !important;
+/* ── Moderator UI Fixes ── */
+#kelasor-mod-ui {
+    pointer-events: auto !important;
 }

@@ -3,7 +3,8 @@
 // ═══════════════════════════════════════════════════════════════
 
 // API base URL — auto-detect based on current host
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
+const API_BASE = isLocal
     ? 'http://localhost:8080/api/kelasor-online'
     : window.location.origin + '/api/kelasor-online';
 
@@ -107,22 +108,25 @@ function showSuccessPanel(roomInfo) {
     successPanel.classList.add('active');
     document.getElementById('success-room-name').textContent = roomInfo.roomName;
     
-    // Set organizer link (joinUrl is an absolute path, so prepend origin)
-    var organizerLink = window.location.origin + roomInfo.joinUrl;
+    // For local testing, point to the live Jitsi server
+    var JITSI_DOMAIN = isLocal ? 'https://online.kelasorapp.ir' : window.location.origin;
+    
+    // Set organizer link
+    var organizerLink = JITSI_DOMAIN + roomInfo.joinUrl;
     var orgLinkDisplay = document.getElementById('organizer-link-display');
     if (orgLinkDisplay) {
         orgLinkDisplay.textContent = organizerLink;
     }
     window._currentOrganizerLink = organizerLink;
     
-    // Set join link to Jitsi room (same origin)
+    // Set join link to Jitsi room
     var joinLink = document.getElementById('join-link');
     if (joinLink) {
-        joinLink.href = roomInfo.joinUrl;
+        joinLink.href = JITSI_DOMAIN + roomInfo.joinUrl;
     }
     
-    // Set share link
-    var shareUrl = window.location.origin + '/?room=' + roomInfo.roomId;
+    // Set share link (landing page)
+    var shareUrl = JITSI_DOMAIN + '/?room=' + roomInfo.roomId;
     var shareLinkDisplay = document.getElementById('room-link-display');
     if (shareLinkDisplay) {
         shareLinkDisplay.textContent = shareUrl;

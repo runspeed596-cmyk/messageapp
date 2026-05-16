@@ -1,0 +1,44 @@
+/* ══════════════════════════════════════════════════════════════
+   کلاسور آنلاین — Premium UI Styles
+   ══════════════════════════════════════════════════════════════ */
+
+@font-face {
+    font-family: 'Vazirmatn';
+    src: url('/css/fonts/vazir/Vazirmatn-Regular.woff2') format('woff2');
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body, html {
+    width: 100%; height: 100%;
+    background: #0A0A0B;
+    color: #F4F4F5;
+    font-family: 'Vazirmatn', 'Tahoma', sans-serif;
+    overflow: hidden;
+}
+
+#loading-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: #0A0A0B;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 10000;
+}
+
+.spinner {
+    width: 40px; height: 40px;
+    border: 3px solid rgba(99, 102, 241, 0.2);
+    border-top-color: #6366F1;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Scrollbar Fixes */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #27272A; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #3F3F46; }
+
+/* Custom Layout overrides for Jitsi internal elements (in case they bleed through) */
+iframe { background: transparent !important; }

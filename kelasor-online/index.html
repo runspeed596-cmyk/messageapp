@@ -87,6 +87,17 @@
                     </span>
                 </button>
             </form>
+
+            <!-- Past Rooms Section (in organizer tab) -->
+            <div id="past-rooms-container" style="display: none; margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <h3 style="font-size: 1.1rem; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
+                    <span>📚 اتاق‌های اخیر شما</span>
+                    <button class="btn-clear-history" onclick="clearPastRooms()" style="background: none; border: none; color: #ff6b6b; font-size: 0.8rem; cursor: pointer; padding: 5px;">حذف تاریخچه</button>
+                </h3>
+                <div id="past-rooms-list" style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Room items will be injected here by JS -->
+                </div>
+            </div>
         </div>
 
         <!-- Guest Join Form -->
@@ -118,17 +129,6 @@
                     </span>
                 </button>
             </form>
-            
-            <!-- Past Rooms Section -->
-            <div id="past-rooms-container" style="display: none; margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                <h3 style="font-size: 1.1rem; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
-                    <span>📚 اتاق‌های اخیر شما</span>
-                    <button class="btn-clear-history" onclick="clearPastRooms()" style="background: none; border: none; color: #ff6b6b; font-size: 0.8rem; cursor: pointer; padding: 5px;">حذف تاریخچه</button>
-                </h3>
-                <div id="past-rooms-list" style="display: flex; flex-direction: column; gap: 10px;">
-                    <!-- Room items will be injected here by JS -->
-                </div>
-            </div>
         </div>
 
         <!-- Success Panel (shown after organizer login) -->
