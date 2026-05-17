@@ -70,7 +70,17 @@ fun AcademyProfileSetupScreen(
     LaunchedEffect(viewModel.events) {
         viewModel.events.collect { event ->
             when (event) {
-                is AcademyProfileEvent.Success -> onFinish()
+                is AcademyProfileEvent.Success -> {
+                    com.Kelasor.app.ui.components.KelasorToast.show(
+                        context = context,
+                        message = "کانال اختصاصی شما در بخش علم کلاب ایجاد شد",
+                        type = com.Kelasor.app.ui.components.ToastType.SUCCESS,
+                        durationMillis = 7000L
+                    )
+                    // Tiny delay to let user see the customized Toast before popping backstack
+                    kotlinx.coroutines.delay(1200L)
+                    onFinish()
+                }
                 is AcademyProfileEvent.Error -> { /* Show snackbar if needed */ }
             }
         }

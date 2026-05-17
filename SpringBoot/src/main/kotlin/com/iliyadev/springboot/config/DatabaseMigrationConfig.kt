@@ -37,8 +37,8 @@ class DatabaseMigrationConfig(private val jdbcTemplate: JdbcTemplate) : Applicat
             if (botUserCount == 0) {
                 logger.info("Bot User not found in 'users' table. Creating it...")
                 jdbcTemplate.execute("""
-                    INSERT INTO users (id, username, display_name, phone_number, avatar_url, role, points, is_online, is_premium, created_at)
-                    VALUES ('00000000-0000-0000-0000-000000000001', 'mosbat_elm_bot', 'ربات مثبت علم', '0000000001', 'https://img.icons8.com/fluency/96/graduation-cap.png', 'ADMIN', 0, true, true, now())
+                    INSERT INTO users (id, username, display_name, phone_number, avatar_url, role, points, is_online, is_premium, average_rating, review_count, created_at)
+                    VALUES ('00000000-0000-0000-0000-000000000001', 'mosbat_elm_bot', 'ربات مثبت علم', '0000000001', 'https://img.icons8.com/fluency/96/graduation-cap.png', 'ADMIN', 0, true, true, 0.0, 0, now())
                 """.trimIndent())
                 logger.info("Bot User created successfully.")
             }

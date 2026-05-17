@@ -9,6 +9,7 @@ import com.Kelasor.app.data.remote.dto.SpecialChannelDto
 import com.Kelasor.app.data.remote.dto.SpecialFolderDto
 import com.Kelasor.app.data.remote.dto.SpecialGroupDto
 import com.Kelasor.app.data.repository.SettingsRepository
+import com.Kelasor.app.data.repository.ChatRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,13 +39,30 @@ data class SpecialFolderState(
 @HiltViewModel
 class SpecialFolderViewModel @Inject constructor(
     private val apiService: ApiService,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val chatRepository: ChatRepository
 ) : ViewModel() {
     private val _state: MutableStateFlow<SpecialFolderState> = MutableStateFlow(SpecialFolderState())
     val state: StateFlow<SpecialFolderState> = _state.asStateFlow()
     
     val isProfileBannerDismissed: StateFlow<Boolean> = settingsRepository.isProfileBannerDismissed
         .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
+    fun startChatWithBot(botUserId: String, onChatResolved: (String) -> Unit) {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true) }
+            val result = chatRepository.createChat(botUserId)
+            _state.update { it.copy(isLoading = false) }
+            result.fold(
+                onSuccess = { chat ->
+                    onChatResolved(chat.id)
+                },
+                onFailure = { e ->
+                    _state.update { it.copy(error = "خطا در ارتباط با ربات: ${e.message}") }
+                }
+            )
+        }
+    }
 
     init {
         Log.d("SpecialFolderVM", "🔥 ViewModel created, calling loadSpecialFolder()")

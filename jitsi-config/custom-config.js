@@ -37,3 +37,25 @@ config.disableInviteFunctions = true;
 
 // Force tile view (grid view) instead of stage/filmstrip view
 config.defaultTiling = true;
+
+// ── Mobile-specific optimizations ──
+// Disable filmstrip entirely (we use external sidebar)
+config.filmstrip = config.filmstrip || {};
+config.filmstrip.enabled = false;
+
+// Hide dominant speaker badge (saves space on mobile)
+config.hideDominantSpeakerBadge = true;
+
+// Disable 1-on-1 mode (keeps tile layout even with 2 participants)
+config.disable1On1Mode = true;
+
+// Responsive tiles
+config.disableResponsiveTiles = false;
+
+// ── Welcome & Redirect Overrides ──
+config.welcomePage = config.welcomePage || {};
+config.welcomePage.disabled = true;
+
+// Default Language
+config.defaultLanguage = 'fa';
+

@@ -2,14 +2,25 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminApi, getMediaUrl } from '../api/adminApi';
 import type { FieldOfStudy, EducationLevel, Faculty, EducationalRoleOption, ReferenceClub, ReferenceStudentOrg, HomeBanner } from '../api/adminApi';
-import { Users, Image as ImageIcon, Upload } from 'lucide-react';
-import Pagination from '../components/Pagination';
 import {
-    BookOpen, GraduationCap, Building2, Plus, Trash2, Check, X, Loader2,
+    Users, Image as ImageIcon, Upload, BookOpen, GraduationCap, Building2, Plus, Trash2, Check, X, Loader2,
     Pencil, ArrowRight, AlertTriangle, Shield, Layers
 } from 'lucide-react';
+import Pagination from '../components/Pagination';
 
 type Tab = 'fields' | 'levels' | 'faculties' | 'roles' | 'clubs' | 'studentOrgs' | 'slider';
+
+const getLevelColor = (levelName: string): string => {
+    const name = (levelName || '').toLowerCase();
+    if (name.includes('ارشد')) return 'amber'; 
+    if (name.includes('دکتری') || name.includes('دکترا')) return 'rose'; 
+    if (name.includes('کارشناسی')) return 'indigo'; 
+    if (name.includes('کاردانی')) return 'emerald'; 
+    if (name.includes('هنرستان')) return 'teal'; 
+    if (name.includes('دبستان')) return 'cyan'; 
+    if (name.includes('متوسطه')) return 'purple'; 
+    return 'slate';
+};
 
 const WorldOfScienceSettings = () => {
     const navigate = useNavigate();
@@ -32,36 +43,35 @@ const WorldOfScienceSettings = () => {
 
     // Field form
     const [showFieldForm, setShowFieldForm] = useState<boolean>(false);
-    const [fieldForm, setFieldForm] = useState<FieldOfStudy>({ name: '', educationLevel: '', displayOrder: 0 });
+    const [fieldForm, setFieldForm] = useState<FieldOfStudy>({ name: '', educationLevel: '' });
     const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
 
     // Level form
     const [showLevelForm, setShowLevelForm] = useState<boolean>(false);
-    const [levelForm, setLevelForm] = useState<EducationLevel>({ name: '', roleValueEn: '', displayOrder: 0 });
+    const [levelForm, setLevelForm] = useState<EducationLevel>({ name: '', roleValueEn: '' });
     const [editingLevelId, setEditingLevelId] = useState<string | null>(null);
 
     // Faculty form
     const [showFacultyForm, setShowFacultyForm] = useState<boolean>(false);
-    const [facultyForm, setFacultyForm] = useState<Faculty>({ name: '', displayOrder: 0 });
+    const [facultyForm, setFacultyForm] = useState<Faculty>({ name: '' });
     const [editingFacultyId, setEditingFacultyId] = useState<string | null>(null);
 
     // Role form
     const [showRoleForm, setShowRoleForm] = useState<boolean>(false);
-    const [roleForm, setRoleForm] = useState<EducationalRoleOption>({ labelFa: '', valueEn: '', emoji: '', displayOrder: 0 });
+    const [roleForm, setRoleForm] = useState<EducationalRoleOption>({ labelFa: '', valueEn: '', emoji: '' });
     const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
 
     // Club form
     const [showClubForm, setShowClubForm] = useState<boolean>(false);
-    const [clubForm, setClubForm] = useState<ReferenceClub>({ name: '', displayOrder: 0 });
+    const [clubForm, setClubForm] = useState<ReferenceClub>({ name: '' });
 
     // Student Org form
     const [showStudentOrgForm, setShowStudentOrgForm] = useState<boolean>(false);
-    const [studentOrgForm, setStudentOrgForm] = useState<ReferenceStudentOrg>({ name: '', displayOrder: 0 });
+    const [studentOrgForm, setStudentOrgForm] = useState<ReferenceStudentOrg>({ name: '' });
 
     // Slider form
     const [showSliderForm, setShowSliderForm] = useState<boolean>(false);
     const [sliderTitle, setSliderTitle] = useState<string>('');
-    const [sliderOrder, setSliderOrder] = useState<number>(0);
     const [sliderFile, setSliderFile] = useState<File | null>(null);
     const [sliderPreview, setSliderPreview] = useState<string>('');
     const [isSliderUploading, setIsSliderUploading] = useState<boolean>(false);
@@ -117,7 +127,7 @@ const WorldOfScienceSettings = () => {
                 return;
             }
             setShowFieldForm(false);
-            setFieldForm({ name: '', educationLevel: '', displayOrder: 0 });
+            setFieldForm({ name: '', educationLevel: '' });
             setEditingFieldId(null);
             loadData();
         } catch (err: any) {
@@ -127,7 +137,7 @@ const WorldOfScienceSettings = () => {
     };
 
     const handleEditField = (field: FieldOfStudy): void => {
-        setFieldForm({ id: field.id, name: field.name, educationLevel: field.educationLevel, displayOrder: field.displayOrder });
+        setFieldForm({ id: field.id, name: field.name, educationLevel: field.educationLevel });
         setEditingFieldId(field.id!);
         setShowFieldForm(true);
     };
@@ -148,7 +158,7 @@ const WorldOfScienceSettings = () => {
         try {
             await adminApi.saveEducationLevel(levelForm);
             setShowLevelForm(false);
-            setLevelForm({ name: '', roleValueEn: '', displayOrder: 0 });
+            setLevelForm({ name: '', roleValueEn: '' });
             setEditingLevelId(null);
             loadData();
         } catch (err) {
@@ -157,7 +167,7 @@ const WorldOfScienceSettings = () => {
     };
 
     const handleEditLevel = (level: EducationLevel): void => {
-        setLevelForm({ id: level.id, name: level.name, roleValueEn: level.roleValueEn, displayOrder: level.displayOrder });
+        setLevelForm({ id: level.id, name: level.name, roleValueEn: level.roleValueEn });
         setEditingLevelId(level.id!);
         setShowLevelForm(true);
     };
@@ -182,7 +192,7 @@ const WorldOfScienceSettings = () => {
                 return;
             }
             setShowFacultyForm(false);
-            setFacultyForm({ name: '', displayOrder: 0 });
+            setFacultyForm({ name: '' });
             setEditingFacultyId(null);
             loadData();
         } catch (err: any) {
@@ -192,7 +202,7 @@ const WorldOfScienceSettings = () => {
     };
 
     const handleEditFaculty = (faculty: Faculty): void => {
-        setFacultyForm({ id: faculty.id, name: faculty.name, displayOrder: faculty.displayOrder });
+        setFacultyForm({ id: faculty.id, name: faculty.name });
         setEditingFacultyId(faculty.id!);
         setShowFacultyForm(true);
     };
@@ -319,9 +329,7 @@ const WorldOfScienceSettings = () => {
                 </div>
             )}
 
-            {/* ═══════════════════════════════════════════════════════════════ */}
             {/* ─── Fields of Study Tab ─── */}
-            {/* ═══════════════════════════════════════════════════════════════ */}
             {activeTab === 'fields' && !loading && (
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
@@ -330,7 +338,7 @@ const WorldOfScienceSettings = () => {
                             رشته‌های تحصیلی ({fieldsOfStudy.length})
                         </h2>
                         <button
-                            onClick={() => { setShowFieldForm(true); setEditingFieldId(null); setFieldForm({ name: '', educationLevel: '', displayOrder: 0 }); }}
+                            onClick={() => { setShowFieldForm(true); setEditingFieldId(null); setFieldForm({ name: '', educationLevel: '' }); }}
                             className="flex items-center gap-3 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95"
                         >
                             <Plus size={16} />
@@ -341,40 +349,33 @@ const WorldOfScienceSettings = () => {
                     {showFieldForm && (
                         <div className="glass p-6 rounded-2xl border-emerald-500/20 animate-in fade-in slide-in-from-top-4 duration-300">
                             <h3 className="text-sm font-black text-emerald-400 mb-4">{editingFieldId ? '✏️ ویرایش رشته' : 'ثبت رشته جدید'}</h3>
-                            <div className="flex gap-4 items-end flex-wrap">
-                                <div className="flex-1 min-w-[200px] space-y-2">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">نام رشته *</label>
-                                    <input
-                                        type="text"
-                                        value={fieldForm.name}
-                                        onChange={(e) => setFieldForm({ ...fieldForm, name: e.target.value })}
-                                        placeholder="مثال: مهندسی کامپیوتر"
-                                        className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none placeholder:text-slate-600"
-                                    />
-                                </div>
-                                <div className="w-48 space-y-2">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">مقطع تحصیلی *</label>
-                                    <select
-                                        value={fieldForm.educationLevel}
-                                        onChange={(e) => setFieldForm({ ...fieldForm, educationLevel: e.target.value })}
-                                        className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                                    >
-                                        <option value="" className="bg-slate-900">انتخاب مقطع</option>
-                                        {educationLevels
-                                            .sort((a, b) => a.displayOrder - b.displayOrder)
-                                            .map(level => (
-                                                <option key={level.id} value={level.name} className="bg-slate-900">{level.name}</option>
-                                            ))}
-                                    </select>
-                                </div>
-                                <div className="w-32 space-y-2">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">ترتیب</label>
-                                    <input
-                                        type="number"
-                                        value={fieldForm.displayOrder}
-                                        onChange={(e) => setFieldForm({ ...fieldForm, displayOrder: parseInt(e.target.value) || 0 })}
-                                        className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                                    />
+                            <div className="space-y-4">
+                                <div className="flex gap-4 items-end flex-wrap">
+                                    <div className="flex-1 min-w-[200px] space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">نام رشته *</label>
+                                        <input
+                                            type="text"
+                                            value={fieldForm.name}
+                                            onChange={(e) => setFieldForm({ ...fieldForm, name: e.target.value })}
+                                            placeholder="مثال: مهندسی کامپیوتر"
+                                            className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none placeholder:text-slate-600"
+                                        />
+                                    </div>
+                                    <div className="w-48 space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">مقطع تحصیلی *</label>
+                                        <select
+                                            value={fieldForm.educationLevel}
+                                            onChange={(e) => setFieldForm({ ...fieldForm, educationLevel: e.target.value })}
+                                            className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                                        >
+                                            <option value="" className="bg-slate-900">انتخاب مقطع</option>
+                                            {([...educationLevels])
+                                                .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'fa'))
+                                                .map(level => (
+                                                    <option key={level.id} value={level.name} className="bg-slate-900">{level.name}</option>
+                                                ))}
+                                        </select>
+                                    </div>
                                 </div>
                                 <div className="flex gap-2">
                                     <button
@@ -385,7 +386,7 @@ const WorldOfScienceSettings = () => {
                                         ذخیره
                                     </button>
                                     <button
-                                        onClick={() => { setShowFieldForm(false); setFieldForm({ name: '', educationLevel: '', displayOrder: 0 }); setEditingFieldId(null); }}
+                                        onClick={() => { setShowFieldForm(false); setFieldForm({ name: '', educationLevel: '' }); setEditingFieldId(null); }}
                                         className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-slate-400 px-5 py-4 rounded-xl font-bold text-sm transition-all"
                                     >
                                         <X size={16} />
@@ -403,45 +404,46 @@ const WorldOfScienceSettings = () => {
                                     <th className="p-4 text-right text-xs font-black text-slate-500 uppercase tracking-widest">ردیف</th>
                                     <th className="p-4 text-right text-xs font-black text-slate-500 uppercase tracking-widest">نام رشته</th>
                                     <th className="p-4 text-center text-xs font-black text-slate-500 uppercase tracking-widest">مقطع</th>
-                                    <th className="p-4 text-center text-xs font-black text-slate-500 uppercase tracking-widest">ترتیب</th>
                                     <th className="p-4 text-center text-xs font-black text-slate-500 uppercase tracking-widest">عملیات</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {fieldsOfStudy
-                                    .sort((a, b) => a.displayOrder - b.displayOrder)
+                                {([...fieldsOfStudy])
+                                    .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'fa'))
                                     .slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
-                                    .map((field, index) => (
-                                        <tr key={field.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                                            <td className="p-4 text-sm text-slate-600">{index + 1}</td>
-                                            <td className="p-4 text-sm font-bold text-white">{field.name}</td>
-                                            <td className="p-4 text-center">
-                                                <span className="bg-indigo-500/10 text-indigo-400 px-3 py-1 rounded-lg text-xs font-bold">
-                                                    {field.educationLevel || '—'}
-                                                </span>
-                                            </td>
-                                            <td className="p-4 text-center text-sm text-slate-400">{field.displayOrder}</td>
-                                            <td className="p-4 text-center">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <button
-                                                        onClick={() => handleEditField(field)}
-                                                        className="p-2 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 rounded-lg transition-all"
-                                                    >
-                                                        <Pencil size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteField(field.id!)}
-                                                        className="p-2 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 rounded-lg transition-all"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    .map((field, index) => {
+                                        const color = getLevelColor(field.educationLevel || '');
+                                        return (
+                                            <tr key={field.id} className={`border-b border-white/5 hover:bg-${color}-500/10 transition-colors bg-${color}-500/[0.02]`}>
+                                                <td className="p-4 text-sm text-slate-600">{index + 1}</td>
+                                                <td className="p-4 text-sm font-bold text-white">{field.name}</td>
+                                                <td className="p-4 text-center">
+                                                    <span className={`bg-${color}-500/10 text-${color}-400 px-3 py-1 rounded-lg text-xs font-bold`}>
+                                                        {field.educationLevel || '—'}
+                                                    </span>
+                                                </td>
+                                                <td className="p-4 text-center">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <button
+                                                            onClick={() => handleEditField(field)}
+                                                            className="p-2 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 rounded-lg transition-all"
+                                                        >
+                                                            <Pencil size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteField(field.id!)}
+                                                            className="p-2 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 rounded-lg transition-all"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 {fieldsOfStudy.length === 0 && (
                                     <tr>
-                                        <td colSpan={5} className="p-12 text-center text-slate-600 text-sm">
+                                        <td colSpan={4} className="p-12 text-center text-slate-600 text-sm">
                                             هنوز رشته‌ای ثبت نشده است
                                         </td>
                                     </tr>
@@ -463,9 +465,7 @@ const WorldOfScienceSettings = () => {
                 </div>
             )}
 
-            {/* ═══════════════════════════════════════════════════════════════ */}
             {/* ─── Faculties Tab ─── */}
-            {/* ═══════════════════════════════════════════════════════════════ */}
             {activeTab === 'faculties' && !loading && (
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
@@ -474,7 +474,7 @@ const WorldOfScienceSettings = () => {
                             دانشکده‌ها ({faculties.length})
                         </h2>
                         <button
-                            onClick={() => { setShowFacultyForm(true); setEditingFacultyId(null); setFacultyForm({ name: '', displayOrder: 0 }); }}
+                            onClick={() => { setShowFacultyForm(true); setEditingFacultyId(null); setFacultyForm({ name: '' }); }}
                             className="flex items-center gap-3 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95"
                         >
                             <Plus size={16} />
@@ -485,8 +485,8 @@ const WorldOfScienceSettings = () => {
                     {showFacultyForm && (
                         <div className="glass p-6 rounded-2xl border-amber-500/20 animate-in fade-in slide-in-from-top-4 duration-300">
                             <h3 className="text-sm font-black text-amber-400 mb-4">{editingFacultyId ? '✏️ ویرایش دانشکده' : 'ثبت دانشکده جدید'}</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 items-end">
-                                <div className="space-y-2">
+                            <div className="flex gap-4 items-end">
+                                <div className="flex-1 space-y-2">
                                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">نام دانشکده *</label>
                                     <input
                                         type="text"
@@ -496,31 +496,20 @@ const WorldOfScienceSettings = () => {
                                         className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-amber-500 outline-none placeholder:text-slate-600"
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">ترتیب</label>
-                                    <input
-                                        type="number"
-                                        value={facultyForm.displayOrder}
-                                        onChange={(e) => setFacultyForm({ ...facultyForm, displayOrder: parseInt(e.target.value) || 0 })}
-                                        className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-amber-500 outline-none"
-                                    />
-                                </div>
-                                <div className="flex gap-2 lg:col-span-2 justify-end pt-2">
-                                    <button
-                                        onClick={handleSaveFaculty}
-                                        className="flex items-center gap-2 bg-amber-600 hover:bg-amber-500 text-white px-5 py-4 rounded-xl font-bold text-sm transition-all"
-                                    >
-                                        <Check size={16} />
-                                        ذخیره
-                                    </button>
-                                    <button
-                                        onClick={() => { setShowFacultyForm(false); setFacultyForm({ name: '', displayOrder: 0 }); setEditingFacultyId(null); }}
-                                        className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-slate-400 px-5 py-4 rounded-xl font-bold text-sm transition-all"
-                                    >
-                                        <X size={16} />
-                                        انصراف
-                                    </button>
-                                </div>
+                                <button
+                                    onClick={handleSaveFaculty}
+                                    className="flex items-center gap-2 bg-amber-600 hover:bg-amber-500 text-white px-5 py-4 rounded-xl font-bold text-sm transition-all"
+                                >
+                                    <Check size={16} />
+                                    ذخیره
+                                </button>
+                                <button
+                                    onClick={() => { setShowFacultyForm(false); setFacultyForm({ name: '' }); setEditingFacultyId(null); }}
+                                    className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-slate-400 px-5 py-4 rounded-xl font-bold text-sm transition-all"
+                                >
+                                    <X size={16} />
+                                    انصراف
+                                </button>
                             </div>
                         </div>
                     )}
@@ -531,19 +520,17 @@ const WorldOfScienceSettings = () => {
                                 <tr className="border-b border-white/5">
                                     <th className="p-4 text-right text-xs font-black text-slate-500 uppercase tracking-widest">ردیف</th>
                                     <th className="p-4 text-right text-xs font-black text-slate-500 uppercase tracking-widest">نام دانشکده</th>
-                                    <th className="p-4 text-center text-xs font-black text-slate-500 uppercase tracking-widest">ترتیب نمایش</th>
                                     <th className="p-4 text-center text-xs font-black text-slate-500 uppercase tracking-widest">عملیات</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {faculties
-                                    .sort((a, b) => a.displayOrder - b.displayOrder)
+                                {([...faculties])
+                                    .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'fa'))
                                     .slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
                                     .map((faculty, index) => (
                                         <tr key={faculty.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                                             <td className="p-4 text-sm text-slate-600">{index + 1}</td>
                                             <td className="p-4 text-sm font-bold text-white">{faculty.name}</td>
-                                            <td className="p-4 text-center text-sm text-slate-400">{faculty.displayOrder}</td>
                                             <td className="p-4 text-center">
                                                 <div className="flex items-center justify-center gap-2">
                                                     <button
@@ -564,7 +551,7 @@ const WorldOfScienceSettings = () => {
                                     ))}
                                 {faculties.length === 0 && (
                                     <tr>
-                                        <td colSpan={4} className="p-12 text-center text-slate-600 text-sm">
+                                        <td colSpan={3} className="p-12 text-center text-slate-600 text-sm">
                                             هنوز دانشکده‌ای ثبت نشده است
                                         </td>
                                     </tr>
@@ -586,9 +573,7 @@ const WorldOfScienceSettings = () => {
                 </div>
             )}
 
-            {/* ═══════════════════════════════════════════════════════════════ */}
             {/* ─── Education Levels Tab ─── */}
-            {/* ═══════════════════════════════════════════════════════════════ */}
             {activeTab === 'levels' && !loading && (
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
@@ -597,7 +582,7 @@ const WorldOfScienceSettings = () => {
                             مقاطع تحصیلی ({educationLevels.length})
                         </h2>
                         <button
-                            onClick={() => { setShowLevelForm(true); setEditingLevelId(null); setLevelForm({ name: '', roleValueEn: '', displayOrder: 0 }); }}
+                            onClick={() => { setShowLevelForm(true); setEditingLevelId(null); setLevelForm({ name: '', roleValueEn: '' }); }}
                             className="flex items-center gap-3 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95"
                         >
                             <Plus size={16} />
@@ -608,8 +593,8 @@ const WorldOfScienceSettings = () => {
                     {showLevelForm && (
                         <div className="glass p-6 rounded-2xl border-purple-500/20 animate-in fade-in slide-in-from-top-4 duration-300">
                             <h3 className="text-sm font-black text-purple-400 mb-4">{editingLevelId ? '✏️ ویرایش مقطع' : 'ثبت مقطع جدید'}</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                                <div className="space-y-2 col-span-1 md:col-span-2 lg:col-span-1">
+                            <div className="flex gap-4 items-end">
+                                <div className="flex-1 space-y-2">
                                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">نام مقطع *</label>
                                     <input
                                         type="text"
@@ -619,7 +604,7 @@ const WorldOfScienceSettings = () => {
                                         className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-purple-500 outline-none placeholder:text-slate-600"
                                     />
                                 </div>
-                                <div className="space-y-2">
+                                <div className="flex-1 space-y-2">
                                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">مربوط به نقش *</label>
                                     <select
                                         value={levelForm.roleValueEn || ''}
@@ -634,31 +619,20 @@ const WorldOfScienceSettings = () => {
                                         ))}
                                     </select>
                                 </div>
-                                <div className="w-full space-y-2">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">ترتیب</label>
-                                    <input
-                                        type="number"
-                                        value={levelForm.displayOrder}
-                                        onChange={(e) => setLevelForm({ ...levelForm, displayOrder: parseInt(e.target.value) || 0 })}
-                                        className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-purple-500 outline-none"
-                                    />
-                                </div>
-                                </div>
-                                <div className="flex gap-2 lg:col-span-4 justify-end pt-2">
-                                    <button
-                                        onClick={handleSaveLevel}
-                                        className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-5 py-4 rounded-xl font-bold text-sm transition-all"
-                                    >
-                                        <Check size={16} />
-                                        ذخیره
-                                    </button>
-                                    <button
-                                        onClick={() => { setShowLevelForm(false); setLevelForm({ name: '', roleValueEn: '', displayOrder: 0 }); setEditingLevelId(null); }}
-                                        className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-slate-400 px-5 py-4 rounded-xl font-bold text-sm transition-all"
-                                    >
-                                        <X size={16} />
-                                        انصراف
-                                    </button>
+                                <button
+                                    onClick={handleSaveLevel}
+                                    className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-5 py-4 rounded-xl font-bold text-sm transition-all"
+                                >
+                                    <Check size={16} />
+                                    ذخیره
+                                </button>
+                                <button
+                                    onClick={() => { setShowLevelForm(false); setLevelForm({ name: '', roleValueEn: '' }); setEditingLevelId(null); }}
+                                    className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-slate-400 px-5 py-4 rounded-xl font-bold text-sm transition-all"
+                                >
+                                    <X size={16} />
+                                    انصراف
+                                </button>
                             </div>
                         </div>
                     )}
@@ -670,43 +644,44 @@ const WorldOfScienceSettings = () => {
                                     <th className="p-4 text-right text-xs font-black text-slate-500 uppercase tracking-widest">ردیف</th>
                                     <th className="p-4 text-right text-xs font-black text-slate-500 uppercase tracking-widest">نام مقطع</th>
                                     <th className="p-4 text-right text-xs font-black text-slate-500 uppercase tracking-widest">نقش مرتبط</th>
-                                    <th className="p-4 text-center text-xs font-black text-slate-500 uppercase tracking-widest">ترتیب نمایش</th>
                                     <th className="p-4 text-center text-xs font-black text-slate-500 uppercase tracking-widest">عملیات</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {educationLevels
-                                    .sort((a, b) => a.displayOrder - b.displayOrder)
+                                {([...educationLevels])
+                                    .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'fa'))
                                     .slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
-                                    .map((level, index) => (
-                                        <tr key={level.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                                            <td className="p-4 text-sm text-slate-600">{index + 1}</td>
-                                            <td className="p-4 text-sm font-bold text-white">{level.name}</td>
-                                            <td className="p-4 text-sm text-slate-400">
-                                                {educationalRoles.find(r => r.valueEn === level.roleValueEn)?.labelFa || <span className="opacity-30">عمومی</span>}
-                                            </td>
-                                            <td className="p-4 text-center text-sm text-slate-400">{level.displayOrder}</td>
-                                            <td className="p-4 text-center">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <button
-                                                        onClick={() => handleEditLevel(level)}
-                                                        className="p-2 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-lg transition-all"
-                                                    >
-                                                        <Pencil size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteLevel(level.id!)}
-                                                        className="p-2 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 rounded-lg transition-all"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    .map((level, index) => {
+                                        const color = getLevelColor(level.name);
+                                        return (
+                                            <tr key={level.id} className={`border-b border-white/5 hover:bg-${color}-500/10 transition-colors bg-${color}-500/[0.02]`}>
+                                                <td className="p-4 text-sm text-slate-600">{index + 1}</td>
+                                                <td className="p-4 text-sm font-bold text-white">{level.name}</td>
+                                                <td className="p-4 text-sm text-slate-400">
+                                                    {educationalRoles.find(r => r.valueEn === level.roleValueEn)?.labelFa || <span className="opacity-30">عمومی</span>}
+                                                </td>
+                                                <td className="p-4 text-center">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <button
+                                                            onClick={() => handleEditLevel(level)}
+                                                            className="p-2 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-lg transition-all"
+                                                        >
+                                                            <Pencil size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteLevel(level.id!)}
+                                                            className="p-2 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 rounded-lg transition-all"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 {educationLevels.length === 0 && (
                                     <tr>
-                                        <td colSpan={5} className="p-12 text-center text-slate-600 text-sm">
+                                        <td colSpan={4} className="p-12 text-center text-slate-600 text-sm">
                                             هنوز مقطعی ثبت نشده است
                                         </td>
                                     </tr>
@@ -728,9 +703,7 @@ const WorldOfScienceSettings = () => {
                 </div>
             )}
 
-            {/* ═══════════════════════════════════════════════════════════════ */}
             {/* ─── Educational Roles Tab ─── */}
-            {/* ═══════════════════════════════════════════════════════════════ */}
             {activeTab === 'roles' && !loading && (
                 <div className="space-y-6">
                     <div className="flex items-center justify-between">
@@ -738,7 +711,7 @@ const WorldOfScienceSettings = () => {
                             نقش‌های آموزشی ({educationalRoles.length})
                         </h2>
                         <button
-                            onClick={() => { setShowRoleForm(true); setEditingRoleId(null); setRoleForm({ labelFa: '', valueEn: '', emoji: '', displayOrder: 0 }); }}
+                            onClick={() => { setShowRoleForm(true); setEditingRoleId(null); setRoleForm({ labelFa: '', valueEn: '', emoji: '' }); }}
                             className="flex items-center gap-3 bg-rose-600 hover:bg-rose-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95"
                         >
                             <Plus size={16} />
@@ -780,15 +753,6 @@ const WorldOfScienceSettings = () => {
                                         className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-rose-500 outline-none text-center text-lg"
                                     />
                                 </div>
-                                <div className="w-24 space-y-2">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">ترتیب</label>
-                                    <input
-                                        type="number"
-                                        value={roleForm.displayOrder}
-                                        onChange={(e) => setRoleForm({ ...roleForm, displayOrder: parseInt(e.target.value) || 0 })}
-                                        className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-rose-500 outline-none"
-                                    />
-                                </div>
                                 <div className="flex gap-2">
                                     <button
                                         onClick={async () => {
@@ -796,7 +760,7 @@ const WorldOfScienceSettings = () => {
                                             try {
                                                 await adminApi.saveEducationalRole(roleForm);
                                                 setShowRoleForm(false);
-                                                setRoleForm({ labelFa: '', valueEn: '', emoji: '', displayOrder: 0 });
+                                                setRoleForm({ labelFa: '', valueEn: '', emoji: '' });
                                                 setEditingRoleId(null);
                                                 loadData();
                                             } catch (err) { console.error('Error saving role:', err); }
@@ -807,7 +771,7 @@ const WorldOfScienceSettings = () => {
                                         ذخیره
                                     </button>
                                     <button
-                                        onClick={() => { setShowRoleForm(false); setRoleForm({ labelFa: '', valueEn: '', emoji: '', displayOrder: 0 }); setEditingRoleId(null); }}
+                                        onClick={() => { setShowRoleForm(false); setRoleForm({ labelFa: '', valueEn: '', emoji: '' }); setEditingRoleId(null); }}
                                         className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-slate-400 px-5 py-4 rounded-xl font-bold text-sm transition-all"
                                     >
                                         <X size={16} />
@@ -826,13 +790,12 @@ const WorldOfScienceSettings = () => {
                                     <th className="p-4 text-right text-xs font-black text-slate-500 uppercase tracking-widest">ایموجی</th>
                                     <th className="p-4 text-right text-xs font-black text-slate-500 uppercase tracking-widest">نام فارسی</th>
                                     <th className="p-4 text-right text-xs font-black text-slate-500 uppercase tracking-widest">مقدار انگلیسی</th>
-                                    <th className="p-4 text-center text-xs font-black text-slate-500 uppercase tracking-widest">ترتیب</th>
                                     <th className="p-4 text-center text-xs font-black text-slate-500 uppercase tracking-widest">عملیات</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {educationalRoles
-                                    .sort((a, b) => a.displayOrder - b.displayOrder)
+                                {([...educationalRoles])
+                                    .sort((a, b) => (a.labelFa || '').localeCompare(b.labelFa || '', 'fa'))
                                     .slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
                                     .map((role, index) => (
                                         <tr key={role.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
@@ -840,12 +803,11 @@ const WorldOfScienceSettings = () => {
                                             <td className="p-4 text-xl">{role.emoji}</td>
                                             <td className="p-4 text-sm font-bold text-white">{role.labelFa}</td>
                                             <td className="p-4 text-sm text-slate-400 font-mono">{role.valueEn}</td>
-                                            <td className="p-4 text-center text-sm text-slate-400">{role.displayOrder}</td>
                                             <td className="p-4 text-center">
                                                 <div className="flex items-center justify-center gap-2">
                                                     <button
                                                         onClick={() => {
-                                                            setRoleForm({ id: role.id, labelFa: role.labelFa, valueEn: role.valueEn, emoji: role.emoji, displayOrder: role.displayOrder });
+                                                            setRoleForm({ id: role.id, labelFa: role.labelFa, valueEn: role.valueEn, emoji: role.emoji });
                                                             setEditingRoleId(role.id!);
                                                             setShowRoleForm(true);
                                                         }}
@@ -892,9 +854,7 @@ const WorldOfScienceSettings = () => {
                 </div>
             )}
 
-            {/* ═══════════════════════════════════════════════════════════════ */}
             {/* ─── Clubs Tab ─── */}
-            {/* ═══════════════════════════════════════════════════════════════ */}
             {activeTab === 'clubs' && !loading && (
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
@@ -903,7 +863,7 @@ const WorldOfScienceSettings = () => {
                             کانون‌ها ({clubs.length})
                         </h2>
                         <button
-                            onClick={() => { setShowClubForm(true); setClubForm({ name: '', displayOrder: 0 }); }}
+                            onClick={() => { setShowClubForm(true); setClubForm({ name: '' }); }}
                             className="flex items-center gap-3 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95"
                         >
                             <Plus size={16} />
@@ -918,32 +878,28 @@ const WorldOfScienceSettings = () => {
                                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">نام کانون *</label>
                                     <input type="text" value={clubForm.name} onChange={(e) => setClubForm({ ...clubForm, name: e.target.value })} placeholder="مثال: کانون فرهنگی" className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-teal-500 outline-none placeholder:text-slate-600" />
                                 </div>
-                                <div className="w-32 space-y-2">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">ترتیب</label>
-                                    <input type="number" value={clubForm.displayOrder} onChange={(e) => setClubForm({ ...clubForm, displayOrder: parseInt(e.target.value) || 0 })} className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-teal-500 outline-none" />
-                                </div>
                                 <div className="flex gap-2">
-                                    <button onClick={async () => { if (!clubForm.name.trim()) return; try { await adminApi.saveClub(clubForm); setShowClubForm(false); setClubForm({ name: '', displayOrder: 0 }); loadData(); } catch (err) { setError('خطا در ذخیره کانون'); } }} className="flex items-center gap-2 bg-teal-600 hover:bg-teal-500 text-white px-5 py-4 rounded-xl font-bold text-sm transition-all"><Check size={16} />ذخیره</button>
-                                    <button onClick={() => { setShowClubForm(false); setClubForm({ name: '', displayOrder: 0 }); }} className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-slate-400 px-5 py-4 rounded-xl font-bold text-sm transition-all"><X size={16} />انصراف</button>
+                                    <button onClick={async () => { if (!clubForm.name.trim()) return; try { await adminApi.saveClub(clubForm); setShowClubForm(false); setClubForm({ name: '' }); loadData(); } catch (err) { setError('خطا در ذخیره کانون'); } }} className="flex items-center gap-2 bg-teal-600 hover:bg-teal-500 text-white px-5 py-4 rounded-xl font-bold text-sm transition-all"><Check size={16} />ذخیره</button>
+                                    <button onClick={() => { setShowClubForm(false); setClubForm({ name: '' }); }} className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-slate-400 px-5 py-4 rounded-xl font-bold text-sm transition-all"><X size={16} />انصراف</button>
                                 </div>
                             </div>
                         </div>
                     )}
                     <div className="glass rounded-2xl overflow-hidden">
                         <table className="w-full">
-                            <thead><tr className="border-b border-white/5"><th className="p-4 text-right text-xs font-black text-slate-500 uppercase tracking-widest">ردیف</th><th className="p-4 text-right text-xs font-black text-slate-500 uppercase tracking-widest">نام کانون</th><th className="p-4 text-center text-xs font-black text-slate-500 uppercase tracking-widest">ترتیب</th><th className="p-4 text-center text-xs font-black text-slate-500 uppercase tracking-widest">عملیات</th></tr></thead>
+                            <thead><tr className="border-b border-white/5"><th className="p-4 text-right text-xs font-black text-slate-500 uppercase tracking-widest">ردیف</th><th className="p-4 text-right text-xs font-black text-slate-500 uppercase tracking-widest">نام کانون</th><th className="p-4 text-center text-xs font-black text-slate-500 uppercase tracking-widest">عملیات</th></tr></thead>
                             <tbody>
-                                {clubs.sort((a, b) => a.displayOrder - b.displayOrder)
-                                .slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
-                                .map((club, index) => (
-                                    <tr key={club.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                                        <td className="p-4 text-sm text-slate-600">{index + 1}</td>
-                                        <td className="p-4 text-sm font-bold text-white">{club.name}</td>
-                                        <td className="p-4 text-center text-sm text-slate-400">{club.displayOrder}</td>
-                                        <td className="p-4 text-center"><button onClick={async () => { if (club.id && confirm('آیا از حذف این کانون مطمئنید؟')) { await adminApi.deleteClub(club.id); loadData(); } }} className="p-2 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 rounded-lg transition-all"><Trash2 size={16} /></button></td>
-                                    </tr>
-                                ))}
-                                {clubs.length === 0 && (<tr><td colSpan={4} className="p-12 text-center text-slate-600 text-sm">هنوز کانونی ثبت نشده است</td></tr>)}
+                                {([...clubs])
+                                    .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'fa'))
+                                    .slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
+                                    .map((club, index) => (
+                                        <tr key={club.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                            <td className="p-4 text-sm text-slate-600">{index + 1}</td>
+                                            <td className="p-4 text-sm font-bold text-white">{club.name}</td>
+                                            <td className="p-4 text-center"><button onClick={async () => { if (club.id && confirm('آیا از حذف این کانون مطمئنید؟')) { await adminApi.deleteClub(club.id); loadData(); } }} className="p-2 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 rounded-lg transition-all"><Trash2 size={16} /></button></td>
+                                        </tr>
+                                    ))}
+                                {clubs.length === 0 && (<tr><td colSpan={3} className="p-12 text-center text-slate-600 text-sm">هنوز کانونی ثبت نشده است</td></tr>)}
                             </tbody>
                         </table>
                     </div>
@@ -961,9 +917,7 @@ const WorldOfScienceSettings = () => {
                 </div>
             )}
 
-            {/* ═══════════════════════════════════════════════════════════════ */}
             {/* ─── Student Orgs Tab ─── */}
-            {/* ═══════════════════════════════════════════════════════════════ */}
             {activeTab === 'studentOrgs' && !loading && (
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
@@ -972,7 +926,7 @@ const WorldOfScienceSettings = () => {
                             تشکل‌های دانشجویی ({studentOrgs.length})
                         </h2>
                         <button
-                            onClick={() => { setShowStudentOrgForm(true); setStudentOrgForm({ name: '', displayOrder: 0 }); }}
+                            onClick={() => { setShowStudentOrgForm(true); setStudentOrgForm({ name: '' }); }}
                             className="flex items-center gap-3 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95"
                         >
                             <Plus size={16} />
@@ -987,32 +941,28 @@ const WorldOfScienceSettings = () => {
                                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">نام تشکل *</label>
                                     <input type="text" value={studentOrgForm.name} onChange={(e) => setStudentOrgForm({ ...studentOrgForm, name: e.target.value })} placeholder="مثال: بسیج دانشجویی" className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-cyan-500 outline-none placeholder:text-slate-600" />
                                 </div>
-                                <div className="w-32 space-y-2">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">ترتیب</label>
-                                    <input type="number" value={studentOrgForm.displayOrder} onChange={(e) => setStudentOrgForm({ ...studentOrgForm, displayOrder: parseInt(e.target.value) || 0 })} className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-cyan-500 outline-none" />
-                                </div>
                                 <div className="flex gap-2">
-                                    <button onClick={async () => { if (!studentOrgForm.name.trim()) return; try { await adminApi.saveStudentOrg(studentOrgForm); setShowStudentOrgForm(false); setStudentOrgForm({ name: '', displayOrder: 0 }); loadData(); } catch (err) { setError('خطا در ذخیره تشکل'); } }} className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-4 rounded-xl font-bold text-sm transition-all"><Check size={16} />ذخیره</button>
-                                    <button onClick={() => { setShowStudentOrgForm(false); setStudentOrgForm({ name: '', displayOrder: 0 }); }} className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-slate-400 px-5 py-4 rounded-xl font-bold text-sm transition-all"><X size={16} />انصراف</button>
+                                    <button onClick={async () => { if (!studentOrgForm.name.trim()) return; try { await adminApi.saveStudentOrg(studentOrgForm); setShowStudentOrgForm(false); setStudentOrgForm({ name: '' }); loadData(); } catch (err) { setError('خطا در ذخیره تشکل'); } }} className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-4 rounded-xl font-bold text-sm transition-all"><Check size={16} />ذخیره</button>
+                                    <button onClick={() => { setShowStudentOrgForm(false); setStudentOrgForm({ name: '' }); }} className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-slate-400 px-5 py-4 rounded-xl font-bold text-sm transition-all"><X size={16} />انصراف</button>
                                 </div>
                             </div>
                         </div>
                     )}
                     <div className="glass rounded-2xl overflow-hidden">
                         <table className="w-full">
-                            <thead><tr className="border-b border-white/5"><th className="p-4 text-right text-xs font-black text-slate-500 uppercase tracking-widest">ردیف</th><th className="p-4 text-right text-xs font-black text-slate-500 uppercase tracking-widest">نام تشکل</th><th className="p-4 text-center text-xs font-black text-slate-500 uppercase tracking-widest">ترتیب</th><th className="p-4 text-center text-xs font-black text-slate-500 uppercase tracking-widest">عملیات</th></tr></thead>
+                            <thead><tr className="border-b border-white/5"><th className="p-4 text-right text-xs font-black text-slate-500 uppercase tracking-widest">ردیف</th><th className="p-4 text-right text-xs font-black text-slate-500 uppercase tracking-widest">نام تشکل</th><th className="p-4 text-center text-xs font-black text-slate-500 uppercase tracking-widest">عملیات</th></tr></thead>
                             <tbody>
-                                {studentOrgs.sort((a, b) => a.displayOrder - b.displayOrder)
-                                .slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
-                                .map((org, index) => (
-                                    <tr key={org.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                                        <td className="p-4 text-sm text-slate-600">{index + 1}</td>
-                                        <td className="p-4 text-sm font-bold text-white">{org.name}</td>
-                                        <td className="p-4 text-center text-sm text-slate-400">{org.displayOrder}</td>
-                                        <td className="p-4 text-center"><button onClick={async () => { if (org.id && confirm('آیا از حذف این تشکل مطمئنید؟')) { await adminApi.deleteStudentOrg(org.id); loadData(); } }} className="p-2 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 rounded-lg transition-all"><Trash2 size={16} /></button></td>
-                                    </tr>
-                                ))}
-                                {studentOrgs.length === 0 && (<tr><td colSpan={4} className="p-12 text-center text-slate-600 text-sm">هنوز تشکلی ثبت نشده است</td></tr>)}
+                                {([...studentOrgs])
+                                    .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'fa'))
+                                    .slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
+                                    .map((org, index) => (
+                                        <tr key={org.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                            <td className="p-4 text-sm text-slate-600">{index + 1}</td>
+                                            <td className="p-4 text-sm font-bold text-white">{org.name}</td>
+                                            <td className="p-4 text-center"><button onClick={async () => { if (org.id && confirm('آیا از حذف این تشکل مطمئنید؟')) { await adminApi.deleteStudentOrg(org.id); loadData(); } }} className="p-2 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 rounded-lg transition-all"><Trash2 size={16} /></button></td>
+                                        </tr>
+                                    ))}
+                                {studentOrgs.length === 0 && (<tr><td colSpan={3} className="p-12 text-center text-slate-600 text-sm">هنوز تشکلی ثبت نشده است</td></tr>)}
                             </tbody>
                         </table>
                     </div>
@@ -1030,9 +980,7 @@ const WorldOfScienceSettings = () => {
                 </div>
             )}
 
-            {/* ═══════════════════════════════════════════════════════════════ */}
             {/* ─── Mosbat Elm Slider Tab ─── */}
-            {/* ═══════════════════════════════════════════════════════════════ */}
             {activeTab === 'slider' && !loading && (
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
@@ -1041,7 +989,7 @@ const WorldOfScienceSettings = () => {
                             اسلایدر مثبت علم ({sliderBanners.length})
                         </h2>
                         <button
-                            onClick={() => { setShowSliderForm(true); setSliderTitle(''); setSliderOrder(0); setSliderFile(null); setSliderPreview(''); }}
+                            onClick={() => { setShowSliderForm(true); setSliderTitle(''); setSliderFile(null); setSliderPreview(''); }}
                             className="flex items-center gap-3 bg-orange-600 hover:bg-orange-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95"
                         >
                             <Plus size={16} />
@@ -1066,10 +1014,6 @@ const WorldOfScienceSettings = () => {
                                         <label className="text-xs font-black text-slate-500 uppercase tracking-widest">عنوان بنر</label>
                                         <input type="text" value={sliderTitle} onChange={(e) => setSliderTitle(e.target.value)} placeholder="مثال: ثبت‌نام کارگاه تابستانه" className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-orange-500 outline-none" />
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-black text-slate-500 uppercase tracking-widest">ترتیب نمایش</label>
-                                        <input type="number" value={sliderOrder} onChange={(e) => setSliderOrder(parseInt(e.target.value) || 0)} className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-orange-500 outline-none" />
-                                    </div>
                                 </div>
                             </div>
                             <div className="flex gap-4 mt-6">
@@ -1078,8 +1022,8 @@ const WorldOfScienceSettings = () => {
                                     setIsSliderUploading(true);
                                     try {
                                         const imageUrl = await adminApi.uploadBannerImage(sliderFile);
-                                        await adminApi.saveMosbatElmBanner({ title: sliderTitle, imageUrl, displayOrder: sliderOrder, isActive: true });
-                                        setShowSliderForm(false); setSliderFile(null); setSliderPreview(''); setSliderTitle(''); setSliderOrder(0); loadData();
+                                        await adminApi.saveMosbatElmBanner({ title: sliderTitle, imageUrl, isActive: true });
+                                        setShowSliderForm(false); setSliderFile(null); setSliderPreview(''); setSliderTitle(''); loadData();
                                     } catch (err) { setError('خطا در آپلود یا ذخیره اسلاید'); } finally { setIsSliderUploading(false); }
                                 }} className={`flex-1 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 transition-all ${isSliderUploading || !sliderFile ? 'bg-slate-600 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-500'}`}>
                                     {isSliderUploading ? (<><Loader2 size={20} className="animate-spin" />در حال آپلود...</>) : (<><Check size={20} />تایید و ثبت اسلاید</>)}
@@ -1090,7 +1034,8 @@ const WorldOfScienceSettings = () => {
                     )}
                     {sliderBanners.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {sliderBanners.sort((a, b) => a.displayOrder - b.displayOrder)
+                             {([...sliderBanners])
+                                .sort((a, b) => (a.title || '').localeCompare(b.title || '', 'fa'))
                                 .slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
                                 .map((banner) => (
                                 <div key={banner.id} className="glass rounded-2xl overflow-hidden group border-white/5 hover:border-orange-500/30 transition-all duration-500 shadow-xl">
@@ -1099,8 +1044,8 @@ const WorldOfScienceSettings = () => {
                                             <div className="w-full h-full flex items-center justify-center text-slate-700"><ImageIcon size={60} /></div>
                                         )}
                                         <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-slate-900 to-transparent">
-                                            <div className="flex justify-between items-end">
-                                                <div className="text-xs font-black bg-orange-500 text-white px-3 py-1 rounded-full">اولویت {banner.displayOrder}</div>
+                                             <div className="flex justify-between items-end">
+                                                 <div className="text-xs font-black bg-orange-500 text-white px-3 py-1 rounded-full">{banner.title}</div>
                                                 <button onClick={async () => { if (banner.id && confirm('آیا از حذف این اسلاید مطمئنید؟')) { await adminApi.deleteMosbatElmBanner(banner.id); loadData(); } }} className="bg-rose-500 hover:bg-rose-400 text-white p-3 rounded-2xl shadow-xl transition-all active:scale-90"><Trash2 size={16} /></button>
                                             </div>
                                         </div>

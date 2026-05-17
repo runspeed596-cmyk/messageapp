@@ -21,7 +21,10 @@ data class TeacherPublicProfileState(
     val teacher: UserDto? = null,
     val courses: List<Course> = emptyList(),
     val isLoading: Boolean = true,
-    val error: String? = null
+    val error: String? = null,
+    val isFollowing: Boolean = false,
+    val isFollowLoading: Boolean = false,
+    val followerCount: Int = 0
 )
 
 @HiltViewModel
@@ -57,16 +60,87 @@ class TeacherPublicProfileViewModel @Inject constructor(
                 }
                 val courses = coursesResponse.body()?.data?.content?.map { it.toDomain() } ?: emptyList()
 
+                // Fetch follow counts
+                var followerCount = 0
+                try {
+                    val countsResponse = apiService.getFollowCounts(teacherId)
+                    if (countsResponse.isSuccessful) {
+                        followerCount = countsResponse.body()?.followerCount ?: 0
+                    }
+                } catch (e: Exception) {
+                    Log.e("TeacherPublicProfile", "Failed to fetch follow counts", e)
+                }
+
+                // Fetch is following status
+                var isFollowing = false
+                try {
+                    val followResponse = apiService.isFollowing(teacherId)
+                    if (followResponse.isSuccessful && followResponse.body()?.success == true) {
+                        isFollowing = followResponse.body()?.data ?: false
+                    }
+                } catch (e: Exception) {
+                    Log.e("TeacherPublicProfile", "Failed to check is following", e)
+                }
+
                 _state.update { 
                     it.copy(
                         teacher = teacher,
                         courses = courses,
+                        isFollowing = isFollowing,
+                        followerCount = followerCount,
                         isLoading = false
                     ) 
                 }
             } catch (e: Exception) {
                 Log.e("TeacherPublicProfile", "Error loading teacher", e)
                 _state.update { it.copy(isLoading = false, error = "خطا در بارگذاری اطلاعات: ${e.message}") }
+            }
+        }
+    }
+
+    fun toggleFollow() {
+        if (_state.value.isFollowLoading) return
+        val currentlyFollowing = _state.value.isFollowing
+        val currentFollowerCount = _state.value.followerCount
+        
+        // Optimistic UI Update: instantly flip the follow state & modify counter
+        _state.update { currentState ->
+            currentState.copy(
+                isFollowing = !currentlyFollowing,
+                followerCount = if (currentlyFollowing) maxOf(0, currentFollowerCount - 1) else currentFollowerCount + 1,
+                isFollowLoading = true
+            )
+        }
+        
+        viewModelScope.launch {
+            try {
+                val response = if (currentlyFollowing) {
+                    apiService.unfollowUser(teacherId)
+                } else {
+                    apiService.followUser(teacherId)
+                }
+                
+                if (response.isSuccessful && response.body()?.success == true) {
+                    _state.update { it.copy(isFollowLoading = false) }
+                } else {
+                    // Revert on API response failure
+                    _state.update { currentState ->
+                        currentState.copy(
+                            isFollowing = currentlyFollowing,
+                            followerCount = currentFollowerCount,
+                            isFollowLoading = false
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                // Revert on Exception
+                _state.update { currentState ->
+                    currentState.copy(
+                        isFollowing = currentlyFollowing,
+                        followerCount = currentFollowerCount,
+                        isFollowLoading = false
+                    )
+                }
             }
         }
     }

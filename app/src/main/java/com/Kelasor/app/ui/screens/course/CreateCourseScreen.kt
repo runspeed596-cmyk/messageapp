@@ -96,25 +96,27 @@ fun CreateCourseScreen(
         }
     }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val sharedPrefs = remember { context.getSharedPreferences("create_course_draft", android.content.Context.MODE_PRIVATE) }
     
-    var title by remember { mutableStateOf("") }
+    var title by remember { mutableStateOf(if (editCourseId == null) sharedPrefs.getString("draft_title", "") ?: "" else "") }
     var validationAttempted by remember { mutableStateOf(false) }
 
     var showAddInstructorTypeDialog by remember { mutableStateOf(false) }
     var titleError by remember { mutableStateOf<String?>(null) }
-    var slogan by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var priceTomans by remember { mutableStateOf("") }
+    var slogan by remember { mutableStateOf(if (editCourseId == null) sharedPrefs.getString("draft_slogan", "") ?: "" else "") }
+    var description by remember { mutableStateOf(if (editCourseId == null) sharedPrefs.getString("draft_description", "") ?: "" else "") }
+    var priceTomans by remember { mutableStateOf(if (editCourseId == null) sharedPrefs.getString("draft_priceTomans", "") ?: "" else "") }
     var fieldOfStudyError by remember { mutableStateOf<String?>(null) }
     var descriptionError by remember { mutableStateOf<String?>(null) }
     var posterError by remember { mutableStateOf<String?>(null) }
-    var priceDisplay by remember { mutableStateOf("") }
-    var discountPercentage by remember { mutableStateOf("") }
-    var capacity by remember { mutableStateOf("") }
-    var syllabusDurationHours by remember { mutableStateOf("") }
-    var syllabusDurationMinutes by remember { mutableStateOf("") }
-    var isPublic by remember { mutableStateOf(true) }
-    var posterUrl by remember { mutableStateOf<String?>(null) }
+    var priceDisplay by remember { mutableStateOf(if (editCourseId == null) sharedPrefs.getString("draft_priceDisplay", "") ?: "" else "") }
+    var discountPercentage by remember { mutableStateOf(if (editCourseId == null) sharedPrefs.getString("draft_discountPercentage", "") ?: "" else "") }
+    var capacity by remember { mutableStateOf(if (editCourseId == null) sharedPrefs.getString("draft_capacity", "") ?: "" else "") }
+    var syllabusDurationHours by remember { mutableStateOf(if (editCourseId == null) sharedPrefs.getString("draft_syllabusDurationHours", "") ?: "" else "") }
+    var syllabusDurationMinutes by remember { mutableStateOf(if (editCourseId == null) sharedPrefs.getString("draft_syllabusDurationMinutes", "") ?: "" else "") }
+    var isPublic by remember { mutableStateOf(if (editCourseId == null) sharedPrefs.getBoolean("draft_isPublic", true) else true) }
+    var posterUrl by remember { mutableStateOf<String?>(if (editCourseId == null) sharedPrefs.getString("draft_posterUrl", null) else null) }
     var isUploadingPoster by remember { mutableStateOf(false) }
     var tagsList by remember { mutableStateOf<List<String>>(emptyList()) }
     var currentTagInput by remember { mutableStateOf("") }
@@ -124,7 +126,25 @@ fun CreateCourseScreen(
     var showUserSearchDialog by remember { mutableStateOf(false) }
     var showInstructorDialog by remember { mutableStateOf(false) }
     var showCollaboratorDialog by remember { mutableStateOf(false) }
-    var activeSearchTarget by remember { mutableStateOf("ADMIN") } // ADMIN or INSTRUCTOR
+    var showAdminSearchDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(title, slogan, description, priceTomans, priceDisplay, discountPercentage, capacity, syllabusDurationHours, syllabusDurationMinutes, isPublic, posterUrl) {
+        if (editCourseId == null) {
+            sharedPrefs.edit().apply {
+                putString("draft_title", title)
+                putString("draft_slogan", slogan)
+                putString("draft_description", description)
+                putString("draft_priceTomans", priceTomans)
+                putString("draft_priceDisplay", priceDisplay)
+                putString("draft_discountPercentage", discountPercentage)
+                putString("draft_capacity", capacity)
+                putString("draft_syllabusDurationHours", syllabusDurationHours)
+                putString("draft_syllabusDurationMinutes", syllabusDurationMinutes)
+                putBoolean("draft_isPublic", isPublic)
+                putString("draft_posterUrl", posterUrl)
+            }.apply()
+        }
+    }
     var suitableForList by remember { mutableStateOf<List<String>>(emptyList()) }
     var isVerticalPoster by remember { mutableStateOf(false) }
     var chaptersList by remember { mutableStateOf<List<com.Kelasor.app.data.remote.dto.CourseChapterDto>>(emptyList()) }
@@ -167,7 +187,6 @@ fun CreateCourseScreen(
         }
     }
     
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     
     val posterPicker = rememberLauncherForActivityResult(
@@ -217,6 +236,7 @@ fun CreateCourseScreen(
                     message = "دوره با موفقیت ساخته شد! یک گروه اختصاصی برای دوره شما ساخته شد. به بخش پیام‌رسان مراجعه کنید.",
                     type = ToastType.SUCCESS
                 )
+                sharedPrefs.edit().clear().apply()
             }
             onCourseCreated(null) 
             viewModel.resetCreateState()
@@ -525,7 +545,7 @@ fun CreateCourseScreen(
                 users = selectedAdmins,
                 buttonLabel = "افزودن ادمین",
                 emptyLabel = "هیچ ادمینی اضافه نشده است",
-                onAddClick = { onNavigateToEditAcademyProfile() }, // Actually this should maybe just use a dialog like before, but this is what it was
+                onAddClick = { showAdminDialog = true },
                 onRemove = { selectedAdmins = selectedAdmins - it }
             )
 
@@ -704,7 +724,7 @@ fun CreateCourseScreen(
                 )
                 
                 var expandedDiscount by remember { mutableStateOf(false) }
-                val discountOptions = listOf("بدون تخفیف") + (5..65 step 5).map { "$it" }
+                val discountOptions = listOf("بدون تخفیف") + (5..100 step 5).map { "$it" }
 
                 ExposedDropdownMenuBox(
                     expanded = expandedDiscount,
@@ -862,18 +882,10 @@ fun CreateCourseScreen(
         UserSearchDialog(
             onDismiss = { showUserSearchDialog = false },
             onUserSelected = { user ->
-                if (activeSearchTarget == "ADMIN") {
-                    if (user !in selectedAdmins) {
-                        selectedAdmins = selectedAdmins + user
-                    } else {
-                        KelasorToast.show(context, "این ادمین قبلاً اضافه شده است", ToastType.ERROR)
-                    }
-                } else if (activeSearchTarget == "INSTRUCTOR") {
-                    if (user !in selectedInstructors) {
-                        selectedInstructors = selectedInstructors + user
-                    } else {
-                        KelasorToast.show(context, "این مدرس قبلاً اضافه شده است", ToastType.ERROR)
-                    }
+                if (user !in selectedInstructors) {
+                    selectedInstructors = selectedInstructors + user
+                } else {
+                    KelasorToast.show(context, "این مدرس قبلاً اضافه شده است", ToastType.ERROR)
                 }
                 showUserSearchDialog = false
             },
@@ -1043,6 +1055,19 @@ fun CreateCourseScreen(
                     selectedInstructors = selectedInstructors + user
                 }
                 showUserSearchDialog = false
+            },
+            viewModel = viewModel
+        )
+    }
+
+    if (showAdminSearchDialog) {
+        UserSearchDialogForCourse(
+            onDismiss = { showAdminSearchDialog = false },
+            onUserSelected = { user ->
+                if (selectedAdmins.none { it.id == user.id }) {
+                    selectedAdmins = selectedAdmins + user
+                }
+                showAdminSearchDialog = false
             },
             viewModel = viewModel
         )

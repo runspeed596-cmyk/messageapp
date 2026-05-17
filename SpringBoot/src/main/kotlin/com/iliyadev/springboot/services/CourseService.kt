@@ -124,6 +124,7 @@ data class CourseResponse(
     val managerId: UUID,
     val managerName: String,
     val managerAvatarUrl: String?,
+    val organizerChannelId: UUID? = null,
     val createdAt: Instant
 )
 
@@ -248,6 +249,26 @@ class CourseService(
         } catch (e: Exception) {
             // Ignore
         }
+    }
+
+    @Transactional
+    fun incrementViewCount(courseId: UUID): Long {
+        val course = courseRepository.findById(courseId)
+            .orElseThrow { org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Course not found") }
+        course.viewCount += 1
+        courseRepository.save(course)
+        logger.info("👀 Incremented view count for course $courseId to ${course.viewCount}")
+        return course.viewCount
+    }
+
+    @Transactional
+    fun incrementClickCount(courseId: UUID): Long {
+        val course = courseRepository.findById(courseId)
+            .orElseThrow { org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Course not found") }
+        course.clickCount += 1
+        courseRepository.save(course)
+        logger.info("🖱️ Incremented click count for course $courseId to ${course.clickCount}")
+        return course.clickCount
     }
 
     // ── Course CRUD ──
@@ -384,7 +405,10 @@ class CourseService(
     fun deleteCourse(courseId: UUID, organizerId: UUID) {
         val course: Course = getOwnedCourse(courseId, organizerId)
         if (course.status == CourseStatus.APPROVED || course.status == CourseStatus.ACTIVE) {
-            throw ResponseStatusException(HttpStatus.CONFLICT, "Cannot delete an approved course. Archive it first.")
+            course.status = CourseStatus.COMPLETED
+            course.updatedAt = Instant.now()
+            courseRepository.save(course)
+            return
         }
         // Delete related enrollments
         enrollmentRepository.deleteByCourseId(courseId)
@@ -882,6 +906,9 @@ class CourseService(
             managerId = course.organizer?.id ?: java.util.UUID.randomUUID(),
             managerName = course.organizer?.displayName ?: "Unknown",
             managerAvatarUrl = course.organizer?.avatarUrl,
+            organizerChannelId = institution?.channel?.id,
+            averageRating = course.averageRating,
+            reviewCount = course.reviewCount,
             createdAt = course.createdAt
         )
     }

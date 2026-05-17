@@ -51,5 +51,23 @@ class DatabaseConstraintFixer(
                 logger.warn("⚠️ Could not update courses_status_check: ${e.message}")
             }
         }
+        
+        // Fix: Drop deprecated display_order column from reference tables
+        val referenceTables = listOf(
+            "fields_of_study", "education_levels", "universities", 
+            "cities", "provinces", "ministries", "banners"
+        )
+        dataSource.connection.use { conn ->
+            for (table in referenceTables) {
+                try {
+                    conn.createStatement().use { stmt ->
+                        stmt.execute("ALTER TABLE $table DROP COLUMN IF EXISTS display_order CASCADE")
+                    }
+                    logger.info("✅ Dropped display_order from $table if existed")
+                } catch (e: Exception) {
+                    logger.warn("⚠️ Could not drop display_order from $table: ${e.message}")
+                }
+            }
+        }
     }
 }

@@ -26,6 +26,7 @@ data class MosbatElmState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val isOrganizer: Boolean = false,
+    val isOrganizerChecked: Boolean = false,
     val searchQuery: String = "",
     val isSearchActive: Boolean = false,
     val discountedCourses: List<Course> = emptyList(),
@@ -49,6 +50,7 @@ class MosbatElmScreenViewModel @Inject constructor(
 
     init {
         loadData()
+        checkOrganizerStatus()
         webSocketManager.subscribeToMosbatElmCapacityUpdates()
         observeWebSocketMessages()
     }
@@ -179,10 +181,14 @@ class MosbatElmScreenViewModel @Inject constructor(
                 userRepository.observeCurrentUser().collect { user ->
                     if (user != null) {
                         val isOrganizer = user.institutionId != null
-                        _state.update { it.copy(isOrganizer = isOrganizer) }
+                        _state.update { it.copy(isOrganizer = isOrganizer, isOrganizerChecked = true) }
+                    } else {
+                        _state.update { it.copy(isOrganizerChecked = true) }
                     }
                 }
-            } catch (_: Exception) { }
+            } catch (_: Exception) {
+                _state.update { it.copy(isOrganizerChecked = true) }
+            }
         }
     }
 

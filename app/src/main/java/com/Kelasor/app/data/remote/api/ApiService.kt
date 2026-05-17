@@ -461,12 +461,21 @@ interface ApiService {
         @Query("page") page: Int = 0,
         @Query("size") size: Int = 20
     ): Response<NotificationListResponse>
+    @GET("api/notifications/mosbat-elm")
+    suspend fun getMosbatElmNotifications(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 50
+    ): Response<NotificationListResponse>
     @POST("api/notifications/{notificationId}/read")
     suspend fun markNotificationAsRead(@Path("notificationId") notificationId: String): Response<ApiResponse<Boolean>>
     @POST("api/notifications/read-all")
     suspend fun markAllNotificationsAsRead(): Response<ApiResponse<Int>>
     @GET("api/notifications/unread-count")
     suspend fun getUnreadNotificationCount(): Response<UnreadCountResponse>
+    @POST("api/notifications/{notificationId}/accept-invite")
+    suspend fun acceptInvite(@Path("notificationId") notificationId: String): Response<ApiResponse<Boolean>>
+    @POST("api/notifications/{notificationId}/reject-invite")
+    suspend fun rejectInvite(@Path("notificationId") notificationId: String): Response<ApiResponse<Boolean>>
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // 📌 Message Pin Endpoints
@@ -739,6 +748,16 @@ interface ApiService {
     suspend fun deleteCourse(
         @Path("id") courseId: String
     ): Response<ApiResponse<Unit>>
+
+    @POST("api/courses/{id}/view")
+    suspend fun incrementViewCount(
+        @Path("id") id: String
+    ): Response<ApiResponse<Long>>
+
+    @POST("api/courses/{id}/click")
+    suspend fun incrementClickCount(
+        @Path("id") id: String
+    ): Response<ApiResponse<Long>>
 
     @GET("api/channels/by-user/{userId}")
     suspend fun getChannelsByUser(

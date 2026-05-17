@@ -19,12 +19,12 @@ class ReferenceDataController(
     @GetMapping
     fun getReferenceData(): ResponseEntity<ApiResponse<ReferenceDataDto>> {
         val universities: List<UniversitySimpleDto> = universityRepository.findAll().map { it.toSimpleDto() }
-        val fieldsOfStudy: List<FieldOfStudyDto> = fieldOfStudyRepository.findAllByOrderByDisplayOrderAsc().map { it.toDto() }
-        val educationLevels: List<EducationLevelDto> = educationLevelRepository.findAllByOrderByDisplayOrderAsc().map { it.toDto() }
-        val faculties: List<FacultyDto> = facultyRepository.findAllByOrderByDisplayOrderAsc().map { it.toDto() }
-        val educationalRoles: List<EducationalRoleOptionDto> = educationalRoleOptionRepository.findAllByOrderByDisplayOrderAsc().map { it.toDto() }
-        val clubs: List<ClubDto> = clubRepository.findAllByOrderByDisplayOrderAsc().map { it.toDto() }
-        val studentOrgs: List<StudentOrgDto> = studentOrgRepository.findAllByOrderByDisplayOrderAsc().map { it.toDto() }
+        val fieldsOfStudy: List<FieldOfStudyDto> = fieldOfStudyRepository.findAll().map { it.toDto() }
+        val educationLevels: List<EducationLevelDto> = educationLevelRepository.findAll().map { it.toDto() }
+        val faculties: List<FacultyDto> = facultyRepository.findAll().map { it.toDto() }
+        val educationalRoles: List<EducationalRoleOptionDto> = educationalRoleOptionRepository.findAll().map { it.toDto() }
+        val clubs: List<ClubDto> = clubRepository.findAll().map { it.toDto() }
+        val studentOrgs: List<StudentOrgDto> = studentOrgRepository.findAll().map { it.toDto() }
         
         val data = ReferenceDataDto(
             universities = universities,
@@ -40,7 +40,7 @@ class ReferenceDataController(
 
     @GetMapping("/fields-by-level")
     fun getFieldsByLevel(@RequestParam level: String): ResponseEntity<ApiResponse<List<FieldOfStudyDto>>> {
-        val allFields: List<FieldOfStudyDto> = fieldOfStudyRepository.findAllByOrderByDisplayOrderAsc()
+        val allFields: List<FieldOfStudyDto> = fieldOfStudyRepository.findAll()
             .filter { it.educationLevel.equals(level, ignoreCase = true) }
             .map { it.toDto() }
         return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = allFields))

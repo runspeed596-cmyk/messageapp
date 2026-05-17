@@ -204,7 +204,8 @@ class CollaborationService(
 class NotificationService(
     private val notificationRepository: NotificationRepository,
     private val userRepository: UserRepository,
-    private val webSocketMessageHandler: WebSocketMessageHandler
+    private val webSocketMessageHandler: WebSocketMessageHandler,
+    private val institutionRepository: InstitutionRepository
 ) {
     @Transactional
     fun createNotification(
@@ -267,12 +268,22 @@ class NotificationService(
     }
     fun getNotifications(userId: UUID, page: Int, size: Int): NotificationListResponse {
         val pageable = PageRequest.of(page, size)
-        val notificationsPage = notificationRepository.findByUserId(userId, pageable)
-        val unreadCount = notificationRepository.countUnreadByUserId(userId)
+        val notificationsPage = notificationRepository.findMainNotificationsByUserId(userId, pageable)
+        val unreadCount = notificationRepository.countUnreadMainNotificationsByUserId(userId)
         return NotificationListResponse(
             notifications = notificationsPage.content.map { it.toDto() },
             totalCount = notificationsPage.totalElements.toInt(),
             unreadCount = unreadCount,
+            hasMore = notificationsPage.hasNext()
+        )
+    }
+    fun getMosbatElmNotifications(userId: UUID, page: Int, size: Int): NotificationListResponse {
+        val pageable = PageRequest.of(page, size)
+        val notificationsPage = notificationRepository.findMosbatElmNotificationsByUserId(userId, pageable)
+        return NotificationListResponse(
+            notifications = notificationsPage.content.map { it.toDto() },
+            totalCount = notificationsPage.totalElements.toInt(),
+            unreadCount = 0, // Unread badge count is not needed separately
             hasMore = notificationsPage.hasNext()
         )
     }
@@ -293,7 +304,7 @@ class NotificationService(
         return unread.content.size
     }
     fun getUnreadCount(userId: UUID): Int {
-        return notificationRepository.countUnreadByUserId(userId)
+        return notificationRepository.countUnreadMainNotificationsByUserId(userId)
     }
     private fun sendNotificationViaWebSocket(userId: UUID, notification: NotificationDto) {
         try {
@@ -301,5 +312,46 @@ class NotificationService(
         } catch (e: Exception) {
             // Log error but don't fail the operation
         }
+    }
+
+    @Transactional
+    fun acceptInvite(notificationId: UUID, userId: UUID): Boolean {
+        val notification = notificationRepository.findById(notificationId).orElse(null) ?: return false
+        if (notification.user?.id != userId) return false
+        if (notification.status != "PENDING") return false
+
+        val academyId = notification.relatedEntityId ?: return false
+        val academy = institutionRepository.findById(academyId).orElse(null) ?: return false
+
+        if (notification.type == NotificationType.TEACHER_INVITE) {
+            if (!academy.instructorIds.contains(userId)) {
+                academy.instructorIds.add(userId)
+            }
+        } else if (notification.type == NotificationType.ADMIN_INVITE) {
+            if (!academy.adminIds.contains(userId)) {
+                academy.adminIds.add(userId)
+            }
+        } else {
+            return false
+        }
+
+        institutionRepository.save(academy)
+
+        notification.status = "ACCEPTED"
+        notification.isRead = true
+        notificationRepository.save(notification)
+        return true
+    }
+
+    @Transactional
+    fun rejectInvite(notificationId: UUID, userId: UUID): Boolean {
+        val notification = notificationRepository.findById(notificationId).orElse(null) ?: return false
+        if (notification.user?.id != userId) return false
+        if (notification.status != "PENDING") return false
+
+        notification.status = "REJECTED"
+        notification.isRead = true
+        notificationRepository.save(notification)
+        return true
     }
 }

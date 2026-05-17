@@ -78,6 +78,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -1267,35 +1268,54 @@ fun ConversationScreen(
                     }} else null
                 )
             } else {
-                MessageInputBar(
-                    text = messageText,
-                    onTextChange = { messageText = it },
-                    onSendClick = {
-                        if (messageText.isNotBlank()) {
-                            viewModel.sendMessage(messageText)
-                            messageText = ""
-                        } else {
-                            Toast.makeText(context, context.getString(com.Kelasor.app.R.string.enter_message_error), Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                    onAttachClick = { showAttachmentMenu = true },
-                    voiceRecorderManager = viewModel.voiceRecorderManager,
-                    onVoiceRecorded = { file, duration, amplitudes ->
-                        viewModel.sendVoiceMessage(file, duration, amplitudes)
-                    },
-                    onScheduleSendClick = { timestampMs ->
-                        if (messageText.isNotBlank()) {
-                            val instant = java.time.Instant.ofEpochMilli(timestampMs)
-                            val isoTime = instant.toString()
-                            viewModel.scheduleMessage(messageText, isoTime)
-                            messageText = ""
-                            Toast.makeText(context, "پیام زمان‌بندی شد", Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                    onVideoNoteClick = {
-                        showVideoNoteRecorder = true
+                val otherParticipant = state.chat?.participants?.find { it.id != state.currentUserId }
+                val isMosbatElmBot = otherParticipant?.username == "mosbat_elm_bot"
+                if (isMosbatElmBot) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "امکان ارسال پیام به این ربات وجود ندارد. این ربات صرفاً جهت اطلاع‌رسانی است.",
+                            fontFamily = DanaFontFamily,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
                     }
-                )
+                } else {
+                    MessageInputBar(
+                        text = messageText,
+                        onTextChange = { messageText = it },
+                        onSendClick = {
+                            if (messageText.isNotBlank()) {
+                                viewModel.sendMessage(messageText)
+                                messageText = ""
+                            } else {
+                                Toast.makeText(context, context.getString(com.Kelasor.app.R.string.enter_message_error), Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        onAttachClick = { showAttachmentMenu = true },
+                        voiceRecorderManager = viewModel.voiceRecorderManager,
+                        onVoiceRecorded = { file, duration, amplitudes ->
+                            viewModel.sendVoiceMessage(file, duration, amplitudes)
+                        },
+                        onScheduleSendClick = { timestampMs ->
+                            if (messageText.isNotBlank()) {
+                                val instant = java.time.Instant.ofEpochMilli(timestampMs)
+                                val isoTime = instant.toString()
+                                viewModel.scheduleMessage(messageText, isoTime)
+                                messageText = ""
+                                Toast.makeText(context, "پیام زمان‌بندی شد", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        onVideoNoteClick = {
+                            showVideoNoteRecorder = true
+                        }
+                    )
+                }
             }
         }
         // Delete Confirmation Dialog

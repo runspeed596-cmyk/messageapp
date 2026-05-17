@@ -24,6 +24,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,7 +71,7 @@ fun GlassmorphismTabBar(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(44.dp)
+                .height(48.dp)
                 .shadow(
                     elevation = 8.dp,
                     shape = containerShape,
@@ -83,19 +86,23 @@ fun GlassmorphismTabBar(
                     shape = containerShape
                 )
         ) {
-            // Animated sliding pill indicator
-            val tabWidth: Dp = with(LocalDensity.current) {
-                // Calculate available width (full width minus padding)
-                // We'll use weight-based approach, so indicator follows layout
-                0.dp // placeholder — we use offset-based approach below
+            val scrollState = rememberScrollState()
+            
+            // Smoothly auto-scroll to center target tab pill
+            LaunchedEffect(selectedIndex) {
+                if (selectedIndex >= 0 && selectedIndex < tabs.size) {
+                    val targetScroll = (selectedIndex * 110) - 100
+                    scrollState.animateScrollTo(maxOf(0, targetScroll))
+                }
             }
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp)
+                    .height(48.dp)
+                    .horizontalScroll(scrollState)
                     .padding(horizontal = 3.dp, vertical = 3.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 tabs.forEachIndexed { index, title ->
@@ -121,8 +128,8 @@ fun GlassmorphismTabBar(
 
                     Box(
                         modifier = Modifier
-                            .weight(1f)
-                            .height(38.dp)
+                            .height(42.dp)
+                            .padding(horizontal = 4.dp)
                             .clip(pillShape)
                             .then(
                                 if (isSelected) {
@@ -142,7 +149,8 @@ fun GlassmorphismTabBar(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
                                 onClick = { onTabSelected(index) }
-                            ),
+                            )
+                            .padding(horizontal = 16.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(

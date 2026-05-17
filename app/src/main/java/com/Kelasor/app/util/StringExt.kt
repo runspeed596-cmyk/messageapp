@@ -61,10 +61,21 @@ fun Instant.toPersianDateTime(): String {
 fun String.toPersianDateTime(): String {
     if (this.isBlank() || this == "Unknown") return this
     return try {
-        val instant = Instant.parse(this)
+        val sanitized = this.trim().uppercase()
+        val instant = Instant.parse(sanitized)
         instant.toPersianDateTime()
     } catch (e: Exception) {
-        // Fallback if not standard ISO string
-        this
+        try {
+            val sanitized = this.trim().uppercase()
+            val offsetDateTime = java.time.OffsetDateTime.parse(sanitized)
+            offsetDateTime.toInstant().toPersianDateTime()
+        } catch (e2: Exception) {
+            try {
+                val zonedDateTime = java.time.ZonedDateTime.parse(this.trim())
+                zonedDateTime.toInstant().toPersianDateTime()
+            } catch (e3: Exception) {
+                this
+            }
+        }
     }
 }

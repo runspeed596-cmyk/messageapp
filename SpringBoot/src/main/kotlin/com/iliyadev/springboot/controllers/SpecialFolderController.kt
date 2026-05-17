@@ -80,6 +80,12 @@ class SpecialFolderAdminController(
         return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = channels))
     }
 
+    @GetMapping("/app-channels")
+    fun getAllAppCreatedChannels(): ResponseEntity<ApiResponse<List<OfficialChannelAdminDto>>> {
+        val channels: List<OfficialChannelAdminDto> = specialFolderService.getAllAppCreatedChannels()
+        return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = channels))
+    }
+
     @PostMapping("/official-channels")
     fun createOfficialChannel(
         @RequestBody request: CreateOfficialChannelRequest,
@@ -137,6 +143,12 @@ class SpecialFolderAdminController(
     @GetMapping("/official-groups")
     fun getAllOfficialGroups(): ResponseEntity<ApiResponse<List<OfficialGroupAdminDto>>> {
         val groups: List<OfficialGroupAdminDto> = specialFolderService.getAllOfficialGroups()
+        return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = groups))
+    }
+
+    @GetMapping("/app-groups")
+    fun getAllAppCreatedGroups(): ResponseEntity<ApiResponse<List<OfficialGroupAdminDto>>> {
+        val groups: List<OfficialGroupAdminDto> = specialFolderService.getAllAppCreatedGroups()
         return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = groups))
     }
 

@@ -315,32 +315,24 @@ fun SplashScreen(
                             )
                         )
                 )
-                // Main logo circle
+                // Main logo circle — no gradient since foreground has its own
                 Box(
                     modifier = Modifier
-                        .size(100.dp)
+                        .size(110.dp)
                         .graphicsLayer {
                             scaleX = logoScale.value
                             scaleY = logoScale.value
                             alpha = logoAlpha.value
                             rotationZ = logoRotation.value
                         }
-                        .clip(CircleShape)
-                        .background(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    extendedColors.gradientStart,
-                                    extendedColors.gradientEnd
-                                )
-                            )
-                        ),
+                        .clip(CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Chat,
+                    // Use app's foreground drawable for consistent logo across all screens
+                    androidx.compose.foundation.Image(
+                        painter = androidx.compose.ui.res.painterResource(com.Kelasor.app.R.drawable.ic_launcher_foreground),
                         contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
             }

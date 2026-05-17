@@ -40,7 +40,7 @@ object KelasorToast {
         context: Context,
         message: String,
         type: ToastType = ToastType.INFO,
-        durationMillis: Long = 3000
+        durationMillis: Long = 5000
     ) {
         val activity = context as? Activity ?: return
         val decorView = activity.window.decorView as? ViewGroup ?: return

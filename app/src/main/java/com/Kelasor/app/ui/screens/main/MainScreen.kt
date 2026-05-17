@@ -111,6 +111,7 @@ fun MainScreen(
     onNavigateToArchivedChats: () -> Unit = {},
     onNavigateToUserProfile: (String) -> Unit = {},
     onNavigateToNotifications: () -> Unit = {},
+    onNavigateToMosbatElmNotifications: () -> Unit = {},
     onNavigateToElm: () -> Unit = {},
     onNavigateToAllMovies: () -> Unit = {},
     onNavigateToAllMusic: () -> Unit = {},
@@ -201,7 +202,7 @@ fun MainScreen(
                         onNavigateToAcademyProfile(institutionId)
                     },
                     onNavigateToTeacherProfile = onNavigateToTeacherProfile,
-                    onNavigateToNotifications = onNavigateToNotifications,
+                    onNavigateToNotifications = onNavigateToMosbatElmNotifications,
                     onNavigateToCategory = { category ->
                         bottomNavController.navigate("mosbat_elm_category/$category")
                     }
@@ -267,7 +268,8 @@ fun MainScreen(
                     onNavigateToAiBotList = onNavigateToAiBotList,
                     onNavigateToEditProfile = onNavigateToEditProfile,
                     appConnectionState = appConnectionState,
-                    chatListViewModel = chatListViewModel
+                    chatListViewModel = chatListViewModel,
+                    isBottomNavVisible = isBottomNavVisible
                 )
             }
             composable(Routes.Treasure.route) { 
@@ -375,7 +377,8 @@ fun MessagingContent(
     chatListViewModel: ChatListViewModel,
     specialFolderViewModel: SpecialFolderViewModel = hiltViewModel(),
     smartFolderViewModel: SmartFolderViewModel = hiltViewModel(),
-    storyViewModel: com.Kelasor.app.ui.viewmodel.StoryViewModel = hiltViewModel()
+    storyViewModel: com.Kelasor.app.ui.viewmodel.StoryViewModel = hiltViewModel(),
+    isBottomNavVisible: Boolean = true
 ) {
     val extendedColors = MessageAppTheme.extendedColors
     val specialFolderState by specialFolderViewModel.state.collectAsState()
@@ -389,7 +392,7 @@ fun MessagingContent(
     }
 
     var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
-    val tabs = listOf("پیام‌ها", "گروه‌ها", "کانال‌ها", "اساتید", "دوره‌ها", "ویژه")
+    val tabs = listOf("پیام‌ها", "گروه‌ها", "کانال‌ها", "اساتید", "علم کلاب", "دوره‌ها", "ویژه")
     var isSearchActive by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
@@ -669,6 +672,21 @@ fun MessagingContent(
                     }
                     4 -> {
                         SmartFolderTabContent(
+                            folderType = "ELM_CLUB",
+                            title = "علم کلاب",
+                            emptyIcon = Icons.Default.Person,
+                            emptyMessage = "شما هنوز عضو هیچ گروه یا کانالی در علم کلاب نشده‌اید.",
+                            accentColor = Color(0xFF00796B),
+                            onChannelClick = onNavigateToChannelView,
+                            onGroupClick = onNavigateToGroupChat,
+                            onMyStoriesClick = onNavigateToMyStories,
+                            onNavigateToChannelStories = onNavigateToChannelStories,
+                            viewModel = smartFolderViewModel,
+                            storyViewModel = storyViewModel
+                        )
+                    }
+                    5 -> {
+                        SmartFolderTabContent(
                             folderType = "COURSES",
                             title = "دوره‌ها",
                             emptyIcon = Icons.Default.Person,
@@ -682,10 +700,11 @@ fun MessagingContent(
                             storyViewModel = storyViewModel
                         )
                     }
-                    5 -> {
+                    6 -> {
                         SpecialFolderScreen(
                             onNavigateToChannel = onNavigateToChannelView,
                             onNavigateToGroup = onNavigateToGroupChat,
+                            onNavigateToChat = onNavigateToConversation,
                             onNavigateToAiBotList = onNavigateToAiBotList
                         )
                     }
@@ -727,13 +746,14 @@ fun MessagingContent(
         // FAB
         if (!isSearchActive) {
             val navBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            val fabBottomPadding = if (isBottomNavVisible) 100.dp + navBarBottomPadding else 16.dp + navBarBottomPadding
             androidx.compose.material3.FloatingActionButton(
                 onClick = onNavigateToNewChat,
                 containerColor = extendedColors.accent,
                 contentColor = Color.White,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = 16.dp, bottom = 16.dp + navBarBottomPadding)
+                    .padding(start = 16.dp, bottom = fabBottomPadding)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,

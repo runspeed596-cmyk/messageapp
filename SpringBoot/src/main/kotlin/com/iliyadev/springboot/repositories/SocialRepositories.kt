@@ -70,4 +70,13 @@ interface NotificationRepository : JpaRepository<Notification, UUID> {
     @Query("SELECT n FROM Notification n WHERE n.user.id = :userId AND n.isRead = false ORDER BY n.createdAt DESC")
     fun findUnreadByUserId(@Param("userId") userId: UUID, pageable: Pageable): Page<Notification>
     fun findByUserIdAndRelatedEntityId(userId: UUID, relatedEntityId: UUID): List<Notification>
+
+    @Query("SELECT n FROM Notification n WHERE n.user.id = :userId AND n.type NOT IN (com.iliyadev.springboot.models.NotificationType.COLLABORATION_REQUEST, com.iliyadev.springboot.models.NotificationType.COLLABORATION_ACCEPTED, com.iliyadev.springboot.models.NotificationType.COLLABORATION_REJECTED, com.iliyadev.springboot.models.NotificationType.ADMIN_INVITE, com.iliyadev.springboot.models.NotificationType.TEACHER_INVITE) ORDER BY n.createdAt DESC")
+    fun findMainNotificationsByUserId(@Param("userId") userId: UUID, pageable: Pageable): Page<Notification>
+
+    @Query("SELECT COUNT(n) FROM Notification n WHERE n.user.id = :userId AND n.isRead = false AND n.type NOT IN (com.iliyadev.springboot.models.NotificationType.COLLABORATION_REQUEST, com.iliyadev.springboot.models.NotificationType.COLLABORATION_ACCEPTED, com.iliyadev.springboot.models.NotificationType.COLLABORATION_REJECTED, com.iliyadev.springboot.models.NotificationType.ADMIN_INVITE, com.iliyadev.springboot.models.NotificationType.TEACHER_INVITE)")
+    fun countUnreadMainNotificationsByUserId(@Param("userId") userId: UUID): Int
+
+    @Query("SELECT n FROM Notification n WHERE n.user.id = :userId AND n.type IN (com.iliyadev.springboot.models.NotificationType.COLLABORATION_REQUEST, com.iliyadev.springboot.models.NotificationType.COLLABORATION_ACCEPTED, com.iliyadev.springboot.models.NotificationType.COLLABORATION_REJECTED, com.iliyadev.springboot.models.NotificationType.ADMIN_INVITE, com.iliyadev.springboot.models.NotificationType.TEACHER_INVITE) ORDER BY n.createdAt DESC")
+    fun findMosbatElmNotificationsByUserId(@Param("userId") userId: UUID, pageable: Pageable): Page<Notification>
 }

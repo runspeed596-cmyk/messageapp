@@ -178,7 +178,7 @@ const SearchableMultiSelect = ({
                                     <button
                                         key={o.value}
                                         className="w-full text-right px-3 py-2.5 text-sm text-slate-300 hover:bg-white/10 hover:text-white transition-colors"
-                                        onClick={() => { onChange([...selected, o.value]); setSearch(''); }}
+                                        onClick={() => { onChange([...selected, o.value]); }}
                                     >
                                         {o.label}
                                     </button>
@@ -198,6 +198,7 @@ const SearchableMultiSelect = ({
 const Universities = () => {
     const navigate = useNavigate();
     const [unis, setUnis] = useState<University[]>([]);
+    const [rankingsList, setRankingsList] = useState<{ title: string; value: string }[]>([]);
     const [isAdding, setIsAdding] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [editingUniId, setEditingUniId] = useState<string | null>(null);
@@ -222,6 +223,8 @@ const Universities = () => {
     const [mapSearch, setMapSearch] = useState<string>('');
     const [mapSearchResults, setMapSearchResults] = useState<any[]>([]);
     const [mapFlyTarget, setMapFlyTarget] = useState<{ lat: number; lng: number } | null>(null);
+
+    const [listSearch, setListSearch] = useState<string>('');
 
     const [facultyAssignments, setFacultyAssignments] = useState<{ id: string; faculty: string; fields: string[] }[]>([]);
 
@@ -384,8 +387,7 @@ const Universities = () => {
         try {
             const uniToSave: University = {
                 ...newUni,
-                iranRank: Number(newUni.iranRank) || 0,
-                worldRank: Number(newUni.worldRank) || 0,
+                rankings: JSON.stringify(rankingsList),
                 studentCount: Number(newUni.studentCount) || 0,
                 articleCount: Number(newUni.articleCount) || 0,
                 journalCount: Number(newUni.journalCount) || 0,
@@ -393,6 +395,10 @@ const Universities = () => {
                 professorCount: Number(newUni.professorCount) || 0,
                 publicationCount: Number(newUni.publicationCount) || 0,
             };
+            // @ts-ignore - removing deprecated fields
+            delete uniToSave.iranRank;
+            // @ts-ignore
+            delete uniToSave.worldRank;
             const res = await adminApi.saveUniversity(uniToSave);
             if (!res.data.success) {
                 setError(res.data.message || 'خطا در ذخیره دانشگاه');
@@ -443,6 +449,16 @@ const Universities = () => {
             }
         }
         setFacultyAssignments(assignments);
+        
+        if (uni.rankings) {
+            try {
+                setRankingsList(JSON.parse(uni.rankings));
+            } catch (e) {
+                setRankingsList([]);
+            }
+        } else {
+            setRankingsList([]);
+        }
     };
 
     const handleDelete = async (id: string) => {
@@ -477,13 +493,12 @@ const Universities = () => {
             longitude: 51.3890,
             imageUrl: '',
             websiteUrl: '',
-            honors: '',
-            professorCount: 0,
-            professorNames: '',
             publicationCount: 0,
             studentOrgs: '',
-            lastAdmissionCapacity: ''
+            lastAdmissionCapacity: '',
+            rankings: ''
         });
+        setRankingsList([]);
         setCities([]);
         setMapFlyTarget(null);
         setFacultyAssignments([]);
@@ -492,7 +507,7 @@ const Universities = () => {
     // ─── Build multi-select options from reference data ───
 
     const fieldOptions: MultiSelectOption[] = refFields
-        .sort((a, b) => a.displayOrder - b.displayOrder)
+        .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'fa'))
         .map(f => ({ value: `${f.name} (${f.educationLevel})`, label: `${f.name} — ${f.educationLevel}`, group: f.educationLevel }));
 
     const updateFacultyAssignments = (newAssignments: typeof facultyAssignments) => {
@@ -523,12 +538,12 @@ const Universities = () => {
         'ملی مهارت',
         'علوم قرآن و معارف',
         'هنر',
-        'موسسه آموزش عالی',
         'فرهنگیان',
-        'علوم پزشکی'
+        'نظامی',
+        'دانشگاه الزهرا'
     ];
 
-    const typeOptions: string[] = ['دولتی', 'آزاد اسلامی', 'غیرانتفاعی', 'علوم پزشکی', 'پیام نور', 'فنی و حرفه‌ای', 'جامع علمی کاربردی'];
+    const typeOptions: string[] = ['دولتی', 'آزاد اسلامی', 'غیرانتفاعی', 'پیام نور', 'فنی و حرفه‌ای', 'جامع علمی کاربردی'];
 
     return (
         <div className="space-y-8 rtl font-[Vazirmatn]">
@@ -785,26 +800,49 @@ const Universities = () => {
                                                     }}
                                                 >
                                                     <option value="" className="bg-slate-900">انتخاب کنید...</option>
-                                                    {refFaculties.sort((a,b) => a.displayOrder - b.displayOrder).map(f => (
+                                                    {refFaculties.sort((a,b) => (a.name || '').localeCompare(b.name || '', 'fa')).map(f => (
                                                         <option key={f.id} value={f.name} className="bg-slate-900">{f.name}</option>
                                                     ))}
                                                 </select>
+                                                {assignment.fields.length > 0 && (
+                                                    <div className="mt-4 p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/20 space-y-2">
+                                                        <div className="text-xs font-black text-indigo-400">
+                                                            مجموع رشته‌ها در این دانشکده: {assignment.fields.length}
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {Object.entries(
+                                                                assignment.fields.reduce((acc, f) => {
+                                                                    const m = f.match(/\(([^)]+)\)$/);
+                                                                    const lvl = m ? m[1] : 'سایر';
+                                                                    acc[lvl] = (acc[lvl] || 0) + 1;
+                                                                    return acc;
+                                                                }, {} as Record<string, number>)
+                                                            ).map(([lvl, count]) => (
+                                                                <span key={lvl} className="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded-md font-bold border border-white/5">
+                                                                    {lvl}: {count as number}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                             
                                             <div className="space-y-2 lg:col-span-2">
                                                 <label className="text-xs font-black text-slate-500 uppercase tracking-widest block">رشته‌های تحصیلی</label>
                                                 {assignment.faculty ? (
-                                                    <SearchableMultiSelect
-                                                         options={fieldOptions}
-                                                         selected={assignment.fields}
-                                                         onChange={(val) => {
-                                                              const newAssignments = [...facultyAssignments];
-                                                              newAssignments[index].fields = val;
-                                                              updateFacultyAssignments(newAssignments);
-                                                         }}
-                                                         placeholder={`جستجو و افزودن رشته‌های ${assignment.faculty}...`}
-                                                         accentColor="indigo"
-                                                    />
+                                                    <>
+                                                        <SearchableMultiSelect
+                                                             options={fieldOptions}
+                                                             selected={assignment.fields}
+                                                             onChange={(val) => {
+                                                                  const newAssignments = [...facultyAssignments];
+                                                                  newAssignments[index].fields = val;
+                                                                  updateFacultyAssignments(newAssignments);
+                                                             }}
+                                                             placeholder={`جستجو و افزودن رشته‌های ${assignment.faculty}...`}
+                                                             accentColor="indigo"
+                                                        />
+                                                    </>
                                                 ) : (
                                                     <div className="w-full glass bg-slate-800/50 border-white/5 p-3.5 rounded-xl text-slate-500 text-sm flex items-center min-h-[52px]">
                                                         ابتدا یک دانشکده انتخاب کنید
@@ -816,33 +854,76 @@ const Universities = () => {
                                 ))
                             )}
                         </div>
+                        {facultyAssignments.length > 0 && (
+                            <div className="flex justify-between items-center mt-3 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                                <span className="text-sm font-black text-emerald-400">تعداد کل رشته‌های انتخاب شده برای این دانشگاه:</span>
+                                <span className="text-xl font-black text-white">{facultyAssignments.reduce((acc, curr) => acc + curr.fields.length, 0)} <span className="text-sm text-slate-400 font-normal">رشته</span></span>
+                            </div>
+                        )}
                         <p className="text-[10px] text-slate-600 mt-2">با کلیک روی «افزودن دانشکده»، می‌توانید دانشکده‌های مختلف را انتخاب کرده و برای هرکدام بی‌نهایت رشته تخصیص دهید.</p>
                     </div>
 
                     {/* Rankings Section */}
                     <div className="mb-8">
-                        <h3 className="text-sm font-black text-indigo-400 mb-4 flex items-center gap-2">
-                            <Trophy size={16} /> رتبه‌بندی و آمار
-                        </h3>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-500 mr-2 uppercase tracking-widest">رتبه در ایران</label>
-                                <input
-                                    type="number"
-                                    className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                                    value={newUni.iranRank || ''}
-                                    onChange={e => setNewUni({ ...newUni, iranRank: parseInt(e.target.value) || 0 })}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-500 mr-2 uppercase tracking-widest">رتبه در جهان</label>
-                                <input
-                                    type="number"
-                                    className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                                    value={newUni.worldRank || ''}
-                                    onChange={e => setNewUni({ ...newUni, worldRank: parseInt(e.target.value) || 0 })}
-                                />
-                            </div>
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-sm font-black text-indigo-400 flex items-center gap-2">
+                                <Trophy size={16} /> رتبه‌بندی‌های داینامیک
+                            </h3>
+                            <button
+                                onClick={() => setRankingsList([...rankingsList, { title: '', value: '' }])}
+                                className="flex items-center gap-1 bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                            >
+                                <Plus size={14} />
+                                افزودن رتبه
+                            </button>
+                        </div>
+                        
+                        <div className="space-y-3 glass bg-white/5 border-white/5 p-4 rounded-xl">
+                            {rankingsList.length === 0 ? (
+                                <p className="text-center text-slate-500 text-xs py-4">رتبه‌ای ثبت نشده است (مانند رتبه در ایران، جهان، خاورمیانه و ...)</p>
+                            ) : (
+                                rankingsList.map((rank, idx) => (
+                                    <div key={idx} className="flex gap-4 items-center animate-in fade-in slide-in-from-right-2 duration-300">
+                                        <div className="flex-1 space-y-1">
+                                            <label className="text-[10px] font-black text-slate-600 mr-2 uppercase tracking-widest">عنوان (مثلاً: رتبه در ایران بر اساس ISC)</label>
+                                            <input
+                                                type="text"
+                                                className="w-full glass bg-slate-900 border-white/5 p-3 rounded-xl text-white focus:ring-1 focus:ring-indigo-500 outline-none text-sm"
+                                                value={rank.title}
+                                                placeholder="مثلاً: رتبه در ایران"
+                                                onChange={e => {
+                                                    const newList = [...rankingsList];
+                                                    newList[idx].title = e.target.value;
+                                                    setRankingsList(newList);
+                                                }}
+                                            />
+                                        </div>
+                                        <div className="w-32 space-y-1">
+                                            <label className="text-[10px] font-black text-slate-600 mr-2 uppercase tracking-widest">رتبه / مقدار</label>
+                                            <input
+                                                type="text"
+                                                className="w-full glass bg-slate-900 border-white/5 p-3 rounded-xl text-white focus:ring-1 focus:ring-indigo-500 outline-none text-sm text-center"
+                                                value={rank.value}
+                                                placeholder="مثلاً: ۱۲"
+                                                onChange={e => {
+                                                    const newList = [...rankingsList];
+                                                    newList[idx].value = e.target.value;
+                                                    setRankingsList(newList);
+                                                }}
+                                            />
+                                        </div>
+                                        <button
+                                            onClick={() => setRankingsList(rankingsList.filter((_, i) => i !== idx))}
+                                            className="mt-5 p-2.5 bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white rounded-xl transition-all"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-2 gap-4 mt-6">
                             <div className="space-y-2">
                                 <label className="text-xs font-black text-slate-500 mr-2 uppercase tracking-widest">تعداد مقالات</label>
                                 <input
@@ -864,14 +945,14 @@ const Universities = () => {
                         </div>
                     </div>
 
-                    {/* Extended Info Section — NEW */}
+                    {/* Extended Info Section */}
                     <div className="mb-8">
                         <h3 className="text-sm font-black text-emerald-400 mb-4 flex items-center gap-2">
                             <Award size={16} /> اطلاعات تکمیلی
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-500 mr-2 uppercase tracking-widest">تعداد اساتید</label>
+                                <label className="text-xs font-black text-slate-500 mr-2 uppercase tracking-widest">تعداد اعضای هیات علمی</label>
                                 <input
                                     type="number"
                                     className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-emerald-500 outline-none"
@@ -928,6 +1009,39 @@ const Universities = () => {
                                     onChange={e => setNewUni({ ...newUni, lastAdmissionCapacity: e.target.value })}
                                 />
                             </div>
+
+                            {/* Statistics Summary */}
+                            <div className="md:col-span-2 lg:col-span-3 p-6 glass bg-indigo-500/5 rounded-2xl border border-indigo-500/10 mt-2">
+                                <h4 className="text-xs font-black text-indigo-400 mb-4 flex items-center gap-2">
+                                    <Settings size={14} /> خلاصه آمار مرکز آموزشی
+                                </h4>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                    <div className="space-y-1">
+                                        <span className="text-[10px] text-slate-500 block uppercase">تعداد کل دانشکده‌ها</span>
+                                        <span className="text-lg font-black text-white">{facultyAssignments.length}</span>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <span className="text-[10px] text-slate-500 block uppercase">تعداد کل رشته‌ها</span>
+                                        <span className="text-lg font-black text-white">
+                                            {facultyAssignments.reduce((acc, curr) => acc + curr.fields.length, 0)}
+                                        </span>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <span className="text-[10px] text-slate-500 block uppercase">میانگین رشته در دانشکده</span>
+                                        <span className="text-lg font-black text-white">
+                                            {facultyAssignments.length > 0 
+                                               ? (facultyAssignments.reduce((acc, curr) => acc + curr.fields.length, 0) / facultyAssignments.length).toFixed(1) 
+                                               : 0}
+                                        </span>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <span className="text-[10px] text-slate-500 block uppercase">وضعیت رتبه‌بندی</span>
+                                        <span className={`text-sm font-black ${rankingsList.length > 0 ? 'text-emerald-400' : 'text-slate-600'}`}>
+                                            {rankingsList.length > 0 ? `${rankingsList.length} رتبه ثبت شده` : 'بدون رتبه'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -971,8 +1085,24 @@ const Universities = () => {
                 </div>
             )}
 
+            <div className="flex gap-2 mb-4">
+                <input
+                    type="text"
+                    value={listSearch}
+                    onChange={(e) => setListSearch(e.target.value)}
+                    placeholder="جستجوی دانشگاه در این صفحه..."
+                    className="flex-1 glass bg-white/5 border-white/5 p-3 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm placeholder:text-slate-600"
+                />
+                <button className="bg-indigo-600 text-white px-5 rounded-xl flex items-center justify-center">
+                    <Search size={16} />
+                </button>
+            </div>
+
             <div className="grid grid-cols-1 gap-4">
-                {unis.map((uni) => (
+                {[...unis]
+                    .filter(uni => !listSearch || uni.name.includes(listSearch) || (uni.city && uni.city.includes(listSearch)))
+                    .sort((a, b) => a.name.localeCompare(b.name, 'fa'))
+                    .map((uni) => (
                     <div key={uni.id} className="glass p-6 rounded-[1.5rem] border-white/5 hover:border-indigo-500/30 transition-all group">
                         <div className="flex justify-between items-start">
                             <div className="flex items-center gap-6">
@@ -991,14 +1121,19 @@ const Universities = () => {
                                         <span className="flex items-center gap-2 text-purple-400">
                                             <BookOpen size={12} /> {uni.type}
                                         </span>
-                                        {uni.iranRank ? (
-                                            <span className="flex items-center gap-2 text-emerald-400">
-                                                <Trophy size={12} /> رتبه {uni.iranRank} در ایران
-                                            </span>
-                                        ) : null}
+                                        {uni.rankings && (() => {
+                                            try {
+                                                const list = JSON.parse(uni.rankings);
+                                                return list.slice(0, 2).map((r: any, i: number) => (
+                                                    <span key={i} className="flex items-center gap-2 text-emerald-400">
+                                                        <Trophy size={12} /> {r.title}: {r.value}
+                                                    </span>
+                                                ));
+                                            } catch (e) { return null; }
+                                        })()}
                                         {uni.professorCount ? (
                                             <span className="flex items-center gap-2 text-amber-400">
-                                                <UsersRound size={12} /> {uni.professorCount} استاد
+                                                <UsersRound size={12} /> {uni.professorCount} اعضای هیات علمی
                                             </span>
                                         ) : null}
                                     </div>

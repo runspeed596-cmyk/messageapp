@@ -92,6 +92,8 @@ interface GroupRepository : JpaRepository<Group, UUID> {
     fun searchByName(@Param("query") query: String, pageable: Pageable): Page<Group>
     fun findByInviteLink(inviteLink: String): Group?
     fun findByIsOfficialTrue(): List<Group>
+    fun findByIsSystemOfficialTrue(): List<Group>
+    fun findByIsSystemOfficialFalse(): List<Group>
     fun findByIsOfficialTrueAndOfficialCategory(category: OfficialGroupCategory): List<Group>
 }
 
@@ -144,6 +146,8 @@ interface ChannelRepository : JpaRepository<Channel, UUID> {
     fun findByPublicId(publicId: String): Channel? // For public channel ID lookups
     fun findByOwnerId(ownerId: UUID): List<Channel>
     fun findByIsOfficialTrue(): List<Channel>
+    fun findByIsSystemOfficialTrue(): List<Channel>
+    fun findByIsSystemOfficialFalse(): List<Channel>
     fun findByIsOfficialTrueAndOfficialCategory(category: OfficialChannelCategory): List<Channel>
     fun findByClassificationIn(classifications: List<ChannelClassification>): List<Channel>
 }
@@ -496,6 +500,6 @@ interface HashtagPromotionRepository : JpaRepository<HashtagPromotion, UUID> {
 
 @Repository
 interface SmartFolderRuleRepository : JpaRepository<SmartFolderRule, UUID> {
-    fun findByIsActiveTrueOrderByDisplayOrderAsc(): List<SmartFolderRule>
+    fun findAllByIsActiveTrue(): List<SmartFolderRule>
     fun findByFolderTypeAndIsActiveTrue(folderType: FolderType): List<SmartFolderRule>
 }

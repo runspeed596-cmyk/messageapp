@@ -35,10 +35,10 @@ class ReferenceDataSeeder(
         
         if (!existingRoles.containsAll(requiredRoles)) {
             val roles = listOf(
-                EducationalRoleOption(labelFa = "دانش‌آموز", valueEn = "SCHOOL_STUDENT", emoji = "🎒", displayOrder = 1),
-                EducationalRoleOption(labelFa = "دانشجو", valueEn = "UNI_STUDENT", emoji = "🎓", displayOrder = 2),
-                EducationalRoleOption(labelFa = "استاد", valueEn = "TEACHER", emoji = "👨‍🏫", displayOrder = 3),
-                EducationalRoleOption(labelFa = "آزاد", valueEn = "FREELANCER", emoji = "💼", displayOrder = 4)
+                EducationalRoleOption(labelFa = "دانش‌آموز", valueEn = "SCHOOL_STUDENT", emoji = "🎒"),
+                EducationalRoleOption(labelFa = "دانشجو", valueEn = "UNI_STUDENT", emoji = "🎓"),
+                EducationalRoleOption(labelFa = "استاد", valueEn = "TEACHER", emoji = "👨‍🏫"),
+                EducationalRoleOption(labelFa = "آزاد", valueEn = "FREELANCER", emoji = "💼")
             )
             educationalRoleOptionRepository.saveAll(roles)
             logger.info("Seeded 4 educational roles")
@@ -49,15 +49,15 @@ class ReferenceDataSeeder(
         if (educationLevelRepository.count() == 0L) {
             val levels = listOf(
                 // School levels
-                EducationLevel(name = "متوسطه اول", roleValueEn = "SCHOOL_STUDENT", hasFieldOfStudy = false, hasFaculty = false, displayOrder = 1),
-                EducationLevel(name = "متوسطه دوم (نظری)", roleValueEn = "SCHOOL_STUDENT", hasFieldOfStudy = true, hasFaculty = false, displayOrder = 2),
-                EducationLevel(name = "هنرستان", roleValueEn = "SCHOOL_STUDENT", hasFieldOfStudy = true, hasFaculty = false, displayOrder = 3),
+                EducationLevel(name = "متوسطه اول", roleValueEn = "SCHOOL_STUDENT", hasFieldOfStudy = false, hasFaculty = false),
+                EducationLevel(name = "متوسطه دوم (نظری)", roleValueEn = "SCHOOL_STUDENT", hasFieldOfStudy = true, hasFaculty = false),
+                EducationLevel(name = "هنرستان", roleValueEn = "SCHOOL_STUDENT", hasFieldOfStudy = true, hasFaculty = false),
                 
                 // University levels
-                EducationLevel(name = "کاردانی", roleValueEn = "UNI_STUDENT", hasFieldOfStudy = true, hasFaculty = true, displayOrder = 4),
-                EducationLevel(name = "کارشناسی", roleValueEn = "UNI_STUDENT", hasFieldOfStudy = true, hasFaculty = true, displayOrder = 5),
-                EducationLevel(name = "کارشناسی ارشد", roleValueEn = "UNI_STUDENT", hasFieldOfStudy = true, hasFaculty = true, displayOrder = 6),
-                EducationLevel(name = "دکتری", roleValueEn = "UNI_STUDENT", hasFieldOfStudy = true, hasFaculty = true, displayOrder = 7)
+                EducationLevel(name = "کاردانی", roleValueEn = "UNI_STUDENT", hasFieldOfStudy = true, hasFaculty = true),
+                EducationLevel(name = "کارشناسی", roleValueEn = "UNI_STUDENT", hasFieldOfStudy = true, hasFaculty = true),
+                EducationLevel(name = "کارشناسی ارشد", roleValueEn = "UNI_STUDENT", hasFieldOfStudy = true, hasFaculty = true),
+                EducationLevel(name = "دکتری", roleValueEn = "UNI_STUDENT", hasFieldOfStudy = true, hasFaculty = true)
             )
             educationLevelRepository.saveAll(levels)
             logger.info("Seeded role-linked education levels")
@@ -65,11 +65,11 @@ class ReferenceDataSeeder(
             // Seed some fields for هنرستان
             if (fieldOfStudyRepository.count() == 0L) {
                 val fields = listOf(
-                    FieldOfStudy(name = "شبکه و نرم‌افزار", educationLevel = "هنرستان", displayOrder = 1),
-                    FieldOfStudy(name = "گرافیک", educationLevel = "هنرستان", displayOrder = 2),
-                    FieldOfStudy(name = "حسابداری", educationLevel = "هنرستان", displayOrder = 3),
-                    FieldOfStudy(name = "مهندسی کامپیوتر", educationLevel = "کارشناسی", displayOrder = 1),
-                    FieldOfStudy(name = "حقوق", educationLevel = "کارشناسی", displayOrder = 2)
+                    FieldOfStudy(name = "شبکه و نرم‌افزار", educationLevel = "هنرستان"),
+                    FieldOfStudy(name = "گرافیک", educationLevel = "هنرستان"),
+                    FieldOfStudy(name = "حسابداری", educationLevel = "هنرستان"),
+                    FieldOfStudy(name = "مهندسی کامپیوتر", educationLevel = "کارشناسی"),
+                    FieldOfStudy(name = "حقوق", educationLevel = "کارشناسی")
                 )
                 fieldOfStudyRepository.saveAll(fields)
                 logger.info("Seeded basic fields of study")

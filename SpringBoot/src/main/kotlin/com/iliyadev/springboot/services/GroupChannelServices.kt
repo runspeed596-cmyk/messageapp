@@ -32,9 +32,9 @@ class GroupService(
         // Filter out official groups with SPECIAL or SUPPORT displayMode (they belong in Special Folder only)
         // Also filter out COURSE_GROUP so they only show in Courses tab
         val filteredGroups = groups.content.filter { group ->
-            val isHiddenOfficial = group.isOfficial && group.displayMode != OfficialDisplayMode.TAB
-            val isCourseGroup = group.officialCategory == OfficialGroupCategory.COURSE_GROUP
-            !isHiddenOfficial && !isCourseGroup
+            // Exclude ALL official groups from the regular list.
+            // Official groups are displayed exclusively in their Smart Folder tab (علم کلاب, دوره‌ها, etc.)
+            !group.isOfficial
         }
         return GroupListResponse(
             groups = filteredGroups.map { group -> groupToDto(group, userId) },
@@ -625,7 +625,9 @@ class ChannelService(
         val channels = channelRepository.findBySubscriberId(userId, pageable)
         val filteredChannels = channels.content.filter { channel ->
             val isHiddenOfficial = channel.isOfficial && channel.displayMode != OfficialDisplayMode.TAB
-            val isSmartFolderOnly = channel.classification == ChannelClassification.VERIFIED_TEACHER || channel.classification == ChannelClassification.COURSE_CHANNEL
+            val isSmartFolderOnly = channel.classification == ChannelClassification.VERIFIED_TEACHER || 
+                                    channel.classification == ChannelClassification.COURSE_CHANNEL || 
+                                    channel.classification == ChannelClassification.ELM_CLUB_INSTITUTION
             !isHiddenOfficial && !isSmartFolderOnly
         }
         return ChannelListResponse(
@@ -908,7 +910,9 @@ class ChannelService(
         val channels = channelRepository.searchByName(query, pageable)
         val filteredChannels = channels.content.filter { channel ->
             val isHiddenOfficial = channel.isOfficial && channel.displayMode != OfficialDisplayMode.TAB
-            val isSmartFolderOnly = channel.classification == ChannelClassification.VERIFIED_TEACHER || channel.classification == ChannelClassification.COURSE_CHANNEL
+            val isSmartFolderOnly = channel.classification == ChannelClassification.VERIFIED_TEACHER || 
+                                    channel.classification == ChannelClassification.COURSE_CHANNEL || 
+                                    channel.classification == ChannelClassification.ELM_CLUB_INSTITUTION
             channel.isPublic && !isHiddenOfficial && !isSmartFolderOnly
         }
         return ChannelListResponse(

@@ -97,6 +97,9 @@ sealed class Routes(val route: String) {
     data object AcademyProfile : Routes("academyProfile/{institutionId}") {
         fun createRoute(institutionId: String): String = "academyProfile/$institutionId"
     }
+    data object AcademyAnalytics : Routes("academyAnalytics/{institutionId}") {
+        fun createRoute(institutionId: String): String = "academyAnalytics/$institutionId"
+    }
     data object TeacherPublicProfile : Routes("teacherPublicProfile/{teacherId}") {
         fun createRoute(teacherId: String): String = "teacherPublicProfile/$teacherId"
     }

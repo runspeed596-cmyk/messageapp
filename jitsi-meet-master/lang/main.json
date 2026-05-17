@@ -483,7 +483,7 @@
         "sendPrivateMessageTitle": "Send privately?",
         "serviceUnavailable": "Service unavailable",
         "sessTerminated": "Call terminated",
-        "sessTerminatedReason": "The meeting has been terminated",
+        "sessTerminatedReason": "جلسه پایان یافت، امیدواریم از پلتفرم کلاسور آنلاین لذت برده باشید",
         "sessionRestarted": "Call restarted because of a connection issue.",
         "shareAudio": "Continue",
         "shareAudioAltText": "to share the desired content, navigate to \"Browser Tab\", select the content, activate the \"share audio\" check mark and then click \"share\" button",

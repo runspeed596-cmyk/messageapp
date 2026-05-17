@@ -264,7 +264,7 @@ class MosbatElmHomeController(
 ) {
     @GetMapping
     fun getHomeData(): ResponseEntity<ApiResponse<MosbatElmHomeDataDto>> {
-        val bannerEntities = bannerRepository.findAllBySectionAndIsActiveTrueOrderByDisplayOrderAsc("MOSBAT_ELM")
+        val bannerEntities = bannerRepository.findAllBySectionAndIsActiveTrueOrderByCreatedAtDesc("MOSBAT_ELM")
         val banners: List<HomeBannerDto> = bannerEntities.map { b -> b.toDto() }
         
         val institutionsPage = institutionService.getActiveInstitutions(PageRequest.of(0, 10))

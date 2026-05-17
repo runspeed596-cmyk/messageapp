@@ -16,7 +16,7 @@ class HomeService(
 ) {
     fun getHomeData(): HomeDataResponse {
         val userCount = userRepository.count()
-        val banners = bannerRepository.findAllBySectionAndIsActiveTrueOrderByDisplayOrderAsc("HOME").map { it.toDto() }
+        val banners = bannerRepository.findAllBySectionAndIsActiveTrueOrderByCreatedAtDesc("HOME").map { it.toDto() }
         val elmData = elmPeakService.getElmPeakData()
         val entertainmentData = entertainmentService.getEntertainmentData()
         val discounts = discountRepository.findAllByOrderByCreatedAtDesc().take(10).map { it.toDto() }
@@ -32,7 +32,7 @@ class HomeService(
         )
     }
 
-    fun getActiveBanners(): List<HomeBanner> = bannerRepository.findAllByIsActiveTrueOrderByDisplayOrderAsc()
+    fun getActiveBanners(): List<HomeBanner> = bannerRepository.findAllByIsActiveTrueOrderByCreatedAtDesc()
     
     fun getAllUniversities(): List<University> = universityRepository.findAll()
     

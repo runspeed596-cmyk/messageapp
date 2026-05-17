@@ -83,3 +83,81 @@ button[aria-label*="Toggle filmstrip"],
 #kelasor-mod-ui {
     pointer-events: auto !important;
 }
+
+
+/* ══════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE — Inside Jitsi iframe
+   ══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+
+    /* ── Toolbar: compact on mobile ── */
+    .new-toolbox .toolbox-content-items {
+        gap: 2px !important;
+    }
+    .new-toolbox .toolbox-content-items > div > div > button,
+    .new-toolbox .toolbox-content-items > div > button {
+        width: 42px !important;
+        height: 42px !important;
+    }
+    .new-toolbox .toolbox-content-items > div > div > button svg,
+    .new-toolbox .toolbox-content-items > div > button svg {
+        width: 20px !important;
+        height: 20px !important;
+    }
+
+    /* ── Make tiles use full width ── */
+    #videoconference_page {
+        width: 100% !important;
+    }
+
+    /* ── Ensure toolbar stays visible ── */
+    .new-toolbox {
+        bottom: 0 !important;
+        padding: 8px 4px !important;
+    }
+
+    /* ── Tile view: better mobile spacing ── */
+    [id*="remoteVideos"],
+    .tile-view,
+    [class*="TileView"] {
+        padding: 4px !important;
+    }
+
+    /* ── Notifications: prevent overlap ── */
+    .notification-location {
+        top: auto !important;
+        bottom: 60px !important;
+    }
+
+    /* ── Font sizes for mobile readability ── */
+    .display-name-container {
+        font-size: 11px !important;
+    }
+
+    /* ── Connection status indicator: smaller ── */
+    .connection-indicator {
+        font-size: 10px !important;
+    }
+
+    /* ── Modal dialogs: full-width on mobile ── */
+    .atlaskit-portal-container [class*="modal"],
+    [class*="Dialog"],
+    [class*="dialog-container"] {
+        width: 95vw !important;
+        max-width: 95vw !important;
+        margin: 8px auto !important;
+    }
+}
+
+/* ── Very small screens ── */
+@media (max-width: 400px) {
+    .new-toolbox .toolbox-content-items > div > div > button,
+    .new-toolbox .toolbox-content-items > div > button {
+        width: 38px !important;
+        height: 38px !important;
+    }
+    .new-toolbox .toolbox-content-items {
+        gap: 1px !important;
+    }
+}

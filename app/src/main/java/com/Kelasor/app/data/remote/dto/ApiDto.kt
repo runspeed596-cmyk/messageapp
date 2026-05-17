@@ -611,7 +611,8 @@ data class NotificationDto(
     val createdAt: String = "",
     val actorId: String? = null,
     val actorName: String? = null,
-    val actorAvatarUrl: String? = null
+    val actorAvatarUrl: String? = null,
+    val status: String = "PENDING"
 )
 
 data class NotificationListResponse(
@@ -971,10 +972,13 @@ data class InstitutionDto(
     val totalTeachersCount: Int = 0,
     val totalCollaborations: Int = 0,
     val totalRevenue: Long? = null,
+    val totalViews: Long = 0,
+    val totalClicks: Long = 0,
     val rating: Double = 0.0,
     val averageRating: Double = 0.0,
     val reviewCount: Int = 0,
-    val honors: List<InstitutionHonorDto> = emptyList()
+    val honors: List<InstitutionHonorDto> = emptyList(),
+    val createdAt: String? = null
 )
 
 data class InstitutionHonorDto(
@@ -1091,9 +1095,12 @@ data class CourseDto(
     val managerId: String,
     val managerName: String,
     val managerAvatarUrl: String? = null,
+    val organizerChannelId: String? = null,
     val createdAt: String,
     val averageRating: Double = 0.0,
     val reviewCount: Int = 0,
+    val viewCount: Long = 0,
+    val clickCount: Long = 0,
     val hasOnlineClass: Boolean = false
 )
 

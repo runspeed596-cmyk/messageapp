@@ -2,11 +2,13 @@
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>کلاسور آنلاین — اتاق کلاس</title>
     <link rel="stylesheet" href="room.css">
     <style>
-        /* ── Modern Premium Layout ── */
+        /* ── Premium Desktop Layout ── */
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
             overflow: hidden; background: #0A0A0B;
@@ -96,6 +98,7 @@
             font-size: 13px;
             line-height: 1.5;
             position: relative;
+            word-break: break-word;
         }
         .message.remote {
             background: #27272A; color: #F4F4F5; align-self: flex-start;
@@ -123,6 +126,7 @@
             border-radius: 8px;
             font-size: 13px;
             outline: none;
+            font-family: 'Vazirmatn', Tahoma, sans-serif;
         }
         #chat-input:focus { border-color: #6366F1; }
         #send-btn {
@@ -170,7 +174,10 @@
         .popup-btn {
             background: #6366F1; color: white; border: none;
             padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 700;
+            font-family: 'Vazirmatn', Tahoma, sans-serif;
         }
+
+
     </style>
 </head>
 <body>
@@ -182,9 +189,28 @@
         </div>
     </div>
 
-    <div id="kelasor-sidebar">
+    <!-- Mobile Backdrop -->
+    <div id="mobile-backdrop"></div>
+
+    <div id="kelasor-sidebar" class="tab-chat">
+        <!-- Mobile Drag Handle -->
+        <div id="mobile-drag-handle">
+            <div class="handle-bar"></div>
+        </div>
+
+        <!-- Mobile Tab Bar -->
+        <div id="mobile-tabs">
+            <button class="mobile-tab active" data-tab="chat" onclick="switchMobileTab('chat')">
+                💬 گپ
+            </button>
+            <button class="mobile-tab" data-tab="participants" onclick="switchMobileTab('participants')">
+                👥 شرکت‌کنندگان
+                <span id="mobile-p-count" class="kel-badge" style="font-size:11px; padding:1px 6px;">0</span>
+            </button>
+        </div>
+
         <!-- Participants -->
-        <div class="kel-section-header">
+        <div class="kel-section-header" id="participants-section-header">
             <span class="kel-section-title">شرکت‌کنندگان</span>
             <span id="p-count" class="kel-badge">0</span>
         </div>
@@ -213,6 +239,12 @@
         <!-- Iframe will be injected here -->
     </div>
 
+    <!-- Mobile FAB (Floating Action Button) -->
+    <button id="mobile-fab" onclick="toggleMobileSidebar()" aria-label="نمایش پنل گپ و شرکت‌کنندگان">
+        💬
+        <span class="fab-badge" id="fab-badge">0</span>
+    </button>
+
     <!-- Custom Context Menu -->
     <div id="custom-menu"></div>
 
@@ -220,6 +252,32 @@
     <div id="request-popup">
         <span id="request-text"></span>
         <button class="popup-btn" id="request-accept">باشه</button>
+    </div>
+
+    <!-- Premium Termination Overlay (Fallback for mobile redirect block) -->
+    <div id="termination-overlay">
+        <div class="termination-content">
+            <div class="termination-icon">🎓</div>
+            <h2>جلسه پایان یافت</h2>
+            <p>امیدواریم از پلتفرم کلاسور آنلاین لذت برده باشید.</p>
+            <button class="termination-btn" onclick="window.top.location.href='https://online.kelasorapp.ir'">بازگشت به کلاسور</button>
+        </div>
+    </div>
+
+    <!-- Premium Exit Dialog Modal (For Moderator) -->
+    <div id="exit-modal" class="exit-modal">
+        <div class="exit-modal-content">
+            <div class="exit-modal-header">
+                <div class="exit-modal-icon">⚠️</div>
+                <h2>خروج از کلاس درس</h2>
+            </div>
+            <p>برگزارکننده گرامی، مایلید کلاس را برای همه به پایان برسانید یا فقط خودتان خارج شوید؟</p>
+            <div class="exit-modal-buttons">
+                <button class="exit-modal-btn danger" onclick="confirmEndClass()">پایان کلاس برای همه</button>
+                <button class="exit-modal-btn secondary" onclick="confirmLeaveClass()">فقط ترک کلاس</button>
+                <button class="exit-modal-btn cancel" onclick="closeExitModal()">انصراف</button>
+            </div>
+        </div>
     </div>
 
     <!-- Load Jitsi External API -->

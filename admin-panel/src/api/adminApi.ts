@@ -71,7 +71,6 @@ export interface HomeBanner {
     title: string;
     imageUrl: string;
     linkUrl?: string;
-    displayOrder: number;
     isActive: boolean;
 }
 
@@ -89,6 +88,7 @@ export interface University {
     departments?: string;
     iranRank?: number;
     worldRank?: number;
+    rankings?: string;
     articleCount?: number;
     journalCount?: number;
     facilities?: string;
@@ -127,7 +127,6 @@ export interface EntertainmentMusic {
 
 export interface RiddleOption {
     text: string;
-    displayOrder: number;
 }
 
 export interface EntertainmentRiddle {
@@ -173,21 +172,18 @@ export interface FieldOfStudy {
     id?: string;
     name: string;
     educationLevel: string;
-    displayOrder: number;
 }
 
 export interface EducationLevel {
     id?: string;
     name: string;
     roleValueEn?: string;
-    displayOrder: number;
 }
 
 export interface Faculty {
     id?: string;
     name: string;
     educationLevel?: string;
-    displayOrder: number;
 }
 
 export interface EducationalRoleOption {
@@ -195,19 +191,16 @@ export interface EducationalRoleOption {
     labelFa: string;
     valueEn: string;
     emoji: string;
-    displayOrder: number;
 }
 
 export interface ReferenceClub {
     id?: string;
     name: string;
-    displayOrder: number;
 }
 
 export interface ReferenceStudentOrg {
     id?: string;
     name: string;
-    displayOrder: number;
 }
 
 export interface PanelAdmin {
@@ -253,6 +246,7 @@ export interface OfficialChannel {
     targetCity?: string;
     targetUniversity?: string;
     targetMinistry?: string;
+    targetAudienceType?: string;
 }
 
 export interface OfficialGroup {
@@ -271,6 +265,7 @@ export interface OfficialGroup {
     targetCity?: string;
     targetUniversity?: string;
     targetMinistry?: string;
+    targetAudienceType?: string;
 }
 
 export interface CreateOfficialChannelRequest {
@@ -285,6 +280,7 @@ export interface CreateOfficialChannelRequest {
     targetCity?: string;
     targetUniversity?: string;
     targetMinistry?: string;
+    targetAudienceType?: string;
     adminIds?: string[];
 }
 
@@ -301,6 +297,7 @@ export interface CreateOfficialGroupRequest {
     targetCity?: string;
     targetUniversity?: string;
     targetMinistry?: string;
+    targetAudienceType?: string;
     adminIds?: string[];
 }
 
@@ -428,6 +425,7 @@ export const adminApi = {
 
     // Official Channels management
     getOfficialChannels: () => api.get<ApiResponse<OfficialChannel[]>>('/admin/special-folder/official-channels'),
+    getAppChannels: () => api.get<ApiResponse<OfficialChannel[]>>('/admin/special-folder/app-channels'),
     createOfficialChannel: (req: CreateOfficialChannelRequest) => api.post<ApiResponse<OfficialChannel>>('/admin/special-folder/official-channels', req),
     updateOfficialChannel: (id: string, req: CreateOfficialChannelRequest) => api.put<ApiResponse<OfficialChannel>>(`/admin/special-folder/official-channels/${id}`, req),
     deleteOfficialChannel: (id: string) => api.delete<ApiResponse<void>>(`/admin/special-folder/official-channels/${id}`),
@@ -437,6 +435,7 @@ export const adminApi = {
 
     // Official Groups management
     getOfficialGroups: () => api.get<ApiResponse<OfficialGroup[]>>('/admin/special-folder/official-groups'),
+    getAppGroups: () => api.get<ApiResponse<OfficialGroup[]>>('/admin/special-folder/app-groups'),
     createOfficialGroup: (req: CreateOfficialGroupRequest) => api.post<ApiResponse<OfficialGroup>>('/admin/special-folder/official-groups', req),
     updateOfficialGroup: (id: string, req: CreateOfficialGroupRequest) => api.put<ApiResponse<OfficialGroup>>(`/admin/special-folder/official-groups/${id}`, req),
     deleteOfficialGroup: (id: string) => api.delete<ApiResponse<void>>(`/admin/special-folder/official-groups/${id}`),

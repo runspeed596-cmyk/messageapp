@@ -85,6 +85,7 @@ services:
       APP_BASE_URL: ${APP_BASE_URL:-http://185.116.162.68}
       JWT_SECRET: ${JWT_SECRET:-2Qw1Qk5vQ2p6b3J4bGd2d2h5b2J6d3J4bGd2d2h5b2J6d3J4bGd2d2h5b2J6d3J4bGd2d2h5b2J6d3J4bGd2d2h5b2J6d3J4bGd2d2h5b2J6d3J4bGQ=}
       NAJVA_SMS_API_KEY: ${NAJVA_SMS_API_KEY:-YOUR_API_KEY_HERE}
+      NAJVA_SMS_ENABLED: "true"
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_ENABLED: "true"
@@ -216,6 +217,8 @@ services:
       - ./jitsi-config/fonts:/usr/share/jitsi-meet/css/fonts/vazir:ro
       - ./jitsi-config/custom-config.js:/config/custom-config.js:ro
       - ./jitsi-config/custom-interface_config.js:/config/custom-interface_config.js:ro
+      - ./jitsi-config/lang/main.json:/usr/share/jitsi-meet/lang/main.json:ro
+      - ./jitsi-config/lang/main-fa.json:/usr/share/jitsi-meet/lang/main-fa.json:ro
       - jitsi-web-config:/config
     networks:
       - messageapp-network

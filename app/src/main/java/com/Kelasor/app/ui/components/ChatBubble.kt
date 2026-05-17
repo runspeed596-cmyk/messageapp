@@ -236,28 +236,6 @@ fun ChatBubble(
                 CountdownTimer(targetTimestamp = timerTargetAt)
             }
 
-            if (!actionLabel.isNullOrEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                androidx.compose.material3.Button(
-                    onClick = { onActionClick?.invoke(actionUrl ?: "") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(vertical = 8.dp),
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = if (isMyMessage) Color.White.copy(alpha = 0.2f) else extendedColors.accent.copy(alpha = 0.15f),
-                        contentColor = if (isMyMessage) Color.White else extendedColors.accent
-                    )
-                ) {
-                    Text(
-                        text = actionLabel,
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = DanaFontFamily
-                        )
-                    )
-                }
-            }
-
             // ── Pin Indicator ────────────────────────────────────────────
             if (isPinned) {
                 Row(

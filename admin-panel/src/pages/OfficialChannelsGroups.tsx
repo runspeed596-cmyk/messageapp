@@ -10,62 +10,27 @@ import {
     Megaphone, Users, Plus, Trash2, Check, X, Loader2,
     UserPlus, UserMinus, Search, Shield, Eye, EyeOff, ChevronDown, ChevronUp, Globe, MapPin, Pencil
 } from 'lucide-react';
+import Pagination from '../components/Pagination';
 
 type Section = 'channels' | 'groups';
 
-const CHANNEL_CATEGORIES: { value: OfficialChannelCategory; label: string }[] = [
-    { value: 'STUDENTS_IRAN', label: 'کانال رسمی دانشجویان ایران زمین' },
-    { value: 'MY_FIELD', label: 'کانال کشوری رشته من' },
-    { value: 'MY_UNIVERSITY', label: 'کانال رسمی دانشگاه من' },
-    { value: 'MY_UNION', label: 'کانال رسمی شورای صنفی من' },
-    { value: 'FREELANCING', label: 'کانال رسمی فریلنسری دانشجویی' },
-    { value: 'PODCAST', label: 'کانال رسمی پادکست دانشجویی' },
-    { value: 'JOURNAL', label: 'کانال رسمی نشریه دانشجویی' },
-    { value: 'RESEARCH', label: 'کانال رسمی پروژه‌های تحقیقاتی' },
-    { value: 'COMPETITIONS', label: 'کانال مسابقات، جشنواره‌ها و کنگره‌ها' },
-    { value: 'SCIENCE_TECH', label: 'کانال رسمی علم + تکنولوژی' },
-    { value: 'EDUCATION', label: 'کانال رسمی آموزش' },
-    { value: 'STUDENT_NEWS', label: 'کانال اخبار دانشجویی کلاسور' },
-    { value: 'ENTERTAINMENT', label: 'کانال تفریح و سرگرمی' },
-    { value: 'APP_OFFICIAL', label: 'کانال رسمی اپلیکیشن کلاسور' },
-    { value: 'LOTTERY_DISCOUNT', label: 'کانال رسمی قرعه‌کشی و تخفیفات' },
-    { value: 'TEACHERS', label: 'کانال دبیران' },
-    { value: 'QA_SCIENCE', label: 'کانال پرسش و پاسخ علمی' },
-    { value: 'COURSE_GROUP', label: 'گروه/کانال دوره آموزشی' },
-];
 
-const GROUP_CATEGORIES: { value: OfficialGroupCategory; label: string }[] = [
-    { value: 'STUDENTS_IRAN', label: 'گروه رسمی دانشجویان ایران زمین' },
-    { value: 'MY_FIELD', label: 'گروه کشوری رشته من' },
-    { value: 'MY_UNIVERSITY', label: 'گروه رسمی دانشگاه من' },
-    { value: 'MY_FIELD_UNIVERSITY', label: 'گروه رسمی رشته دانشگاه من' },
-    { value: 'MY_UNION', label: 'گروه رسمی شورای صنفی من' },
-    { value: 'TEACHERS', label: 'گروه دبیران' },
-    { value: 'QA_SCIENCE', label: 'گروه پرسش و پاسخ علمی' },
-    { value: 'COURSE_GROUP', label: 'گروه دوره آموزشی' },
-];
-
-const getCategoryLabel = (categoryValue: string, type: 'channel' | 'group'): string => {
-    if (type === 'channel') {
-        const found = CHANNEL_CATEGORIES.find(c => c.value === categoryValue);
-        return found ? found.label : categoryValue;
-    }
-    const found = GROUP_CATEGORIES.find(c => c.value === categoryValue);
-    return found ? found.label : categoryValue;
-};
 
 const OfficialChannelsGroups: React.FC = () => {
     const [activeSection, setActiveSection] = useState<Section>('channels');
+    const [isSystemOfficial, setIsSystemOfficial] = useState<boolean>(true);
     const [channels, setChannels] = useState<OfficialChannel[]>([]);
     const [groups, setGroups] = useState<OfficialGroup[]>([]);
+    const [appChannels, setAppChannels] = useState<OfficialChannel[]>([]);
+    const [appGroups, setAppGroups] = useState<OfficialGroup[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [showChannelForm, setShowChannelForm] = useState<boolean>(false);
     const [showGroupForm, setShowGroupForm] = useState<boolean>(false);
     const [channelForm, setChannelForm] = useState<CreateOfficialChannelRequest>({
-        name: '', description: '', category: 'STUDENTS_IRAN', displayMode: 'SPECIAL'
+        name: '', description: '', category: 'MY_FIELD', displayMode: 'SPECIAL', targetAudienceType: undefined
     });
     const [groupForm, setGroupForm] = useState<CreateOfficialGroupRequest>({
-        name: '', description: '', category: 'STUDENTS_IRAN', hideMembers: false, displayMode: 'SPECIAL'
+        name: '', description: '', category: 'MY_FIELD', hideMembers: false, displayMode: 'SPECIAL', targetAudienceType: undefined
     });
     const [adminSearch, setAdminSearch] = useState<string>('');
     const [adminSearchResults, setAdminSearchResults] = useState<AdminUser[]>([]);
@@ -74,6 +39,11 @@ const OfficialChannelsGroups: React.FC = () => {
     const [editingChannelId, setEditingChannelId] = useState<string | null>(null);
     const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
     const [usersLoaded, setUsersLoaded] = useState<boolean>(false);
+
+    // Pagination state
+    const [currentPageChannels, setCurrentPageChannels] = useState<number>(0);
+    const [currentPageGroups, setCurrentPageGroups] = useState<number>(0);
+    const PAGE_SIZE = 10;
 
     // Admin selection during creation
     const [selectedChannelAdmins, setSelectedChannelAdmins] = useState<AdminUser[]>([]);
@@ -100,12 +70,16 @@ const OfficialChannelsGroups: React.FC = () => {
     const loadData = async (): Promise<void> => {
         setLoading(true);
         try {
-            const [channelsRes, groupsRes] = await Promise.all([
+            const [channelsRes, groupsRes, appChannelsRes, appGroupsRes] = await Promise.all([
                 adminApi.getOfficialChannels(),
-                adminApi.getOfficialGroups()
+                adminApi.getOfficialGroups(),
+                adminApi.getAppChannels(),
+                adminApi.getAppGroups()
             ]);
-            setChannels((channelsRes.data.data || []).reverse());
-            setGroups((groupsRes.data.data || []).reverse());
+            setChannels((channelsRes.data.data || []).sort((a, b) => a.name.localeCompare(b.name, 'fa')));
+            setGroups((groupsRes.data.data || []).sort((a, b) => a.name.localeCompare(b.name, 'fa')));
+            setAppChannels((appChannelsRes.data.data || []).sort((a, b) => a.name.localeCompare(b.name, 'fa')));
+            setAppGroups((appGroupsRes.data.data || []).sort((a, b) => a.name.localeCompare(b.name, 'fa')));
         } catch (err) {
             console.error('Error loading data:', err);
         }
@@ -189,7 +163,7 @@ const OfficialChannelsGroups: React.FC = () => {
                 await adminApi.createOfficialChannel(payload);
             }
             setShowChannelForm(false);
-            setChannelForm({ name: '', description: '', category: 'STUDENTS_IRAN', displayMode: 'SPECIAL' });
+            setChannelForm({ name: '', description: '', category: 'MY_FIELD', displayMode: 'SPECIAL', targetAudienceType: undefined });
             setSelectedChannelAdmins([]);
             setCreateAdminSearch('');
             setCreateAdminResults([]);
@@ -207,11 +181,9 @@ const OfficialChannelsGroups: React.FC = () => {
             category: channel.category as OfficialChannelCategory,
             displayMode: channel.displayMode || 'SPECIAL',
             avatarUrl: channel.avatarUrl,
-            targetFieldOfStudy: channel.targetFieldOfStudy,
-            targetEducationLevel: channel.targetEducationLevel,
-            targetProvince: channel.targetProvince,
-            targetCity: channel.targetCity,
             targetUniversity: channel.targetUniversity,
+            targetMinistry: channel.targetMinistry,
+            targetAudienceType: channel.targetAudienceType,
         });
         setIsChannelPublic(!channel.targetProvince && !channel.targetCity && !channel.targetUniversity && !channel.targetFieldOfStudy && !channel.targetEducationLevel);
         setEditingChannelId(channel.id);
@@ -261,7 +233,7 @@ const OfficialChannelsGroups: React.FC = () => {
                 await adminApi.createOfficialGroup(payload);
             }
             setShowGroupForm(false);
-            setGroupForm({ name: '', description: '', category: 'STUDENTS_IRAN', hideMembers: false, displayMode: 'SPECIAL' });
+            setGroupForm({ name: '', description: '', category: 'STUDENTS_IRAN', hideMembers: false, displayMode: 'SPECIAL', targetAudienceType: undefined });
             setSelectedGroupAdmins([]);
             setCreateAdminSearch('');
             setCreateAdminResults([]);
@@ -280,11 +252,9 @@ const OfficialChannelsGroups: React.FC = () => {
             hideMembers: group.hideMembers || false,
             displayMode: group.displayMode || 'SPECIAL',
             avatarUrl: group.avatarUrl,
-            targetFieldOfStudy: group.targetFieldOfStudy,
-            targetEducationLevel: group.targetEducationLevel,
-            targetProvince: group.targetProvince,
-            targetCity: group.targetCity,
             targetUniversity: group.targetUniversity,
+            targetMinistry: group.targetMinistry,
+            targetAudienceType: group.targetAudienceType,
         });
         setIsGroupPublic(!group.targetProvince && !group.targetCity && !group.targetUniversity && !group.targetFieldOfStudy && !group.targetEducationLevel);
         setEditingGroupId(group.id);
@@ -536,7 +506,7 @@ const OfficialChannelsGroups: React.FC = () => {
                         }`}
                 >
                     <Megaphone size={18} />
-                    کانال‌های رسمی ({channels.length})
+                    کانال‌های رسمی ({isSystemOfficial ? channels.length : appChannels.length})
                 </button>
                 <button
                     onClick={() => setActiveSection('groups')}
@@ -546,7 +516,31 @@ const OfficialChannelsGroups: React.FC = () => {
                         }`}
                 >
                     <Users size={18} />
-                    گروه‌های رسمی ({groups.length})
+                    گروه‌های رسمی ({isSystemOfficial ? groups.length : appGroups.length})
+                </button>
+            </div>
+
+            {/* Sub-Tabs: System Official vs App-Created */}
+            <div className="flex gap-2 p-1.5 glass rounded-xl w-fit">
+                <button
+                    onClick={() => { setIsSystemOfficial(true); }}
+                    className={`px-4 py-2 rounded-lg font-bold text-xs transition-all ${
+                        isSystemOfficial 
+                            ? 'bg-white/10 text-white' 
+                            : 'text-slate-400 hover:text-white'
+                    }`}
+                >
+                    💎 رسمی سیستمی (پنل ادمین)
+                </button>
+                <button
+                    onClick={() => { setIsSystemOfficial(false); }}
+                    className={`px-4 py-2 rounded-lg font-bold text-xs transition-all ${
+                        !isSystemOfficial 
+                            ? 'bg-white/10 text-white' 
+                            : 'text-slate-400 hover:text-white'
+                    }`}
+                >
+                    📱 ایجاد شده در اپلیکیشن (اساتید/دوره)
                 </button>
             </div>
 
@@ -562,15 +556,17 @@ const OfficialChannelsGroups: React.FC = () => {
                     <div className="flex justify-between items-center">
                         <h2 className="text-lg font-bold text-white flex items-center gap-3">
                             <Megaphone size={20} className="text-violet-400" />
-                            کانال‌های رسمی
+                            {isSystemOfficial ? 'کانال‌های رسمی سیستمی' : 'کانال‌های عمومی و اساتید'}
                         </h2>
-                        <button
-                            onClick={() => setShowChannelForm(true)}
-                            className="flex items-center gap-3 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95"
-                        >
-                            <Plus size={16} />
-                            ایجاد کانال
-                        </button>
+                        {isSystemOfficial && (
+                            <button
+                                onClick={() => setShowChannelForm(true)}
+                                className="flex items-center gap-3 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95"
+                            >
+                                <Plus size={16} />
+                                ایجاد کانال
+                            </button>
+                        )}
                     </div>
 
                     {showChannelForm && (
@@ -583,7 +579,7 @@ const OfficialChannelsGroups: React.FC = () => {
                                         type="text"
                                         value={channelForm.name}
                                         onChange={(e) => setChannelForm({ ...channelForm, name: e.target.value })}
-                                        placeholder="مثال: کانال رسمی دانشجویان ایران زمین"
+                                        placeholder="مثال: کانال رسمی اخبار دانشگاه"
                                         className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none placeholder:text-slate-600"
                                     />
                                 </div>
@@ -621,7 +617,7 @@ const OfficialChannelsGroups: React.FC = () => {
                                             if (!e.target.checked) {
                                                 loadRefData();
                                             } else {
-                                                setChannelForm({ ...channelForm, targetFieldOfStudy: undefined, targetEducationLevel: undefined, targetProvince: undefined, targetCity: undefined, targetUniversity: undefined });
+                                                setChannelForm({ ...channelForm, targetFieldOfStudy: undefined, targetEducationLevel: undefined, targetProvince: undefined, targetCity: undefined, targetUniversity: undefined, targetAudienceType: undefined });
                                             }
                                         }}
                                         className="w-5 h-5 rounded accent-indigo-500"
@@ -666,12 +662,24 @@ const OfficialChannelsGroups: React.FC = () => {
                                             channelForm.targetUniversity,
                                             (val) => setChannelForm({ ...channelForm, targetUniversity: val })
                                         )}
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-bold text-slate-500">نوع مخاطب (تفکیک دانشجو/دانش‌آموز)</label>
+                                            <select
+                                                value={channelForm.targetAudienceType || ''}
+                                                onChange={(e) => setChannelForm({ ...channelForm, targetAudienceType: e.target.value || undefined })}
+                                                className="w-full glass bg-white/5 border-white/5 p-3 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                                            >
+                                                <option value="" className="bg-slate-800">همه (بدون محدودیت)</option>
+                                                <option value="STUDENT" className="bg-slate-800">فقط دانشجویان</option>
+                                                <option value="PUPIL" className="bg-slate-800">فقط دانش‌آموزان</option>
+                                            </select>
+                                        </div>
                                         {renderMultiSelect(
                                             "وزارت مربوطه",
                                             [
                                                 "وزارت علوم", "وزارت بهداشت", "پیام نور", "دانشگاه آزاد", "فنی حرفه ای",
                                                 "منابع طبیعی", "علمی کاربردی", "غیرانتفاعی", "ملی مهارت", "علوم قرآن و معارف",
-                                                "هنر", "موسسه آموزش عالی", "فرهنگیان", "علوم پزشکی"
+                                                "هنر", "فرهنگیان", "نظامی", "دانشگاه الزهرا"
                                             ].map(m => ({ value: m, label: m })),
                                             channelForm.targetMinistry,
                                             (val) => setChannelForm({ ...channelForm, targetMinistry: val })
@@ -684,7 +692,11 @@ const OfficialChannelsGroups: React.FC = () => {
                                         )}
                                         {renderMultiSelect(
                                             "مقطع تحصیلی",
-                                            educationLevels.map(el => ({ value: el.name, label: el.name })),
+                                            [
+                                                ...educationLevels.map(el => ({ value: el.name, label: el.name })),
+                                                { value: 'هنرستان (هنر)', label: 'هنرستان (هنر)' },
+                                                { value: 'هنرستان (فنی و حرفه‌ای)', label: 'هنرستان (فنی و حرفه‌ای)' }
+                                            ],
                                             channelForm.targetEducationLevel,
                                             (val) => setChannelForm({ ...channelForm, targetEducationLevel: val })
                                         )}
@@ -702,7 +714,7 @@ const OfficialChannelsGroups: React.FC = () => {
                                     <Check size={16} />
                                     {editingChannelId ? 'ذخیره تغییرات' : 'ایجاد'}
                                 </button>
-                                <button onClick={() => { setShowChannelForm(false); setEditingChannelId(null); setChannelForm({ name: '', description: '', category: 'STUDENTS_IRAN', displayMode: 'SPECIAL' }); }} className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-slate-400 px-5 py-3 rounded-xl font-bold text-sm transition-all">
+                                <button onClick={() => { setShowChannelForm(false); setEditingChannelId(null); setChannelForm({ name: '', description: '', category: 'MY_FIELD', displayMode: 'SPECIAL' }); }} className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-slate-400 px-5 py-3 rounded-xl font-bold text-sm transition-all">
                                     <X size={16} />
                                     انصراف
                                 </button>
@@ -711,7 +723,9 @@ const OfficialChannelsGroups: React.FC = () => {
                     )}
 
                     <div className="space-y-4">
-                        {channels.map((channel) => (
+                        {(isSystemOfficial ? channels : appChannels)
+                            .slice(currentPageChannels * PAGE_SIZE, (currentPageChannels + 1) * PAGE_SIZE)
+                            .map((channel) => (
                             <div key={channel.id} className={`glass p-5 rounded-2xl transition-all duration-300 group ${expandedItem === channel.id ? 'border-indigo-500/30' : 'border-white/5 hover:border-indigo-500/20'}`}>
                                 <div
                                     className="flex justify-between items-center cursor-pointer"
@@ -733,9 +747,6 @@ const OfficialChannelsGroups: React.FC = () => {
                                                 )}
                                             </div>
                                             <div className="flex items-center gap-3 mt-1">
-                                                <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full font-bold">
-                                                    {getCategoryLabel(channel.category, 'channel')}
-                                                </span>
                                                 <span className="text-xs text-slate-500">
                                                     {channel.subscriberCount} عضو • {channel.admins.length} ادمین
                                                 </span>
@@ -745,13 +756,13 @@ const OfficialChannelsGroups: React.FC = () => {
                                     <div className="flex items-center gap-3">
                                         <button
                                             onClick={(e) => { e.stopPropagation(); handleEditChannel(channel); }}
-                                            className="p-2 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                            className="p-2 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 rounded-lg transition-all"
                                         >
                                             <Pencil size={16} />
                                         </button>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); handleDeleteChannel(channel.id); }}
-                                            className="p-2 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                            className="p-2 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 rounded-lg transition-all"
                                         >
                                             <Trash2 size={16} />
                                         </button>
@@ -766,9 +777,20 @@ const OfficialChannelsGroups: React.FC = () => {
                                 )}
                             </div>
                         ))}
-                        {channels.length === 0 && (
+                        {(isSystemOfficial ? channels : appChannels).length > PAGE_SIZE && (
+                            <div className="mt-4 p-4">
+                                <Pagination
+                                    currentPage={currentPageChannels}
+                                    totalPages={Math.ceil((isSystemOfficial ? channels : appChannels).length / PAGE_SIZE)}
+                                    totalElements={(isSystemOfficial ? channels : appChannels).length}
+                                    pageSize={PAGE_SIZE}
+                                    onPageChange={setCurrentPageChannels}
+                                />
+                            </div>
+                        )}
+                        {(isSystemOfficial ? channels : appChannels).length === 0 && (
                             <div className="glass p-12 rounded-2xl text-center text-slate-600 text-sm">
-                                هنوز کانال رسمی ایجاد نشده است
+                                {isSystemOfficial ? 'هنوز کانال رسمی ایجاد نشده است' : 'هنوز کانال عمومی/اساتید ایجاد نشده است'}
                             </div>
                         )}
                     </div>
@@ -781,15 +803,17 @@ const OfficialChannelsGroups: React.FC = () => {
                     <div className="flex justify-between items-center">
                         <h2 className="text-lg font-bold text-white flex items-center gap-3">
                             <Users size={20} className="text-emerald-400" />
-                            گروه‌های رسمی
+                            {isSystemOfficial ? 'گروه‌های رسمی سیستمی' : 'گروه‌های عمومی و درسی'}
                         </h2>
-                        <button
-                            onClick={() => setShowGroupForm(true)}
-                            className="flex items-center gap-3 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95"
-                        >
-                            <Plus size={16} />
-                            ایجاد گروه
-                        </button>
+                        {isSystemOfficial && (
+                            <button
+                                onClick={() => setShowGroupForm(true)}
+                                className="flex items-center gap-3 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95"
+                            >
+                                <Plus size={16} />
+                                ایجاد گروه
+                            </button>
+                        )}
                     </div>
 
                     {showGroupForm && (
@@ -802,7 +826,7 @@ const OfficialChannelsGroups: React.FC = () => {
                                         type="text"
                                         value={groupForm.name}
                                         onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
-                                        placeholder="مثال: گروه رسمی دانشجویان ایران زمین"
+                                        placeholder="مثال: گروه رسمی علمی دانشگاه"
                                         className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none placeholder:text-slate-600"
                                     />
                                 </div>
@@ -852,7 +876,7 @@ const OfficialChannelsGroups: React.FC = () => {
                                             if (!e.target.checked) {
                                                 loadRefData();
                                             } else {
-                                                setGroupForm({ ...groupForm, targetFieldOfStudy: undefined, targetEducationLevel: undefined, targetProvince: undefined, targetCity: undefined, targetUniversity: undefined });
+                                                setGroupForm({ ...groupForm, targetFieldOfStudy: undefined, targetEducationLevel: undefined, targetProvince: undefined, targetCity: undefined, targetUniversity: undefined, targetAudienceType: undefined });
                                             }
                                         }}
                                         className="w-5 h-5 rounded accent-indigo-500"
@@ -897,12 +921,24 @@ const OfficialChannelsGroups: React.FC = () => {
                                             groupForm.targetUniversity,
                                             (val) => setGroupForm({ ...groupForm, targetUniversity: val })
                                         )}
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-bold text-slate-500">نوع مخاطب (تفکیک دانشجو/دانش‌آموز)</label>
+                                            <select
+                                                value={groupForm.targetAudienceType || ''}
+                                                onChange={(e) => setGroupForm({ ...groupForm, targetAudienceType: e.target.value || undefined })}
+                                                className="w-full glass bg-white/5 border-white/5 p-3 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                                            >
+                                                <option value="" className="bg-slate-800">همه (بدون محدودیت)</option>
+                                                <option value="STUDENT" className="bg-slate-800">فقط دانشجویان</option>
+                                                <option value="PUPIL" className="bg-slate-800">فقط دانش‌آموزان</option>
+                                            </select>
+                                        </div>
                                         {renderMultiSelect(
                                             "وزارت مربوطه",
                                             [
                                                 "وزارت علوم", "وزارت بهداشت", "پیام نور", "دانشگاه آزاد", "فنی حرفه ای",
                                                 "منابع طبیعی", "علمی کاربردی", "غیرانتفاعی", "ملی مهارت", "علوم قرآن و معارف",
-                                                "هنر", "موسسه آموزش عالی", "فرهنگیان", "علوم پزشکی"
+                                                "هنر", "فرهنگیان", "نظامی", "دانشگاه الزهرا"
                                             ].map(m => ({ value: m, label: m })),
                                             groupForm.targetMinistry,
                                             (val) => setGroupForm({ ...groupForm, targetMinistry: val })
@@ -915,7 +951,11 @@ const OfficialChannelsGroups: React.FC = () => {
                                         )}
                                         {renderMultiSelect(
                                             "مقطع تحصیلی",
-                                            educationLevels.map(el => ({ value: el.name, label: el.name })),
+                                            [
+                                                ...educationLevels.map(el => ({ value: el.name, label: el.name })),
+                                                { value: 'هنرستان (هنر)', label: 'هنرستان (هنر)' },
+                                                { value: 'هنرستان (فنی و حرفه‌ای)', label: 'هنرستان (فنی و حرفه‌ای)' }
+                                            ],
                                             groupForm.targetEducationLevel,
                                             (val) => setGroupForm({ ...groupForm, targetEducationLevel: val })
                                         )}
@@ -933,7 +973,7 @@ const OfficialChannelsGroups: React.FC = () => {
                                     <Check size={16} />
                                     {editingGroupId ? 'ذخیره تغییرات' : 'ایجاد'}
                                 </button>
-                                <button onClick={() => { setShowGroupForm(false); setEditingGroupId(null); setGroupForm({ name: '', description: '', category: 'STUDENTS_IRAN', hideMembers: false, displayMode: 'SPECIAL' }); }} className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-slate-400 px-5 py-3 rounded-xl font-bold text-sm transition-all">
+                                <button onClick={() => { setShowGroupForm(false); setEditingGroupId(null); setGroupForm({ name: '', description: '', category: 'MY_FIELD', hideMembers: false, displayMode: 'SPECIAL' }); }} className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-slate-400 px-5 py-3 rounded-xl font-bold text-sm transition-all">
                                     <X size={16} />
                                     انصراف
                                 </button>
@@ -942,7 +982,9 @@ const OfficialChannelsGroups: React.FC = () => {
                     )}
 
                     <div className="space-y-4">
-                        {groups.map((group) => (
+                        {(isSystemOfficial ? groups : appGroups)
+                            .slice(currentPageGroups * PAGE_SIZE, (currentPageGroups + 1) * PAGE_SIZE)
+                            .map((group) => (
                             <div key={group.id} className={`glass p-5 rounded-2xl transition-all duration-300 group ${expandedItem === group.id ? 'border-indigo-500/30' : 'border-white/5 hover:border-emerald-500/20'}`}>
                                 <div
                                     className="flex justify-between items-center cursor-pointer"
@@ -969,9 +1011,6 @@ const OfficialChannelsGroups: React.FC = () => {
                                                 )}
                                             </div>
                                             <div className="flex items-center gap-3 mt-1">
-                                                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-bold">
-                                                    {getCategoryLabel(group.category, 'group')}
-                                                </span>
                                                 <span className="text-xs text-slate-500">
                                                     {group.memberCount} عضو • {group.admins.length} ادمین
                                                 </span>
@@ -981,13 +1020,13 @@ const OfficialChannelsGroups: React.FC = () => {
                                     <div className="flex items-center gap-3">
                                         <button
                                             onClick={(e) => { e.stopPropagation(); handleEditGroup(group); }}
-                                            className="p-2 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                            className="p-2 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 rounded-lg transition-all"
                                         >
                                             <Pencil size={16} />
                                         </button>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); handleDeleteGroup(group.id); }}
-                                            className="p-2 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                            className="p-2 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 rounded-lg transition-all"
                                         >
                                             <Trash2 size={16} />
                                         </button>
@@ -1002,9 +1041,20 @@ const OfficialChannelsGroups: React.FC = () => {
                                 )}
                             </div>
                         ))}
-                        {groups.length === 0 && (
+                        {(isSystemOfficial ? groups : appGroups).length > PAGE_SIZE && (
+                            <div className="mt-4 p-4">
+                                <Pagination
+                                    currentPage={currentPageGroups}
+                                    totalPages={Math.ceil((isSystemOfficial ? groups : appGroups).length / PAGE_SIZE)}
+                                    totalElements={(isSystemOfficial ? groups : appGroups).length}
+                                    pageSize={PAGE_SIZE}
+                                    onPageChange={setCurrentPageGroups}
+                                />
+                            </div>
+                        )}
+                        {(isSystemOfficial ? groups : appGroups).length === 0 && (
                             <div className="glass p-12 rounded-2xl text-center text-slate-600 text-sm">
-                                هنوز گروه رسمی ایجاد نشده است
+                                {isSystemOfficial ? 'هنوز گروه رسمی ایجاد نشده است' : 'هنوز گروه عمومی/درسی ایجاد نشده است'}
                             </div>
                         )}
                     </div>

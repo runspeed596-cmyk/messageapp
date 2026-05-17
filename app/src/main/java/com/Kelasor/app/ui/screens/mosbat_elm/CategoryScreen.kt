@@ -3,6 +3,8 @@ package com.Kelasor.app.ui.screens.mosbat_elm
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -153,6 +155,7 @@ fun CategoryScreen(
             val matchPrice = when (state.selectedPriceType) {
                 "رایگان" -> course.isFree || course.priceRials == 0L
                 "نقدی" -> !course.isFree && course.priceRials > 0L
+                "تخفیف‌دار" -> (course.discountPercentage ?: 0) > 0
                 else -> true
             }
             val matchRating = course.rating >= state.minRating
@@ -457,7 +460,7 @@ fun FilterBottomSheet(
     onDismiss: () -> Unit,
     onApply: (String, Float, String, String, String) -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var priceType by remember { mutableStateOf(currentState.selectedPriceType) }
     var minRating by remember { mutableFloatStateOf(currentState.minRating) }
     var duration by remember { mutableStateOf(currentState.durationFilter) }
@@ -472,103 +475,125 @@ fun FilterBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(WindowInsets.navigationBars.asPaddingValues())
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 24.dp)
+                .navigationBarsPadding()
         ) {
-            Text(
-                "فیلترهای پیشرفته",
-                fontFamily = DanaFontFamily,
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
-                modifier = Modifier.padding(bottom = 24.dp)
-            )
-            // Sort Order
-            FilterSection(title = "مرتب‌سازی") {
-                val sortOptions = listOf("جدیدترین", "محبوب‌ترین", "بالاترین امتیاز", "ارزان‌ترین", "گران‌ترین")
-                FlowRow(mainAxisSpacing = 8.dp, crossAxisSpacing = 8.dp) {
-                    sortOptions.forEach { s ->
-                        FilterChip(
-                            selected = sortOrder == s,
-                            onClick = { sortOrder = s },
-                            label = { Text(s, fontFamily = DanaFontFamily) }
-                        )
-                    }
-                }
-            }
-            // Price Type
-            FilterSection(title = "نوع قیمت") {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("همه", "رایگان", "نقدی").forEach { type ->
-                        FilterChip(
-                            selected = priceType == type,
-                            onClick = { priceType = type },
-                            label = { Text(type, fontFamily = DanaFontFamily) }
-                        )
-                    }
-                }
-            }
-            // Rating
-            FilterSection(title = "حداقل امتیاز") {
-                Slider(
-                    value = minRating,
-                    onValueChange = { minRating = it },
-                    valueRange = 0f..5f,
-                    steps = 4,
-                    modifier = Modifier.fillMaxWidth()
-                )
+            Column(
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
                 Text(
-                    text = "${minRating.toInt().toString().toPersianNumbers()} ستاره به بالا",
+                    "فیلترهای پیشرفته",
                     fontFamily = DanaFontFamily,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    modifier = Modifier.padding(bottom = 24.dp)
                 )
-            }
-            // Duration
-            FilterSection(title = "مدت زمان") {
-                val durations = listOf("همه", "زیر ۲ ساعت", "۲ تا ۱۰ ساعت", "بالای ۱۰ ساعت")
-                FlowRow(mainAxisSpacing = 8.dp, crossAxisSpacing = 8.dp) {
-                    durations.forEach { d ->
-                        FilterChip(
-                            selected = duration == d,
-                            onClick = { duration = d },
-                            label = { Text(d, fontFamily = DanaFontFamily) }
-                        )
+                // Sort Order
+                FilterSection(title = "مرتب‌سازی") {
+                    val sortOptions = listOf("جدیدترین", "محبوب‌ترین", "بالاترین امتیاز", "ارزان‌ترین", "گران‌ترین")
+                    FlowRow(mainAxisSpacing = 8.dp, crossAxisSpacing = 8.dp) {
+                        sortOptions.forEach { s ->
+                            FilterChip(
+                                selected = sortOrder == s,
+                                onClick = { sortOrder = s },
+                                label = { Text(s, fontFamily = DanaFontFamily) }
+                            )
+                        }
                     }
                 }
-            }
-            // Status
-            FilterSection(title = "وضعیت برگزاری") {
-                val statuses = listOf("همه", "در حال برگزاری", "به‌زودی", "به اتمام رسیده")
-                FlowRow(mainAxisSpacing = 8.dp, crossAxisSpacing = 8.dp) {
-                    statuses.forEach { st ->
-                        FilterChip(
-                            selected = status == st,
-                            onClick = { status = st },
-                            label = { Text(st, fontFamily = DanaFontFamily) }
-                        )
+                // Price Type
+                FilterSection(title = "نوع قیمت") {
+                    FlowRow(mainAxisSpacing = 8.dp, crossAxisSpacing = 8.dp) {
+                        listOf("همه", "رایگان", "نقدی", "تخفیف‌دار").forEach { type ->
+                            FilterChip(
+                                selected = priceType == type,
+                                onClick = { priceType = type },
+                                label = { Text(type, fontFamily = DanaFontFamily) }
+                            )
+                        }
                     }
                 }
+                // Rating
+                FilterSection(title = "حداقل امتیاز") {
+                    Slider(
+                        value = minRating,
+                        onValueChange = { minRating = it },
+                        valueRange = 0f..5f,
+                        steps = 4,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        text = "${minRating.toInt().toString().toPersianNumbers()} ستاره به بالا",
+                        fontFamily = DanaFontFamily,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                // Duration
+                FilterSection(title = "مدت زمان") {
+                    val durations = listOf("همه", "زیر ۲ ساعت", "۲ تا ۱۰ ساعت", "بالای ۱۰ ساعت")
+                    FlowRow(mainAxisSpacing = 8.dp, crossAxisSpacing = 8.dp) {
+                        durations.forEach { d ->
+                            FilterChip(
+                                selected = duration == d,
+                                onClick = { duration = d },
+                                label = { Text(d, fontFamily = DanaFontFamily) }
+                            )
+                        }
+                    }
+                }
+                // Status
+                FilterSection(title = "وضعیت برگزاری") {
+                    val statuses = listOf("همه", "در حال برگزاری", "به‌زودی", "به اتمام رسیده")
+                    FlowRow(mainAxisSpacing = 8.dp, crossAxisSpacing = 8.dp) {
+                        statuses.forEach { st ->
+                            FilterChip(
+                                selected = status == st,
+                                onClick = { status = st },
+                                label = { Text(st, fontFamily = DanaFontFamily) }
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
             }
-            Spacer(modifier = Modifier.height(32.dp))
-            Button(
-                onClick = { onApply(priceType, minRating, duration, status, sortOrder) },
+            
+            // Sticky Action Buttons at the Bottom
+            Surface(
+                tonalElevation = 1.dp,
+                shadowElevation = 8.dp,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                color = MaterialTheme.colorScheme.surface
             ) {
-                Text("اعمال فیلترها", fontFamily = DanaFontFamily, fontWeight = FontWeight.Bold)
-            }
-            TextButton(
-                onClick = {
-                    priceType = "همه"
-                    minRating = 0f
-                    duration = "همه"
-                    status = "همه"
-                    sortOrder = "جدیدترین"
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("پاکسازی همه", fontFamily = DanaFontFamily, color = MaterialTheme.colorScheme.error)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                ) {
+                    Button(
+                        onClick = { onApply(priceType, minRating, duration, status, sortOrder) },
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("اعمال فیلترها", fontFamily = DanaFontFamily, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextButton(
+                        onClick = {
+                            priceType = "همه"
+                            minRating = 0f
+                            duration = "همه"
+                            status = "همه"
+                            sortOrder = "جدیدترین"
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("پاکسازی همه", fontFamily = DanaFontFamily, color = MaterialTheme.colorScheme.error)
+                    }
+                }
             }
         }
     }

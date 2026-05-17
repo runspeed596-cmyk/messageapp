@@ -43,6 +43,34 @@ class CourseRepository @Inject constructor(
         }
     }
 
+    suspend fun incrementViewCount(courseId: String): Result<Long> {
+        return try {
+            val response = apiService.incrementViewCount(courseId)
+            if (response.isSuccessful && response.body()?.success == true) {
+                val count = response.body()?.data
+                if (count != null) Result.success(count) else Result.failure(Exception("View count is null"))
+            } else {
+                Result.failure(Exception(response.body()?.message ?: "Failed to increment view count"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun incrementClickCount(courseId: String): Result<Long> {
+        return try {
+            val response = apiService.incrementClickCount(courseId)
+            if (response.isSuccessful && response.body()?.success == true) {
+                val count = response.body()?.data
+                if (count != null) Result.success(count) else Result.failure(Exception("Click count is null"))
+            } else {
+                Result.failure(Exception(response.body()?.message ?: "Failed to increment click count"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun getJoinClassUrl(courseId: String): Result<String> {
         return try {
             val response = apiService.getJoinClassUrl(courseId)

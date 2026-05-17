@@ -458,6 +458,45 @@ class WebSocketManager @Inject constructor(
         val chatId = data.get("chatId")?.safeString() ?: ""
         val content = data.get("content")?.safeString() ?: ""
         
+        // FIX: If the private chat does not exist locally in Room DB, insert a placeholder ChatEntity immediately
+        // so that the incoming message and chat list are fully visible and not hidden.
+        val existingChat = chatDao.getChatById(chatId)
+        if (existingChat == null && chatId.isNotEmpty()) {
+            val isFromMe = senderId == sessionManager.userId.firstOrNull()
+            val chatTitle = if (isFromMe) "گفتگو" else data.get("senderName")?.safeString() ?: "گفتگو"
+            val chatAvatar = if (isFromMe) null else data.get("senderAvatar")?.safeString()
+            val createdAt = data.get("timestamp")?.safeString()?.let { parseTimestamp(it) }
+                ?: data.get("createdAt")?.safeString()?.let { parseTimestamp(it) }
+                ?: System.currentTimeMillis()
+                
+            val placeholderChat = ChatEntity(
+                id = chatId,
+                type = "PRIVATE",
+                title = chatTitle,
+                avatarUrl = chatAvatar,
+                lastMessageId = messageId,
+                lastMessage = content,
+                lastMessageTime = createdAt,
+                unreadCount = if (isFromMe) 0 else 1,
+                updatedAt = createdAt
+            )
+            chatDao.insertChat(placeholderChat)
+            
+            // Also insert participant relations to link users to the chat
+            val currentUserId = sessionManager.userId.firstOrNull() ?: ""
+            val participants = mutableListOf<com.Kelasor.app.data.local.entity.ChatParticipantEntity>()
+            if (currentUserId.isNotEmpty()) {
+                participants.add(com.Kelasor.app.data.local.entity.ChatParticipantEntity(chatId, currentUserId))
+            }
+            if (senderId.isNotEmpty() && senderId != currentUserId) {
+                participants.add(com.Kelasor.app.data.local.entity.ChatParticipantEntity(chatId, senderId))
+            }
+            if (participants.isNotEmpty()) {
+                chatDao.insertChatParticipants(participants)
+            }
+            Log.d(TAG, "🆕 Created and inserted placeholder ChatEntity and participants for chatId: $chatId")
+        }
+
         // Check if message exists locally (matched by ID)
         val existingMessage = messageDao.getMessageById(messageId)
         var localReplyToMessage = existingMessage?.replyToMessage

@@ -52,7 +52,10 @@ class InstitutionService(
     private val channelRepository: ChannelRepository,
     private val courseRepository: CourseRepository,
     private val userFollowRepository: UserFollowRepository,
-    private val enrollmentRepository: CourseEnrollmentRepository
+    private val enrollmentRepository: CourseEnrollmentRepository,
+    private val channelSubscriberRepository: ChannelSubscriberRepository,
+    private val notificationService: NotificationService,
+    private val notificationRepository: NotificationRepository
 ) {
     @Transactional
     fun registerInstitution(ownerId: UUID, request: InstitutionRegisterRequest): InstitutionResponse {
@@ -79,21 +82,54 @@ class InstitutionService(
             associatedClubIds = request.associatedClubIds.toMutableList(),
             associatedFieldOfStudyIds = request.associatedFieldOfStudyIds.toMutableList(),
             associatedStudentOrgIds = request.associatedStudentOrgIds.toMutableList(),
-            instructorIds = request.instructorIds.toMutableList(),
+            instructorIds = mutableListOf(),
             manualInstructors = request.manualInstructors.map { ManualInstructor(name = it.name, avatarUrl = it.avatarUrl, resume = it.resume) }.toMutableList(),
-            adminIds = request.adminIds.toMutableList(),
+            adminIds = mutableListOf(),
             owner = owner,
-            verificationStatus = VerificationStatus.PENDING_VERIFICATION
+            verificationStatus = VerificationStatus.APPROVED
         )
         val saved: Institution = institutionRepository.save(institution)
         
-        // Link to user (owner)
-        owner.institutionId = saved.id
-        owner.institutionLogoUrl = saved.logoUrl
-        owner.institutionName = saved.name
+        // Auto-create official Elm Club channel
+        val autoChannel = Channel(
+            name = saved.name,
+            description = "کانال رسمی ${saved.name}",
+            avatarUrl = saved.logoUrl,
+            isPublic = true,
+            owner = owner,
+            classification = ChannelClassification.ELM_CLUB_INSTITUTION,
+            institutionId = saved.id
+        )
+        val savedChannel: Channel = channelRepository.save(autoChannel)
+        saved.channel = savedChannel
+        val finalSaved = institutionRepository.save(saved)
+        
+        // Subscribe owner as Admin of the new channel
+        val ownerSub = ChannelSubscriber(
+            channel = savedChannel,
+            user = owner,
+            isAdmin = true,
+            subscribedAt = Instant.now()
+        )
+        channelSubscriberRepository.save(ownerSub)
+        
+        // Upgrade owner role if Normal, and link institution
+        if (owner.role == UserRole.NORMAL) {
+            owner.role = UserRole.INSTITUTION
+        }
+        owner.institutionId = finalSaved.id
+        owner.institutionLogoUrl = finalSaved.logoUrl
+        owner.institutionName = finalSaved.name
         userRepository.save(owner)
         
-        return mapToResponse(saved)
+        request.instructorIds.forEach { instructorId ->
+            sendInvite(instructorId, ownerId, finalSaved, NotificationType.TEACHER_INVITE)
+        }
+        request.adminIds.forEach { adminId ->
+            sendInvite(adminId, ownerId, finalSaved, NotificationType.ADMIN_INVITE)
+        }
+        
+        return mapToResponse(finalSaved)
     }
 
     @Transactional
@@ -116,17 +152,75 @@ class InstitutionService(
         entity.associatedClubIds = request.associatedClubIds.toMutableList()
         entity.associatedFieldOfStudyIds = request.associatedFieldOfStudyIds.toMutableList()
         entity.associatedStudentOrgIds = request.associatedStudentOrgIds.toMutableList()
-        entity.instructorIds = request.instructorIds.toMutableList()
+        val currentInstructors = entity.instructorIds.toList()
+        entity.instructorIds.clear()
+        entity.instructorIds.addAll(currentInstructors.filter { request.instructorIds.contains(it) })
+        request.instructorIds.forEach { instructorId ->
+            if (!currentInstructors.contains(instructorId)) {
+                sendInvite(instructorId, ownerId, entity, NotificationType.TEACHER_INVITE)
+            }
+        }
+
         entity.manualInstructors.clear()
         entity.manualInstructors.addAll(request.manualInstructors.map { ManualInstructor(name = it.name, avatarUrl = it.avatarUrl, resume = it.resume) })
-        entity.adminIds = request.adminIds.toMutableList()
+
+        val currentAdmins = entity.adminIds.toList()
+        entity.adminIds.clear()
+        entity.adminIds.addAll(currentAdmins.filter { request.adminIds.contains(it) })
+        request.adminIds.forEach { adminId ->
+            if (!currentAdmins.contains(adminId)) {
+                sendInvite(adminId, ownerId, entity, NotificationType.ADMIN_INVITE)
+            }
+        }
         entity.updatedAt = Instant.now()
         val saved: Institution = institutionRepository.save(entity)
-        // Update user's cached institution fields
         val owner: User = entity.owner!!
+        
+        if (saved.channel == null) {
+            val autoChannel = Channel(
+                name = saved.name,
+                description = "کانال رسمی ${saved.name}",
+                avatarUrl = saved.logoUrl,
+                isPublic = true,
+                owner = owner,
+                classification = ChannelClassification.ELM_CLUB_INSTITUTION,
+                institutionId = saved.id
+            )
+            val savedChannel: Channel = channelRepository.save(autoChannel)
+            saved.channel = savedChannel
+            institutionRepository.save(saved)
+            
+            val ownerSub = ChannelSubscriber(
+                channel = savedChannel,
+                user = owner,
+                isAdmin = true,
+                subscribedAt = Instant.now()
+            )
+            channelSubscriberRepository.save(ownerSub)
+        } else {
+            val channel = saved.channel!!
+            var channelChanged = false
+            if (channel.name != saved.name) {
+                channel.name = saved.name
+                channel.description = "کانال رسمی ${saved.name}"
+                channelChanged = true
+            }
+            if (channel.avatarUrl != saved.logoUrl) {
+                channel.avatarUrl = saved.logoUrl
+                channelChanged = true
+            }
+            if (channelChanged) {
+                channelRepository.save(channel)
+            }
+        }
+        
+        if (owner.role == UserRole.NORMAL) {
+            owner.role = UserRole.INSTITUTION
+        }
         owner.institutionLogoUrl = saved.logoUrl
         owner.institutionName = saved.name
         userRepository.save(owner)
+        
         return mapToResponse(saved)
     }
 
@@ -216,24 +310,87 @@ class InstitutionService(
         return mapToResponse(saved)
     }
 
-    private fun mapToResponse(entity: Institution): InstitutionResponse {
+    private fun parseDurationTextToMinutes(text: String?): Int {
+        if (text.isNullOrBlank()) return 0
+        return try {
+            val normalized = text.lowercase().trim()
+            var totalMinutes = 0
+            val hourPattern = java.util.regex.Pattern.compile("(\\d+)\\s*h")
+            val minPattern = java.util.regex.Pattern.compile("(\\d+)\\s*m")
+            val hourMatcher = hourPattern.matcher(normalized)
+            if (hourMatcher.find()) {
+                totalMinutes += hourMatcher.group(1).toInt() * 60
+            }
+            val minMatcher = minPattern.matcher(normalized)
+            if (minMatcher.find()) {
+                totalMinutes += minMatcher.group(1).toInt()
+            }
+            if (totalMinutes == 0) {
+                val digitOnly = normalized.filter { it.isDigit() }
+                if (digitOnly.isNotEmpty()) {
+                    if (normalized.contains("hour") || normalized.contains("ساعت")) {
+                        totalMinutes = digitOnly.toInt() * 60
+                    } else {
+                        totalMinutes = digitOnly.toInt()
+                    }
+                }
+            }
+            totalMinutes
+        } catch (e: Exception) {
+            0
+        }
+    }
+
+    fun mapToResponse(entity: Institution): InstitutionResponse {
         val institutionId: UUID = entity.id!!
         
-        // Fetch all approved courses for this institution
+        // Fetch all approved and active courses for this institution
         val approvedCourses = courseRepository.findByInstitutionIdOrOrganizerId(institutionId, entity.owner!!.id!!, org.springframework.data.domain.Pageable.unpaged()).content
-            .filter { it.status == com.iliyadev.springboot.models.CourseStatus.APPROVED }
+            .filter { it.status == com.iliyadev.springboot.models.CourseStatus.APPROVED || it.status == com.iliyadev.springboot.models.CourseStatus.ACTIVE }
             
         var totalTrainingHours = 0
         var totalPersonHours = 0
         var totalRevenue: Long = 0
+        var totalViews: Long = 0
+        var totalClicks: Long = 0
         
         for (course in approvedCourses) {
-            val durationHours = java.time.Duration.between(course.startsAt, course.endsAt).toHours().toInt()
+            var courseDurationMinutes = 0
+            if (course.chapters.isNotEmpty()) {
+                for (chapter in course.chapters) {
+                    if (chapter.sessionStartTime != null && chapter.sessionEndTime != null) {
+                        val chapterDurationMinutes = java.time.Duration.between(chapter.sessionStartTime, chapter.sessionEndTime).toMinutes().toInt()
+                        if (chapterDurationMinutes > 0) {
+                            courseDurationMinutes += chapterDurationMinutes
+                        }
+                    } else {
+                        val parsedMinutes = parseDurationTextToMinutes(chapter.durationText)
+                        if (parsedMinutes > 0) {
+                            courseDurationMinutes += parsedMinutes
+                        }
+                    }
+                }
+            }
+            
+            if (courseDurationMinutes == 0 && !course.syllabusDuration.isNullOrBlank()) {
+                courseDurationMinutes = parseDurationTextToMinutes(course.syllabusDuration)
+            }
+            
+            val durationHours = if (courseDurationMinutes > 0) {
+                val computedHours = (courseDurationMinutes + 30) / 60
+                if (computedHours > 0) computedHours else 1
+            } else {
+                java.time.Duration.between(course.startsAt, course.endsAt).toHours().toInt()
+            }
+            
             val enrolled = enrollmentRepository.countByCourseIdAndIsActiveTrue(course.id!!).toInt()
             
             totalTrainingHours += durationHours
             totalPersonHours += (durationHours * enrolled)
-            totalRevenue += (course.priceRials * enrolled)
+            val discountedPrice = course.priceRials * (100 - course.discountPercentage) / 100
+            totalRevenue += (discountedPrice * enrolled)
+            totalViews += course.viewCount
+            totalClicks += course.clickCount
         }
 
         val totalStudents: Long = enrollmentRepository.countTotalEnrollmentsForInstitution(institutionId)
@@ -292,6 +449,8 @@ class InstitutionService(
             totalTeachersCount = totalTeachersCount,
             totalCollaborations = totalCollaborations,
             totalRevenue = finalRevenue,
+            totalViews = totalViews,
+            totalClicks = totalClicks,
             rating = avgRating,
             averageRating = avgRating,
             reviewCount = totalReviews,
@@ -334,5 +493,26 @@ class InstitutionService(
         entity.honors.add(honor)
         institutionRepository.save(entity)
         return honor.toDto()
+    }
+
+    private fun sendInvite(invitedUserId: UUID, actorId: UUID, institution: Institution, type: NotificationType) {
+        val existing = notificationRepository.findByUserIdAndRelatedEntityId(invitedUserId, institution.id!!)
+            .any { it.type == type && it.status == "PENDING" }
+        if (existing) return
+
+        val roleName = if (type == NotificationType.TEACHER_INVITE) "استاد" else "ادمین"
+        val inviteBody = if (type == NotificationType.ADMIN_INVITE) {
+            "به عنوان ادمین دعوت شدید به آکادمی «${institution.name}»."
+        } else {
+            "شما به عنوان ${roleName} به آکادمی «${institution.name}» دعوت شده‌اید."
+        }
+        notificationService.createNotification(
+            userId = invitedUserId,
+            type = type,
+            title = "دعوت به همکاری در آکادمی",
+            body = inviteBody,
+            relatedEntityId = institution.id,
+            actorId = actorId
+        )
     }
 }

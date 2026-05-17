@@ -254,6 +254,7 @@ Copy-Item (Join-Path $PROJECT_ROOT "jitsi-config\custom.css") $jcDir
 Copy-Item (Join-Path $PROJECT_ROOT "jitsi-config\custom-config.js") $jcDir
 Copy-Item (Join-Path $PROJECT_ROOT "jitsi-config\custom-interface_config.js") $jcDir
 Copy-Item (Join-Path $PROJECT_ROOT "jitsi-config\fonts") $jcDir -Recurse
+Copy-Item (Join-Path $PROJECT_ROOT "jitsi-config\lang") $jcDir -Recurse
 
 # Nginx: config files only
 $ngDir = Join-Path $DEPLOY_DIR "nginx"

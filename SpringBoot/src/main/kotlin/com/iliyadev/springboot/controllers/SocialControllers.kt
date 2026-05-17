@@ -195,6 +195,14 @@ class NotificationController(
     ): ResponseEntity<NotificationListResponse> {
         return ResponseEntity.ok(notificationService.getNotifications(userId, page, size))
     }
+    @GetMapping("/mosbat-elm")
+    fun getMosbatElmNotifications(
+        @RequestAttribute("userId") userId: UUID,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int
+    ): ResponseEntity<NotificationListResponse> {
+        return ResponseEntity.ok(notificationService.getMosbatElmNotifications(userId, page, size))
+    }
     @PostMapping("/{notificationId}/read")
     fun markAsRead(
         @RequestAttribute("userId") userId: UUID,
@@ -219,5 +227,23 @@ class NotificationController(
         @RequestAttribute("userId") userId: UUID
     ): ResponseEntity<UnreadCountResponse> {
         return ResponseEntity.ok(UnreadCountResponse(notificationService.getUnreadCount(userId)))
+    }
+
+    @PostMapping("/{notificationId}/accept-invite")
+    fun acceptInvite(
+        @RequestAttribute("userId") userId: UUID,
+        @PathVariable notificationId: UUID
+    ): ResponseEntity<ApiResponse<Boolean>> {
+        val success = notificationService.acceptInvite(notificationId, userId)
+        return ResponseEntity.ok(ApiResponse(success, if (success) "دعوت با موفقیت پذیرفته شد" else "خطا در پذیرش دعوت", success))
+    }
+
+    @PostMapping("/{notificationId}/reject-invite")
+    fun rejectInvite(
+        @RequestAttribute("userId") userId: UUID,
+        @PathVariable notificationId: UUID
+    ): ResponseEntity<ApiResponse<Boolean>> {
+        val success = notificationService.rejectInvite(notificationId, userId)
+        return ResponseEntity.ok(ApiResponse(success, if (success) "دعوت رد شد" else "خطا در رد دعوت", success))
     }
 }

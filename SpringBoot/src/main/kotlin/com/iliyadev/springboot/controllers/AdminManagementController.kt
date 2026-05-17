@@ -162,7 +162,7 @@ class AdminManagementController(
     // 📚 Field of Study Management
     @GetMapping("/fields-of-study")
     fun getFieldsOfStudy(): ResponseEntity<ApiResponse<List<FieldOfStudy>>> =
-        ResponseEntity.ok(ApiResponse(true, "Success", fieldOfStudyRepository.findAllByOrderByDisplayOrderAsc()))
+        ResponseEntity.ok(ApiResponse(true, "Success", fieldOfStudyRepository.findAll()))
 
     @PostMapping("/fields-of-study")
     fun createFieldOfStudy(@RequestBody field: FieldOfStudy): ResponseEntity<ApiResponse<FieldOfStudy>> {
@@ -189,7 +189,7 @@ class AdminManagementController(
     // 🎓 Education Level Management
     @GetMapping("/education-levels")
     fun getEducationLevels(): ResponseEntity<ApiResponse<List<EducationLevel>>> =
-        ResponseEntity.ok(ApiResponse(true, "Success", educationLevelRepository.findAllByOrderByDisplayOrderAsc()))
+        ResponseEntity.ok(ApiResponse(true, "Success", educationLevelRepository.findAll()))
 
     @PostMapping("/education-levels")
     fun createEducationLevel(@RequestBody level: EducationLevel): ResponseEntity<ApiResponse<EducationLevel>> =
@@ -264,7 +264,7 @@ class AdminManagementController(
     // 🏛️ Faculty Management
     @GetMapping("/faculties")
     fun getFaculties(): ResponseEntity<ApiResponse<List<Faculty>>> =
-        ResponseEntity.ok(ApiResponse(true, "Success", facultyRepository.findAllByOrderByDisplayOrderAsc()))
+        ResponseEntity.ok(ApiResponse(true, "Success", facultyRepository.findAll()))
 
     @PostMapping("/faculties")
     fun createFaculty(@RequestBody faculty: Faculty): ResponseEntity<ApiResponse<Faculty>> {
@@ -286,7 +286,7 @@ class AdminManagementController(
     // 🎭 Educational Role Management
     @GetMapping("/educational-roles")
     fun getEducationalRoles(): ResponseEntity<ApiResponse<List<EducationalRoleOption>>> =
-        ResponseEntity.ok(ApiResponse(true, "Success", educationalRoleOptionRepository.findAllByOrderByDisplayOrderAsc()))
+        ResponseEntity.ok(ApiResponse(true, "Success", educationalRoleOptionRepository.findAll()))
 
     @PostMapping("/educational-roles")
     fun createEducationalRole(@RequestBody role: EducationalRoleOption): ResponseEntity<ApiResponse<EducationalRoleOption>> =
@@ -301,7 +301,7 @@ class AdminManagementController(
     // 🏛️ Club Management (کانون‌ها)
     @GetMapping("/clubs")
     fun getClubs(): ResponseEntity<ApiResponse<List<Club>>> =
-        ResponseEntity.ok(ApiResponse(true, "Success", clubRepository.findAllByOrderByDisplayOrderAsc()))
+        ResponseEntity.ok(ApiResponse(true, "Success", clubRepository.findAll()))
 
     @PostMapping("/clubs")
     fun createClub(@RequestBody club: Club): ResponseEntity<ApiResponse<Club>> =
@@ -316,7 +316,7 @@ class AdminManagementController(
     // 🎓 Student Organization Management (تشکل‌های دانشجویی)
     @GetMapping("/student-orgs")
     fun getStudentOrgs(): ResponseEntity<ApiResponse<List<StudentOrg>>> =
-        ResponseEntity.ok(ApiResponse(true, "Success", studentOrgRepository.findAllByOrderByDisplayOrderAsc()))
+        ResponseEntity.ok(ApiResponse(true, "Success", studentOrgRepository.findAll()))
 
     @PostMapping("/student-orgs")
     fun createStudentOrg(@RequestBody org: StudentOrg): ResponseEntity<ApiResponse<StudentOrg>> =
@@ -331,7 +331,7 @@ class AdminManagementController(
     // 🖼️ Mosbat Elm Banner Management (اسلایدر مثبت علم)
     @GetMapping("/mosbat-elm/banners")
     fun getMosbatElmBanners(): ResponseEntity<ApiResponse<List<HomeBanner>>> =
-        ResponseEntity.ok(ApiResponse(true, "Success", bannerRepository.findAllBySectionAndIsActiveTrueOrderByDisplayOrderAsc("MOSBAT_ELM")))
+        ResponseEntity.ok(ApiResponse(true, "Success", bannerRepository.findAllBySectionAndIsActiveTrueOrderByCreatedAtDesc("MOSBAT_ELM")))
 
     @PostMapping("/mosbat-elm/banners")
     fun createMosbatElmBanner(@RequestBody banner: HomeBanner): ResponseEntity<ApiResponse<HomeBanner>> {

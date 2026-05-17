@@ -93,6 +93,14 @@ class CourseDetailViewModel @Inject constructor(
         }
     }
 
+    private fun incrementCourseViewCount(courseId: String) {
+        viewModelScope.launch {
+            try {
+                courseRepository.incrementViewCount(courseId)
+            } catch (_: Exception) { }
+        }
+    }
+
     fun loadCourse(courseId: String) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
@@ -111,6 +119,7 @@ class CourseDetailViewModel @Inject constructor(
                         _state.update { it.copy(course = course, isLoading = false) }
                         checkOwnership(course)
                         loadSupplementaryData(course)
+                        incrementCourseViewCount(course.id)
                     },
                     onFailure = { e ->
                         _state.update { it.copy(isLoading = false, error = e.message ?: "خطا در بارگذاری دوره") }
@@ -183,6 +192,25 @@ class CourseDetailViewModel @Inject constructor(
         if (_state.value.isEnrolled || _state.value.isEnrolling) return
         viewModelScope.launch {
             _state.update { it.copy(isEnrolling = true) }
+            // National code check before enrollment
+            try {
+                val userResult = userRepository.getCurrentUser()
+                    .filter { it !is com.Kelasor.app.data.repository.UserResult.Loading }
+                    .first()
+                if (userResult is com.Kelasor.app.data.repository.UserResult.Success) {
+                    val nationalCode: String? = userResult.data.nationalCode
+                    if (nationalCode.isNullOrBlank()) {
+                        _state.update { it.copy(
+                            isEnrolling = false,
+                            error = "برای حفظ محتوای مجموعه برگزارکننده، اصالت‌سنجی افراد، جلوگیری از سوءاستفاده‌های احتمالی و صدور گواهی، ابتدا باید کد ملی خود را در پروفایل پیام‌رسان تکمیل نمایید."
+                        ) }
+                        return@launch
+                    }
+                }
+            } catch (_: Exception) { }
+            try {
+                courseRepository.incrementClickCount(courseId)
+            } catch (_: Exception) { }
             try {
                 val result: Result<Unit> = courseRepository.enrollInCourse(courseId, paymentType)
                 result.fold(

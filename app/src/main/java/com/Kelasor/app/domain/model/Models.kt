@@ -338,10 +338,13 @@ data class Institution(
     val totalTeachersCount: Int = 0,
     val totalCollaborations: Int = 0,
     val totalRevenue: Long? = null,
+    val totalViews: Long = 0,
+    val totalClicks: Long = 0,
     val rating: Double = 0.0,
     val averageRating: Double = 0.0,
     val reviewCount: Int = 0,
-    val honors: List<InstitutionHonor> = emptyList()
+    val honors: List<InstitutionHonor> = emptyList(),
+    val createdAt: java.time.Instant? = null
 )
 
 data class InstitutionHonor(
@@ -400,6 +403,8 @@ data class Course(
     val rating: Double = 0.0,
     val reviewCount: Int = 0,
     val favoritesCount: Int = 0,
+    val viewCount: Long = 0,
+    val clickCount: Long = 0,
     val status: String = "DRAFT",
     val adminNote: String? = null,
     val tags: List<String> = emptyList(),
@@ -413,5 +418,6 @@ data class Course(
     val isVerticalPoster: Boolean = false,
     val hasOnlineClass: Boolean = false,
     val organizerType: String? = null,
+    val organizerChannelId: String? = null,
     val createdAt: Instant
 )

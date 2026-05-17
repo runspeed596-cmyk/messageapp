@@ -54,7 +54,7 @@ fun SmartFolderTabContent(
     val context = androidx.compose.ui.platform.LocalContext.current
     val channels: List<SmartFolderChannelDto> = when (folderType) {
         "TEACHERS" -> state.teacherChannels
-        "ELM_CLUB" -> state.elmClubChannels
+        "ELM_CLUB" -> state.elmClubChannels.filter { it.isSubscribed }
         "COURSES" -> state.courseChannels
         else -> emptyList()
     }
@@ -88,110 +88,191 @@ fun SmartFolderTabContent(
             selectedChannelIdForStory = null
         }
     }
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        when {
-            isLoading -> {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center),
-                    color = accentColor
-                )
-            }
-            error != null -> {
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Warning,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = error,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                        textAlign = TextAlign.Center,
-                        fontFamily = DanaFontFamily
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    TextButton(onClick = { viewModel.loadSmartFolders() }) {
-                        Text("تلاش مجدد", fontFamily = DanaFontFamily, color = accentColor)
+    val chatListViewModel: com.Kelasor.app.ui.viewmodel.ChatListViewModel = hiltViewModel()
+    val chatListState by chatListViewModel.state.collectAsState()
+    val selectedChatIds = chatListState.selectedChatIds
+    val allChats = chatListState.chats + chatListState.pinnedChats + chatListState.archivedChats
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        if (selectedChatIds.isNotEmpty()) {
+            com.Kelasor.app.ui.screens.chat.SelectionTopBar(
+                selectedCount = selectedChatIds.size,
+                onClearSelection = { chatListViewModel.clearSelection() },
+                onDeleteSelected = { chatListViewModel.requestDeleteSelection() },
+                onPinSelected = {
+                    val selectedChats = allChats.filter { it.id in selectedChatIds }
+                    val newPinState = !selectedChats.any { it.isPinned }
+                    selectedChatIds.forEach { chatId -> chatListViewModel.pinChat(chatId, newPinState) }
+                    chatListViewModel.clearSelection()
+                },
+                onArchiveSelected = {
+                    val selectedChats = allChats.filter { it.id in selectedChatIds }
+                    val newArchiveState = !selectedChats.any { it.isArchived }
+                    selectedChatIds.forEach { chatId -> chatListViewModel.archiveChat(chatId, newArchiveState) }
+                    chatListViewModel.clearSelection()
+                }
+            )
+        }
+
+        if (chatListState.showDeleteConfirmation) {
+            val selectedChats = allChats.filter { it.id in selectedChatIds }
+            val selectedName = if (selectedChats.size == 1) selectedChats.first().title else "${selectedChatIds.size} گفتگو"
+            AlertDialog(
+                onDismissRequest = { chatListViewModel.cancelDeleteSelection() },
+                title = { Text("حذف گفتگو", fontFamily = DanaFontFamily) },
+                text = { Text("آیا مطمئن هستید که می‌خواهید $selectedName را حذف کنید؟ این عمل غیرقابل بازگشت است.", fontFamily = DanaFontFamily) },
+                confirmButton = {
+                    TextButton(onClick = { chatListViewModel.confirmDeleteSelection() }) {
+                        Text("حذف", color = MaterialTheme.colorScheme.error, fontFamily = DanaFontFamily)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { chatListViewModel.cancelDeleteSelection() }) {
+                        Text("انصراف", fontFamily = DanaFontFamily)
                     }
                 }
-            }
-            channels.isEmpty() -> {
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        imageVector = emptyIcon,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                        modifier = Modifier.size(64.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = emptyMessage,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        textAlign = TextAlign.Center,
-                        fontFamily = DanaFontFamily
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            when {
+                isLoading -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center),
+                        color = accentColor
                     )
                 }
-            }
-            else -> {
-                // Sort by createdAt descending (newest first)
-                val sortedChannels: List<SmartFolderChannelDto> = remember(channels) {
-                    channels.sortedByDescending { it.createdAt ?: "" }
-                }
-                LazyColumn(
-                    contentPadding = PaddingValues(vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    // Story Row at top
-                    item(key = "${folderType}_stories_row", contentType = "stories") {
-                        val storyUsers = when (val uiState = storyUiState) {
-                            is com.Kelasor.app.ui.viewmodel.StoriesUiState.Success -> uiState.storyUsers
-                            else -> emptyList()
+                error != null -> {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = error ?: "",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center,
+                            fontFamily = DanaFontFamily
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        TextButton(onClick = { viewModel.loadSmartFolders() }) {
+                            Text("تلاش مجدد", fontFamily = DanaFontFamily, color = accentColor)
                         }
-                        val currentUser = storyUsers.firstOrNull { it.isCurrentUser }
-                        com.Kelasor.app.ui.components.story.StoriesList(
-                            currentUser = currentUser,
-                            storyUsers = storyUsers,
-                            onStoryClick = { su ->
-                                if (su.isCurrentUser) {
-                                    if (subscribedChannels.size == 1) {
-                                        onNavigateToChannelStories(subscribedChannels.first().id, subscribedChannels.first().name)
-                                    } else if (subscribedChannels.isNotEmpty()) {
-                                        showMyStoriesChannelSheet = true
-                                    } else {
-                                        onMyStoriesClick()
-                                    }
-                                } else {
-                                    storyViewModel.openStoryViewer(su)
-                                }
-                            },
-                            onAddStoryClick = { showChannelSelectionSheet = true }
+                    }
+                }
+                channels.isEmpty() -> {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = emptyIcon,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = emptyMessage,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            textAlign = TextAlign.Center,
+                            fontFamily = DanaFontFamily
                         )
                     }
-                    items(sortedChannels, key = { it.id }) { channel ->
-                        SmartFolderChannelCard(
-                            channel = channel,
-                            accentColor = accentColor,
-                            onClick = { if (channel.chatType == "GROUP") onGroupClick(channel.id) else onChannelClick(channel.id) }
-                        )
+                }
+                else -> {
+                    val sortedChannels: List<SmartFolderChannelDto> = remember(channels) {
+                        channels.sortedByDescending { it.createdAt ?: "" }
+                    }
+                    LazyColumn(
+                        contentPadding = PaddingValues(vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        item(key = "${folderType}_stories_row", contentType = "stories") {
+                            val storyUsers = when (val uiState = storyUiState) {
+                                is com.Kelasor.app.ui.viewmodel.StoriesUiState.Success -> uiState.storyUsers
+                                else -> emptyList()
+                            }
+                            val currentUser = storyUsers.firstOrNull { it.isCurrentUser }
+                            com.Kelasor.app.ui.components.story.StoriesList(
+                                currentUser = currentUser,
+                                storyUsers = storyUsers,
+                                onStoryClick = { su ->
+                                    if (su.isCurrentUser) {
+                                        if (subscribedChannels.size == 1) {
+                                            onNavigateToChannelStories(subscribedChannels.first().id, subscribedChannels.first().name)
+                                        } else if (subscribedChannels.isNotEmpty()) {
+                                            showMyStoriesChannelSheet = true
+                                        } else {
+                                            onMyStoriesClick()
+                                        }
+                                    } else {
+                                        storyViewModel.openStoryViewer(su)
+                                    }
+                                },
+                                onAddStoryClick = { showChannelSelectionSheet = true }
+                            )
+                        }
+                        items(sortedChannels, key = { it.id }) { channel ->
+                            val mappedChat = allChats.find { it.id == channel.id } ?: com.Kelasor.app.domain.model.Chat(
+                                id = channel.id,
+                                type = if (channel.chatType == "GROUP") com.Kelasor.app.domain.model.ChatType.GROUP else com.Kelasor.app.domain.model.ChatType.CHANNEL,
+                                title = channel.name,
+                                avatarUrl = channel.avatarUrl,
+                                lastMessage = null,
+                                unreadCount = channel.unreadCount,
+                                isPinned = false,
+                                isMuted = false,
+                                isArchived = false,
+                                participants = emptyList(),
+                                updatedAt = java.time.Instant.now()
+                            )
+                            com.Kelasor.app.ui.screens.chat.ChatItem(
+                                chat = mappedChat,
+                                isSelected = selectedChatIds.contains(channel.id),
+                                inSelectionMode = selectedChatIds.isNotEmpty(),
+                                onClick = {
+                                    if (selectedChatIds.isNotEmpty()) {
+                                        chatListViewModel.toggleChatSelection(channel.id)
+                                    } else {
+                                        if (channel.chatType == "GROUP") onGroupClick(channel.id) else onChannelClick(channel.id)
+                                    }
+                                },
+                                onLongClick = {
+                                    chatListViewModel.toggleChatSelection(channel.id)
+                                },
+                                onPin = {
+                                    chatListViewModel.pinChat(channel.id, !mappedChat.isPinned)
+                                },
+                                onMute = {
+                                    chatListViewModel.muteChat(channel.id, !mappedChat.isMuted)
+                                },
+                                onArchive = {
+                                    chatListViewModel.archiveChat(channel.id, !mappedChat.isArchived)
+                                },
+                                onDelete = {
+                                    chatListViewModel.deleteChat(channel.id)
+                                }
+                            )
+                        }
                     }
                 }
             }

@@ -17,7 +17,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.ExperimentalComposeUiApi
 import android.widget.Toast
 import java.io.File
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -58,11 +68,8 @@ fun UserInfoScreen(
     var fullName by remember { mutableStateOf("") }
     var selectedRoleValueEn by remember { mutableStateOf("") }
     var selectedEducationLevel by remember { mutableStateOf("") }
-    var isLevelExpanded by remember { mutableStateOf(false) }
     var selectedFieldOfStudy by remember { mutableStateOf("") }
-    var isFieldExpanded by remember { mutableStateOf(false) }
     var selectedFaculty by remember { mutableStateOf("") }
-    var isFacultyExpanded by remember { mutableStateOf(false) }
     
     // New Fields
     var avatarUri by remember { mutableStateOf<android.net.Uri?>(null) }
@@ -71,7 +78,6 @@ fun UserInfoScreen(
     var universities by remember { mutableStateOf(listOf<String>()) }
     var fieldsOfStudy by remember { mutableStateOf(listOf<String>()) }
     var selectedUniversity by remember { mutableStateOf("") }
-    var isUniversityExpanded by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
 
@@ -113,7 +119,13 @@ fun UserInfoScreen(
     val allUniversities = remember(refState.universities) { refState.universities.map { it.name } }
     val allFieldsOfStudy = remember(refState.fieldsOfStudy) { refState.fieldsOfStudy.map { it.name } }
     
-    val isFormValid = fullName.isNotBlank() && selectedRoleValueEn.isNotBlank()
+    // Mandatory fields based on selected role
+    val isFormValid: Boolean = fullName.isNotBlank() && selectedRoleValueEn.isNotBlank() && when (selectedRoleValueEn) {
+        "UNI_STUDENT" -> selectedUniversity.isNotBlank() && selectedEducationLevel.isNotBlank()
+        "SCHOOL_STUDENT" -> selectedEducationLevel.isNotBlank()
+        "TEACHER" -> universities.isNotEmpty()
+        else -> true // FREELANCER etc.
+    }
 
     // Ensure data is loaded if it was missed or failed before
     LaunchedEffect(refState.educationalRoles) {
@@ -147,11 +159,11 @@ fun UserInfoScreen(
                 .padding(paddingValues)
         ) {
             // ── Avatar Upload Section ─────────────────────────────────────────────
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 24.dp, bottom = 16.dp),
-                contentAlignment = Alignment.Center
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Box(
                     modifier = Modifier
@@ -177,6 +189,14 @@ fun UserInfoScreen(
                         )
                     }
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "آپلود تصویر پروفایل (اختیاری)",
+                    fontFamily = DanaFontFamily,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    textAlign = TextAlign.Center
+                )
             }
 
             // ── Form Section ──────────────────────────────────────────────
@@ -312,17 +332,14 @@ fun UserInfoScreen(
                             // School student fields: مقطع + رشته (if configured)
                             val schoolLevels = refState.educationLevels.filter { it.roleValueEn == "SCHOOL_STUDENT" }
                             
-                            DropdownSelector(
+                            SearchableSelector(
                                 label = "مقطع تحصیلی",
                                 selected = selectedEducationLevel,
                                 options = schoolLevels.map { it.name },
-                                expanded = isLevelExpanded,
-                                onExpand = { isLevelExpanded = !isLevelExpanded },
-                                onDismiss = { isLevelExpanded = false },
+                                placeholder = "جستجوی مقطع تحصیلی...",
                                 onSelect = { 
                                     selectedEducationLevel = it
                                     selectedFieldOfStudy = ""
-                                    isLevelExpanded = false
                                 }
                             )
                             
@@ -337,16 +354,13 @@ fun UserInfoScreen(
                             ) {
                                 Column {
                                     Spacer(modifier = Modifier.height(16.dp))
-                                    DropdownSelector(
+                                    SearchableSelector(
                                         label = "رشته تحصیلی",
                                         selected = selectedFieldOfStudy,
                                         options = filteredFields,
-                                        expanded = isFieldExpanded,
-                                        onExpand = { isFieldExpanded = !isFieldExpanded },
-                                        onDismiss = { isFieldExpanded = false },
+                                        placeholder = "جستجوی رشته تحصیلی...",
                                         onSelect = {
                                             selectedFieldOfStudy = it
-                                            isFieldExpanded = false
                                         }
                                     )
                                 }
@@ -373,77 +387,65 @@ fun UserInfoScreen(
                             }
                             
                             if (isGraduated) {
-                                // Graduated student: دانشگاه → رشته → آخرین مقطع
+                                // Graduated student: دانشگاه → آخرین مقطع → رشته تحصیلی
                                 Spacer(modifier = Modifier.height(8.dp))
-                                DropdownSelector(
+                                SearchableSelector(
                                     label = "دانشگاه محل تحصیل",
                                     selected = selectedUniversity,
                                     options = allUniversities,
-                                    expanded = isUniversityExpanded,
-                                    onExpand = { isUniversityExpanded = !isUniversityExpanded },
-                                    onDismiss = { isUniversityExpanded = false },
+                                    placeholder = "جستجوی دانشگاه...",
                                     onSelect = {
                                         selectedUniversity = it
-                                        isUniversityExpanded = false
                                     }
                                 )
                                 
                                 Spacer(modifier = Modifier.height(16.dp))
-                                DropdownSelector(
-                                    label = "رشته تحصیلی",
-                                    selected = selectedFieldOfStudy,
-                                    options = allFieldsOfStudy,
-                                    expanded = isFieldExpanded,
-                                    onExpand = { isFieldExpanded = !isFieldExpanded },
-                                    onDismiss = { isFieldExpanded = false },
-                                    onSelect = {
-                                        selectedFieldOfStudy = it
-                                        isFieldExpanded = false
-                                    }
-                                )
-                                
-                                Spacer(modifier = Modifier.height(16.dp))
-                                DropdownSelector(
+                                SearchableSelector(
                                     label = "آخرین مقطع تحصیلی",
                                     selected = selectedEducationLevel,
                                     options = filteredLevels.map { it.name },
-                                    expanded = isLevelExpanded,
-                                    onExpand = { isLevelExpanded = !isLevelExpanded },
-                                    onDismiss = { isLevelExpanded = false },
+                                    placeholder = "جستجوی مقطع تحصیلی...",
                                     onSelect = {
                                         selectedEducationLevel = it
-                                        isLevelExpanded = false
+                                        if (selectedFieldOfStudy !in filteredFields) {
+                                            selectedFieldOfStudy = ""
+                                        }
+                                    }
+                                )
+                                
+                                Spacer(modifier = Modifier.height(16.dp))
+                                SearchableSelector(
+                                    label = "رشته تحصیلی",
+                                    selected = selectedFieldOfStudy,
+                                    options = filteredFields,
+                                    placeholder = "جستجوی رشته تحصیلی...",
+                                    onSelect = {
+                                        selectedFieldOfStudy = it
                                     }
                                 )
                             } else {
                                 // Active student: دانشگاه → مقطع → دانشکده → رشته
                                 Spacer(modifier = Modifier.height(8.dp))
-                                DropdownSelector(
+                                SearchableSelector(
                                     label = "دانشگاه محل تحصیل",
                                     selected = selectedUniversity,
                                     options = allUniversities,
-                                    expanded = isUniversityExpanded,
-                                    onExpand = { isUniversityExpanded = !isUniversityExpanded },
-                                    onDismiss = { isUniversityExpanded = false },
+                                    placeholder = "جستجوی دانشگاه...",
                                     onSelect = {
                                         selectedUniversity = it
-                                        isUniversityExpanded = false
                                     }
                                 )
                                 
                                 Spacer(modifier = Modifier.height(16.dp))
-                                DropdownSelector(
+                                SearchableSelector(
                                     label = "مقطع تحصیلی",
                                     selected = selectedEducationLevel,
                                     options = filteredLevels.map { it.name },
-                                    expanded = isLevelExpanded,
-                                    onExpand = { isLevelExpanded = !isLevelExpanded },
-                                    onDismiss = { isLevelExpanded = false },
+                                    placeholder = "جستجوی مقطع تحصیلی...",
                                     onSelect = { 
                                         selectedEducationLevel = it
                                         selectedFaculty = ""
                                         selectedFieldOfStudy = ""
-                                        isLevelExpanded = false
                                     }
                                 )
                                 
@@ -454,16 +456,13 @@ fun UserInfoScreen(
                                 ) {
                                     Column {
                                         Spacer(modifier = Modifier.height(16.dp))
-                                        DropdownSelector(
+                                        SearchableSelector(
                                             label = "دانشکده",
                                             selected = selectedFaculty,
                                             options = filteredFaculties,
-                                            expanded = isFacultyExpanded,
-                                            onExpand = { isFacultyExpanded = !isFacultyExpanded },
-                                            onDismiss = { isFacultyExpanded = false },
+                                            placeholder = "جستجوی دانشکده...",
                                             onSelect = {
                                                 selectedFaculty = it
-                                                isFacultyExpanded = false
                                             }
                                         )
                                     }
@@ -476,16 +475,13 @@ fun UserInfoScreen(
                                 ) {
                                     Column {
                                         Spacer(modifier = Modifier.height(16.dp))
-                                        DropdownSelector(
+                                        SearchableSelector(
                                             label = "رشته تحصیلی",
                                             selected = selectedFieldOfStudy,
                                             options = filteredFields,
-                                            expanded = isFieldExpanded,
-                                            onExpand = { isFieldExpanded = !isFieldExpanded },
-                                            onDismiss = { isFieldExpanded = false },
+                                            placeholder = "جستجوی رشته تحصیلی...",
                                             onSelect = {
                                                 selectedFieldOfStudy = it
-                                                isFieldExpanded = false
                                             }
                                         )
                                     }
@@ -507,6 +503,39 @@ fun UserInfoScreen(
                                 type = com.Kelasor.app.ui.components.ToastType.ERROR
                             )
                             return@PrimaryButton
+                        }
+                        if (selectedRoleValueEn.isBlank()) {
+                            com.Kelasor.app.ui.components.KelasorToast.show(
+                                context = context,
+                                message = "لطفاً نقش خود را انتخاب کنید",
+                                type = com.Kelasor.app.ui.components.ToastType.ERROR
+                            )
+                            return@PrimaryButton
+                        }
+                        // Role-specific mandatory field checks
+                        when (selectedRoleValueEn) {
+                            "UNI_STUDENT" -> {
+                                if (selectedUniversity.isBlank()) {
+                                    com.Kelasor.app.ui.components.KelasorToast.show(context = context, message = "لطفاً دانشگاه خود را انتخاب کنید", type = com.Kelasor.app.ui.components.ToastType.ERROR)
+                                    return@PrimaryButton
+                                }
+                                if (selectedEducationLevel.isBlank()) {
+                                    com.Kelasor.app.ui.components.KelasorToast.show(context = context, message = "لطفاً مقطع تحصیلی خود را انتخاب کنید", type = com.Kelasor.app.ui.components.ToastType.ERROR)
+                                    return@PrimaryButton
+                                }
+                            }
+                            "SCHOOL_STUDENT" -> {
+                                if (selectedEducationLevel.isBlank()) {
+                                    com.Kelasor.app.ui.components.KelasorToast.show(context = context, message = "لطفاً مقطع تحصیلی خود را انتخاب کنید", type = com.Kelasor.app.ui.components.ToastType.ERROR)
+                                    return@PrimaryButton
+                                }
+                            }
+                            "TEACHER" -> {
+                                if (universities.isEmpty()) {
+                                    com.Kelasor.app.ui.components.KelasorToast.show(context = context, message = "لطفاً حداقل یک دانشگاه اضافه کنید", type = com.Kelasor.app.ui.components.ToastType.ERROR)
+                                    return@PrimaryButton
+                                }
+                            }
                         }
                         val resolvedAvatarFile: java.io.File? = avatarUri?.let { uri ->
                             try {
@@ -653,21 +682,17 @@ private fun RoleChip(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DropdownSelector(
+private fun SearchableSelector(
     label: String,
     selected: String,
     options: List<String>,
-    expanded: Boolean,
-    onExpand: () -> Unit,
-    onDismiss: () -> Unit,
+    placeholder: String = "جستجو...",
     onSelect: (String) -> Unit
 ) {
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { onExpand() }
-    ) {
+    var isSearchOpen by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxWidth()) {
         OutlinedTextField(
             value = selected,
             onValueChange = {},
@@ -675,28 +700,185 @@ private fun DropdownSelector(
             label = { Text(label, fontFamily = DanaFontFamily) },
             trailingIcon = {
                 Icon(
-                    imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    imageVector = Icons.Default.KeyboardArrowDown,
                     contentDescription = null
                 )
             },
-            modifier = Modifier.menuAnchor().fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { isSearchOpen = true },
+            enabled = false,
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = MessageAppTheme.extendedColors.accent,
-                focusedLabelColor = MessageAppTheme.extendedColors.accent
+                disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                disabledBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
+                disabledLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurface
             )
         )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = onDismiss,
-            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clickable { isSearchOpen = true }
+        )
+    }
+
+    if (isSearchOpen) {
+        SearchSelectionDialog(
+            title = label,
+            options = options,
+            placeholder = placeholder,
+            onSelect = {
+                onSelect(it)
+                isSearchOpen = false
+            },
+            onDismiss = { isSearchOpen = false }
+        )
+    }
+}
+
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)
+@Composable
+private fun SearchSelectionDialog(
+    title: String,
+    options: List<String>,
+    placeholder: String,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusRequester = remember { FocusRequester() }
+
+    val filteredOptions = remember(searchQuery, options) {
+        if (searchQuery.isBlank()) {
+            options
+        } else {
+            options.filter { it.contains(searchQuery, ignoreCase = true) }
+        }
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .fillMaxHeight(0.8f)
+                .clip(RoundedCornerShape(24.dp)),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp
         ) {
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(text = option, fontFamily = DanaFontFamily) },
-                    onClick = { onSelect(option) }
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "انتخاب $title",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontFamily = DanaFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(imageVector = Icons.Default.Clear, contentDescription = "بستن")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text(text = placeholder, fontFamily = DanaFontFamily, fontSize = 14.sp) },
+                    leadingIcon = {
+                        Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(imageVector = Icons.Default.Clear, contentDescription = "پاک کردن")
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MessageAppTheme.extendedColors.accent,
+                        focusedLabelColor = MessageAppTheme.extendedColors.accent
+                    )
                 )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (filteredOptions.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "موردی یافت نشد",
+                            fontFamily = DanaFontFamily,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(filteredOptions) { option ->
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        keyboardController?.hide()
+                                        onSelect(option)
+                                    },
+                                color = Color.Transparent
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 12.dp, horizontal = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = option,
+                                        fontFamily = DanaFontFamily,
+                                        fontSize = 14.sp,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                        }
+                    }
+                }
             }
         }
+    }
+
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(100)
+        focusRequester.requestFocus()
+        keyboardController?.show()
     }
 }

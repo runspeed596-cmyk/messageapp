@@ -37,6 +37,7 @@ fun MosbatElmSettingsScreen(
     onNavigateBack: () -> Unit,
     onEditAcademyProfileClick: () -> Unit,
     onAcademyProfileClick: (String) -> Unit,
+    onAcademyAnalyticsClick: (String) -> Unit = {},
     onMyCoursesClick: () -> Unit = {},
     onCollaborationsClick: () -> Unit = {},
     onMosbatElmNotificationsClick: () -> Unit = {},
@@ -139,7 +140,7 @@ fun MosbatElmSettingsScreen(
                                 title = "آمار و درآمد",
                                 subtitle = "مشاهده عملکرد و گزارش مالی",
                                 iconColor = extendedColors.accent,
-                                onClick = { /* TODO */ }
+                                onClick = { user?.institutionId?.let { onAcademyAnalyticsClick(it) } }
                             ),
                             MosbatElmSettingsItemData(
                                 icon = Icons.Default.School,

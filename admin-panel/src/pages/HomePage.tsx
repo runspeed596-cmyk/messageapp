@@ -27,7 +27,6 @@ const HomePage = () => {
         title: '',
         imageUrl: '',
         linkUrl: '',
-        displayOrder: 0,
         isActive: true
     });
 
@@ -99,7 +98,7 @@ const HomePage = () => {
                 showNotify('success', 'بنر با موفقیت ذخیره شد');
                 setShowAddModal(false);
                 fetchData();
-                setBannerForm({ title: '', imageUrl: '', linkUrl: '', displayOrder: 0, isActive: true });
+                setBannerForm({ title: '', imageUrl: '', linkUrl: '', isActive: true });
             }
         } catch (err) {
             showNotify('error', 'خطا در ذخیره بنر');

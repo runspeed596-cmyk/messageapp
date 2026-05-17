@@ -71,6 +71,7 @@ import androidx.compose.ui.layout.ContentScale
 fun AiBotListScreen(
     onNavigateBack: () -> Unit,
     onBotClick: (botId: String, botName: String, botType: String) -> Unit,
+    onNavigateToChat: (String) -> Unit = {},
     viewModel: SpecialFolderViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -133,7 +134,15 @@ fun AiBotListScreen(
                     items(generalBots, key = { it.id }) { bot ->
                         AiBotCard(
                             bot = bot,
-                            onClick = { onBotClick(bot.id, bot.name, bot.botType) }
+                            onClick = {
+                                if (bot.botType == "mosbat_elm" || bot.botType == "mosbat_elm_bot") {
+                                    viewModel.startChatWithBot("00000000-0000-0000-0000-000000000001") { chatId ->
+                                        onNavigateToChat(chatId)
+                                    }
+                                } else {
+                                    onBotClick(bot.id, bot.name, bot.botType)
+                                }
+                            }
                         )
                     }
                 }
@@ -150,7 +159,15 @@ fun AiBotListScreen(
                     items(specialistBots, key = { it.id }) { bot ->
                         AiBotCard(
                             bot = bot,
-                            onClick = { onBotClick(bot.id, bot.name, bot.botType) }
+                            onClick = {
+                                if (bot.botType == "mosbat_elm" || bot.botType == "mosbat_elm_bot") {
+                                    viewModel.startChatWithBot("00000000-0000-0000-0000-000000000001") { chatId ->
+                                        onNavigateToChat(chatId)
+                                    }
+                                } else {
+                                    onBotClick(bot.id, bot.name, bot.botType)
+                                }
+                            }
                         )
                     }
                 }

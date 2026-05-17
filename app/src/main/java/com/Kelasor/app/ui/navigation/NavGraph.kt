@@ -198,6 +198,7 @@ fun NavGraph(
                 onNavigateToSettings = { navController.navigate(Routes.GlobalSettings.route) },
                 onNavigateToUserProfile = { userId -> navController.navigate(Routes.UserProfile.createRoute(userId)) },
                 onNavigateToNotifications = { navController.navigate(Routes.Notifications.route) },
+                onNavigateToMosbatElmNotifications = { navController.navigate(Routes.MosbatElmNotifications.route) },
                 onNavigateToElm = { navController.navigate(Routes.Elm.route) },
                 onNavigateToAllMovies = { navController.navigate(Routes.AllMovies.route) },
                 onNavigateToAllMusic = { navController.navigate(Routes.AllMusic.route) },
@@ -614,6 +615,9 @@ fun NavGraph(
                 onNavigateBack = { navController.popBackStack() },
                 onBotClick = { botId, botName, botType ->
                     navController.navigate(Routes.AiBotChat.createRoute(botId, botName, botType))
+                },
+                onNavigateToChat = { chatId ->
+                    navController.navigate(Routes.Conversation.createRoute(chatId))
                 }
             )
         }
@@ -701,12 +705,28 @@ fun NavGraph(
                 onAcademyProfileClick = { institutionId -> 
                     navController.navigate(Routes.AcademyProfile.createRoute(institutionId))
                 },
+                onAcademyAnalyticsClick = { institutionId -> 
+                    navController.navigate(Routes.AcademyAnalytics.createRoute(institutionId))
+                },
                 onMyCoursesClick = { navController.navigate(Routes.MyCourses.route) },
                 onCollaborationsClick = { navController.navigate(Routes.Collaborations.route) },
                 onMosbatElmNotificationsClick = { navController.navigate(Routes.MosbatElmNotifications.route) },
                 onPurchasedCoursesClick = { navController.navigate(Routes.MyCourses.route) },
                 onCertificatesClick = { navController.navigate(Routes.ComingSoon.createRoute("مدرک‌های دریافت شده")) },
                 onLikedPostsClick = { navController.navigate(Routes.LikedPosts.route) }
+            )
+        }
+        composable(
+            route = Routes.AcademyAnalytics.route,
+            arguments = listOf(navArgument("institutionId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val institutionId = backStackEntry.arguments?.getString("institutionId") ?: ""
+            com.Kelasor.app.ui.screens.mosbat_elm.AcademyAnalyticsScreen(
+                institutionId = institutionId,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToCourseDetail = { courseId ->
+                    navController.navigate(Routes.CourseDetail.createRoute(courseId))
+                }
             )
         }
         composable(
@@ -731,6 +751,9 @@ fun NavGraph(
                 },
                 onNavigateToEditCourse = { courseId ->
                     navController.navigate(Routes.EditCourse.createRoute(courseId))
+                },
+                onNavigateToChannel = { channelId ->
+                    navController.navigate(Routes.ChannelView.createRoute(channelId))
                 }
             )
         }
@@ -1121,7 +1144,10 @@ fun NavGraph(
         }
         composable(Routes.MosbatElmNotifications.route) {
             com.Kelasor.app.ui.screens.mosbat_elm.MosbatElmNotificationsScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToAcademyProfile = { academyId ->
+                    navController.navigate(Routes.AcademyProfile.createRoute(academyId))
+                }
             )
         }
         composable(Routes.Collaborations.route) {

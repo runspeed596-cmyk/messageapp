@@ -377,7 +377,12 @@ fun CourseDetailScreen(
                             institutionId = course.institutionId,
                             collaborators = course.collaborators,
                             onOrganizerClick = { onOrganizerClick(course.institutionId) },
-                            onChannelClick = { onChannelClick(it) }
+                            onChannelClick = { 
+                                val targetChannelId = course.organizerChannelId ?: course.channelId ?: course.institutionId
+                                if (!targetChannelId.isNullOrEmpty()) {
+                                    onChannelClick(targetChannelId)
+                                }
+                            }
                         )
                     }
                     
@@ -757,7 +762,7 @@ fun CourseMainInfo(course: Course, currentTime: java.time.Instant = java.time.In
                 }
             }
             
-            if (course.rating >= 4.5) {
+            if (course.enrolledCount > 100) {
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
@@ -1169,14 +1174,11 @@ fun AcademyManagerSection(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "ارتباط با مدیر",
+                    text = "مدیر آکادمی برگزارکننده",
                     fontFamily = DanaFontFamily,
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-            TextButton(onClick = { onMessageClick(managerId) }) {
-                Text("ارسال پیام", fontFamily = DanaFontFamily, fontSize = 13.sp)
             }
         }
     }

@@ -254,4 +254,16 @@ class CourseController(
         val result: Page<CourseCommentResponse> = courseService.getComments(id, pageable)
         return ResponseEntity.ok(ApiResponse(success = true, message = "OK", data = result))
     }
+
+    @PostMapping("/{id}/view")
+    fun incrementViewCount(@PathVariable id: UUID): ResponseEntity<ApiResponse<Long>> {
+        val result = courseService.incrementViewCount(id)
+        return ResponseEntity.ok(ApiResponse(success = true, message = "View count incremented", data = result))
+    }
+
+    @PostMapping("/{id}/click")
+    fun incrementClickCount(@PathVariable id: UUID): ResponseEntity<ApiResponse<Long>> {
+        val result = courseService.incrementClickCount(id)
+        return ResponseEntity.ok(ApiResponse(success = true, message = "Click count incremented", data = result))
+    }
 }

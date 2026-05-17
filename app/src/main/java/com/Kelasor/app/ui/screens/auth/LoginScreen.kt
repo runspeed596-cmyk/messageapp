@@ -35,7 +35,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -211,31 +210,22 @@ fun LoginScreen(
                             )
                         )
                 )
-                // Logo circle
+                // Logo using launcher foreground (already has its own background)
                 Box(
                     modifier = Modifier
-                        .size(100.dp)
+                        .size(110.dp)
                         .graphicsLayer {
                             scaleX = logoScale.value
                             scaleY = logoScale.value
                             alpha = logoAlpha.value
                         }
-                        .clip(CircleShape)
-                        .background(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    extendedColors.gradientStart,
-                                    extendedColors.gradientEnd
-                                )
-                            )
-                        ),
+                        .clip(CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Chat,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(48.dp)
+                    androidx.compose.foundation.Image(
+                        painter = androidx.compose.ui.res.painterResource(com.Kelasor.app.R.drawable.ic_launcher_foreground),
+                        contentDescription = "Logo",
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
             }

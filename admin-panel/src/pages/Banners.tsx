@@ -14,7 +14,6 @@ const Banners = () => {
         title: '',
         imageUrl: '',
         linkUrl: '',
-        displayOrder: 0,
         isActive: true
     });
 
@@ -62,7 +61,7 @@ const Banners = () => {
 
             fetchBanners();
             setIsAdding(false);
-            setNewBanner({ title: '', imageUrl: '', linkUrl: '', displayOrder: 0, isActive: true });
+            setNewBanner({ title: '', imageUrl: '', linkUrl: '', isActive: true });
             setSelectedFile(null);
             setPreviewUrl('');
         } catch (error) {
@@ -86,7 +85,7 @@ const Banners = () => {
 
     const resetForm = () => {
         setIsAdding(false);
-        setNewBanner({ title: '', imageUrl: '', linkUrl: '', displayOrder: 0, isActive: true });
+        setNewBanner({ title: '', imageUrl: '', linkUrl: '', isActive: true });
         setSelectedFile(null);
         setPreviewUrl('');
     };
@@ -175,15 +174,7 @@ const Banners = () => {
                                     onChange={e => setNewBanner({ ...newBanner, linkUrl: e.target.value })}
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-500 mr-2 uppercase tracking-widest">ترتیب نمایش (اولویت)</label>
-                                <input
-                                    type="number"
-                                    className="w-full glass bg-white/5 border-white/5 p-4 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                                    value={newBanner.displayOrder}
-                                    onChange={e => setNewBanner({ ...newBanner, displayOrder: parseInt(e.target.value) })}
-                                />
-                            </div>
+
                         </div>
                     </div>
 
@@ -233,7 +224,7 @@ const Banners = () => {
                                 )}
                                 <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-slate-900 to-transparent">
                                     <div className="flex justify-between items-end">
-                                        <div className="text-xs font-black bg-indigo-500 text-white px-3 py-1 rounded-full mb-3">اولویت {banner.displayOrder}</div>
+                                        <div className="text-xs font-black bg-indigo-500 text-white px-3 py-1 rounded-full mb-3">{banner.title}</div>
                                         <div className="flex gap-2">
                                             <button
                                                 onClick={() => handleDelete(banner.id!)}

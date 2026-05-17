@@ -46,6 +46,7 @@ sealed class AcademyPublicProfileEvent {
     data class NavigateToUserProfile(val userId: String) : AcademyPublicProfileEvent()
     data class NavigateToEditProfile(val institutionId: String) : AcademyPublicProfileEvent()
     data class NavigateToChannel(val channelId: String) : AcademyPublicProfileEvent()
+    data class ShowToast(val message: String, val type: com.Kelasor.app.ui.components.ToastType) : AcademyPublicProfileEvent()
 }
 
 @HiltViewModel
@@ -53,7 +54,8 @@ class AcademyPublicProfileViewModel @Inject constructor(
     private val institutionRepository: InstitutionRepository,
     private val courseRepository: CourseRepository,
     private val userRepository: com.Kelasor.app.data.repository.UserRepository,
-    private val chatRepository: com.Kelasor.app.data.repository.ChatRepository
+    private val chatRepository: com.Kelasor.app.data.repository.ChatRepository,
+    private val channelRepository: com.Kelasor.app.data.repository.ChannelRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AcademyProfileState())
@@ -155,8 +157,10 @@ class AcademyPublicProfileViewModel @Inject constructor(
                 val computedScore = (coursesResponse.size / 3.0) * 0.25
                 val finalScore = if (computedScore > 5.0) 5.0 else computedScore
                 
-                val avgRating = if (coursesResponse.any { it.rating > 0.0 }) {
-                    coursesResponse.filter { it.rating > 0.0 }.map { it.rating }.average()
+                // Calculate average rating from courses that have positive ratings
+                val coursesWithRating = coursesResponse.filter { it.rating > 0.0 }
+                val avgRating = if (coursesWithRating.isNotEmpty()) {
+                    coursesWithRating.map { it.rating }.average()
                 } else 0.0
 
                 // Fetch following status
@@ -186,7 +190,12 @@ class AcademyPublicProfileViewModel @Inject constructor(
                         isSelf = isSelf,
                         pendingCollaborations = pendingCollabs,
                         calculatedScore = finalScore,
-                        calculatedRating = if (institution.averageRating > 0.0) institution.averageRating else avgRating,
+                        calculatedRating = when {
+                            avgRating > 0.0 -> avgRating
+                            institution.averageRating > 0.0 -> institution.averageRating
+                            institution.rating > 0.0 -> institution.rating
+                            else -> 0.0
+                        },
                         // If we are currently loading a follow status change, keep our optimistic state
                         isFollowing = if (currentState.isFollowLoading) currentState.isFollowing else currentlyFollowing,
                         isLoading = false
@@ -227,37 +236,57 @@ class AcademyPublicProfileViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val ownerId = institution.ownerId
-                val result = if (currentlyFollowing) {
+                val flow = if (currentlyFollowing) {
                     userRepository.unfollowUser(ownerId)
                 } else {
                     userRepository.followUser(ownerId)
-                }.filter { it !is UserResult.Loading }.first()
+                }
                 
-                if (result is UserResult.Success) {
-                    _state.update { currentState ->
-                        currentState.copy(
-                            isFollowLoading = false
-                        )
-                    }
-                    android.util.Log.d("AcademyVM", "Follow/Unfollow success. New state: ${!currentlyFollowing}")
-                } else {
-                    // Revert on failure
-                    android.util.Log.e("AcademyVM", "Follow/Unfollow result was not success: $result")
-                    _state.update { currentState ->
-                        val revertedInstitution = currentState.institution?.let { inst ->
-                            val revertedFollowerCount = if (currentlyFollowing) {
-                                inst.followerCount + 1
-                            } else {
-                                maxOf(0, inst.followerCount - 1)
-                            }
-                            inst.copy(followerCount = revertedFollowerCount)
+                flow.collect { result ->
+                    if (result is UserResult.Success) {
+                        _state.update { currentState ->
+                            currentState.copy(
+                                isFollowLoading = false
+                            )
                         }
-                        currentState.copy(
-                            isFollowLoading = false,
-                            isFollowing = currentlyFollowing,
-                            institution = revertedInstitution,
-                            error = "خطا در بروزرسانی وضعیت دنبال کردن"
-                        )
+                        android.util.Log.d("AcademyVM", "Follow/Unfollow success. New state: ${!currentlyFollowing}")
+                        
+                        // Auto-subscribe to channel (fire-and-forget — must NOT affect follow state)
+                        if (!currentlyFollowing && !institution.channelId.isNullOrEmpty()) {
+                            viewModelScope.launch {
+                                try {
+                                    channelRepository.subscribe(institution.channelId).collect { channelResult ->
+                                        if (channelResult is com.Kelasor.app.data.repository.ChannelResult.Success) {
+                                            _events.emit(AcademyPublicProfileEvent.ShowToast(
+                                                message = "شما به کانال ${institution.name} عضو شدید و در بخش علم کلاب میتونید ببینید",
+                                                type = com.Kelasor.app.ui.components.ToastType.SUCCESS
+                                            ))
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    android.util.Log.e("AcademyVM", "Failed auto-subscribing to channel", e)
+                                }
+                            }
+                        }
+                    } else if (result is UserResult.Error) {
+                        // Revert on failure
+                        android.util.Log.e("AcademyVM", "Follow/Unfollow result error: ${result.message}")
+                        _state.update { currentState ->
+                            val revertedInstitution = currentState.institution?.let { inst ->
+                                val revertedFollowerCount = if (currentlyFollowing) {
+                                    inst.followerCount + 1
+                                } else {
+                                    maxOf(0, inst.followerCount - 1)
+                                }
+                                inst.copy(followerCount = revertedFollowerCount)
+                            }
+                            currentState.copy(
+                                isFollowLoading = false,
+                                isFollowing = currentlyFollowing,
+                                institution = revertedInstitution,
+                                error = "خطا در بروزرسانی وضعیت دنبال کردن"
+                            )
+                        }
                     }
                 }
             } catch (e: Exception) {

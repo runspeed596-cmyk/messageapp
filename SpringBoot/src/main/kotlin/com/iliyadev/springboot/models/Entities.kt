@@ -73,7 +73,9 @@ enum class NotificationType {
     COLLABORATION_ACCEPTED,
     COLLABORATION_REJECTED,
     NEW_MESSAGE,
-    SYSTEM
+    SYSTEM,
+    ADMIN_INVITE,
+    TEACHER_INVITE
 }
 
 enum class OfficialGroupCategory {
@@ -365,6 +367,8 @@ class Group(
     // Special Folder (Official) fields
     @Column(nullable = false)
     var isOfficial: Boolean = false,
+    @Column(nullable = false)
+    var isSystemOfficial: Boolean = false,
     @Enumerated(EnumType.STRING)
     var officialCategory: OfficialGroupCategory? = null,
     @Column(nullable = false)
@@ -378,7 +382,8 @@ class Group(
     var targetProvince: String? = null,
     var targetCity: String? = null,
     var targetUniversity: String? = null,
-    var targetMinistry: String? = null
+    var targetMinistry: String? = null,
+    var targetAudienceType: String? = null
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -491,6 +496,8 @@ class Channel(
     // Special Folder (Official) fields
     @Column(nullable = false)
     var isOfficial: Boolean = false,
+    @Column(nullable = false)
+    var isSystemOfficial: Boolean = false,
     @Enumerated(EnumType.STRING)
     var officialCategory: OfficialChannelCategory? = null,
     @Enumerated(EnumType.STRING)
@@ -503,6 +510,7 @@ class Channel(
     var targetCity: String? = null,
     var targetUniversity: String? = null,
     var targetMinistry: String? = null,
+    var targetAudienceType: String? = null,
     // Mosbat Elm: Channel classification & DRM
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
@@ -937,7 +945,8 @@ class Notification(
     @Column(nullable = false)
     var isSubscriptionNotification: Boolean = false,
     @Column(nullable = false, length = 10)
-    var notificationTier: String = "NORMAL"  // NORMAL (red) or GOLDEN (subscription)
+    var notificationTier: String = "NORMAL",  // NORMAL (red) or GOLDEN (subscription)
+    var status: String = "PENDING"
 )
 
 
@@ -956,7 +965,6 @@ class HomeBanner(
     var linkUrl: String? = null,
     var colorStart: Long = 0xFF6200EA,
     var colorEnd: Long = 0xFFEC407A,
-    var displayOrder: Int = 0,
     var isActive: Boolean = true,
     var section: String = "HOME", // "HOME", "MOSBAT_ELM"
     var createdAt: Instant = Instant.now()
@@ -969,7 +977,6 @@ class Club(
     @GeneratedValue(strategy = GenerationType.UUID)
     var id: java.util.UUID? = null,
     var name: String = "",
-    var displayOrder: Int = 0
 )
 
 @Entity
@@ -979,7 +986,6 @@ class StudentOrg(
     @GeneratedValue(strategy = GenerationType.UUID)
     var id: java.util.UUID? = null,
     var name: String = "",
-    var displayOrder: Int = 0
 )
 
 @Entity
@@ -998,16 +1004,15 @@ class University(
     var type: String? = null, // Public, Private, Azad, etc.
     var establishedYear: Int? = null,
     var studentCount: Int = 0,
-    @Column(name = "iran_rank", nullable = false)
-    var iranRank: Int = 0,
-    @Column(name = "world_rank", nullable = false)
-    var worldRank: Int = 0,
+    @Column(columnDefinition = "TEXT")
+    var rankings: String? = null,
     @Column(nullable = false)
     var articleCount: Int = 0,
     @Column(nullable = false)
     var journalCount: Int = 0,
     @Column(nullable = false)
     var paperCount: Int = 0,
+    var createdAt: Instant = Instant.now(),
     @Column(length = 2000)
     var facilities: String? = null,
     @Column(length = 2000)
@@ -1034,8 +1039,7 @@ class University(
     @Column(length = 5000)
     var studentOrgs: String? = null, // انجمن‌ها، کانون‌ها و مجموعه‌های دانشجویی
     @Column(length = 5000)
-    var lastAdmissionCapacity: String? = null, // آخرین ظرفیت پذیرش هر رشته
-    var createdAt: Instant = Instant.now()
+    var lastAdmissionCapacity: String? = null // آخرین ظرفیت پذیرش هر رشته
 )
 
 @Entity
@@ -1119,7 +1123,6 @@ class RiddleOption(
     @JoinColumn(name = "riddle_id")
     var riddle: EntertainmentRiddle? = null,
     var text: String = "",
-    var displayOrder: Int = 0
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1159,7 +1162,6 @@ class AiBot(
     @Column(length = 500)
     var description: String? = null,
     var avatarUrl: String? = null,
-    var displayOrder: Int = 0,
     var isActive: Boolean = true,
     var createdAt: Instant = Instant.now()
 )
@@ -1201,7 +1203,6 @@ class FieldOfStudy(
     var name: String = "",
     @Column(nullable = false)
     var educationLevel: String = "", // e.g. کارشناسی, کارشناسی ارشد, دکتری
-    var displayOrder: Int = 0,
     var createdAt: Instant = Instant.now()
 )
 
@@ -1222,7 +1223,6 @@ class EducationLevel(
     var hasFieldOfStudy: Boolean = false,
     @Column(nullable = false, columnDefinition = "boolean default false")
     var hasFaculty: Boolean = false,
-    var displayOrder: Int = 0,
     var createdAt: Instant = Instant.now()
 )
 
@@ -1241,7 +1241,6 @@ class EducationalRoleOption(
     @Column(nullable = false)
     var valueEn: String = "", // e.g. SCHOOL_STUDENT, UNI_STUDENT, TEACHER, FREELANCER
     var emoji: String = "📚", // e.g. 🎒, 🎓, 📚, 💼
-    var displayOrder: Int = 0,
     var createdAt: Instant = Instant.now()
 )
 
@@ -1258,6 +1257,7 @@ class Faculty(
     @Column(nullable = false, unique = true)
     var name: String = "",
     var educationLevel: String? = null, // Linked to EducationLevel.name
+    @Column(name = "display_order", nullable = false, columnDefinition = "integer default 0")
     var displayOrder: Int = 0,
     var createdAt: Instant = Instant.now()
 )
@@ -1590,6 +1590,10 @@ class Course(
     var organizerDescription: String? = null,
     var scientificAssociationName: String? = null,
     var isVerticalPoster: Boolean = false,
+    @Column(nullable = false, columnDefinition = "bigint default 0")
+    var viewCount: Long = 0,
+    @Column(nullable = false, columnDefinition = "bigint default 0")
+    var clickCount: Long = 0,
     // BBB Integration
     var bbbMeetingId: String? = null,
     var bbbAttendeePassword: String? = null,
@@ -1988,7 +1992,6 @@ class SmartFolderRule(
     var folderType: FolderType = FolderType.TEACHERS,
     @Enumerated(EnumType.STRING)
     var classification: ChannelClassification = ChannelClassification.VERIFIED_TEACHER,
-    var displayOrder: Int = 0,
     var iconName: String? = null,
     var labelFa: String = "",
     var isActive: Boolean = true

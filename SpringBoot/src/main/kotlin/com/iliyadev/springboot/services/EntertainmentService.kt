@@ -49,10 +49,9 @@ class EntertainmentService(
                 options = riddle.options.map { option ->
                     RiddleOptionDto(
                         id = option.id ?: UUID.randomUUID(),
-                        text = option.text,
-                        displayOrder = option.displayOrder
+                        text = option.text
                     )
-                }.sortedBy { it.displayOrder },
+                },
                 correctAnswerIndex = riddle.correctAnswerIndex
             )
         }

@@ -48,7 +48,7 @@ class SmartFolderEngineService(
      * Each folder is populated based on channel classifications and user profile.
      */
     fun computeSmartFolders(userId: UUID): List<SmartFolderResponse> {
-        val rules: List<SmartFolderRule> = smartFolderRuleRepository.findByIsActiveTrueOrderByDisplayOrderAsc()
+        val rules: List<SmartFolderRule> = smartFolderRuleRepository.findAllByIsActiveTrue()
         if (rules.isEmpty()) return getDefaultFolders(userId)
         return rules.groupBy { it.folderType }.map { (folderType, folderRules) ->
             val firstRule: SmartFolderRule = folderRules.first()
@@ -79,11 +79,17 @@ class SmartFolderEngineService(
         val elmClubChannels: List<Channel> = findChannelsByClassifications(
             listOf(ChannelClassification.ELM_CLUB_INSTITUTION), userId
         )
+        val elmClubGroups: List<Group> = groupRepository.findByIsOfficialTrue()
+            .filter { group ->
+                group.officialCategory != com.iliyadev.springboot.models.OfficialGroupCategory.COURSE_GROUP &&
+                groupMemberRepository.existsByGroupIdAndUserId(group.id!!, userId)
+            }
         result.add(SmartFolderResponse(
             folderType = FolderType.ELM_CLUB,
             labelFa = "باشگاه علم",
             iconName = "groups",
-            channels = elmClubChannels.map { mapChannelToResponse(it, userId) }
+            channels = elmClubChannels.map { mapChannelToResponse(it, userId) } +
+                       elmClubGroups.map { mapGroupToResponse(it) }
         ))
         // Courses folder
         val courseChannels: List<Channel> = findChannelsByClassifications(
@@ -93,7 +99,7 @@ class SmartFolderEngineService(
         val courseGroups: List<Group> = groupRepository.findByIsOfficialTrue()
             .filter { group ->
                 group.officialCategory == com.iliyadev.springboot.models.OfficialGroupCategory.COURSE_GROUP &&
-                (group.isPublic || groupMemberRepository.existsByGroupIdAndUserId(group.id!!, userId))
+                groupMemberRepository.existsByGroupIdAndUserId(group.id!!, userId)
             }
         
         result.add(SmartFolderResponse(
@@ -113,7 +119,8 @@ class SmartFolderEngineService(
         return channelRepository.findByClassificationIn(classifications)
             .filter { channel ->
                 val isSubscribed = channelSubscriberRepository.existsByChannelIdAndUserId(channel.id!!, userId)
-                if (channel.classification == ChannelClassification.VERIFIED_TEACHER) {
+                if (channel.classification == ChannelClassification.VERIFIED_TEACHER ||
+                    channel.classification == ChannelClassification.COURSE_CHANNEL) {
                     isSubscribed
                 } else {
                     channel.isPublic || isSubscribed

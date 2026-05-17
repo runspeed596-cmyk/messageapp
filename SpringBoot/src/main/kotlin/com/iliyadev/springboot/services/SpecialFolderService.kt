@@ -15,7 +15,8 @@ class SpecialFolderService(
     private val groupMemberRepository: GroupMemberRepository,
     private val channelSubscriberRepository: ChannelSubscriberRepository,
     private val userRepository: UserRepository,
-    private val roleChannelMappingRepository: RoleChannelMappingRepository
+    private val roleChannelMappingRepository: RoleChannelMappingRepository,
+    private val universityRepository: UniversityRepository
 ) {
     @Transactional
     fun getSpecialFolder(userId: UUID): SpecialFolderDto {
@@ -27,10 +28,16 @@ class SpecialFolderService(
         val userUniversity: String? = user.profileDetails?.university
         val userFieldOfStudy: String? = user.profileDetails?.fieldOfStudy
         val userEducationLevel: String? = user.profileDetails?.education
+        
+        // Gather all ministries associated with user's universities
+        val userMinistries: Set<String> = user.profileDetails?.universities?.mapNotNull { uniName ->
+            universityRepository.findByNameIgnoreCase(uniName).firstOrNull()?.ministryName
+        }?.toSet() ?: emptySet()
+
         // Auto-subscribe user to matching official channels/groups
         autoSubscribeUser(user)
         val aiBots: List<AiBotDto> = aiBotRepository
-            .findAllByIsActiveTrueOrderByDisplayOrderAsc()
+            .findAllByIsActiveTrue()
             .map { it.toDto() }
         val officialChannels: List<Channel> = channelRepository.findByIsOfficialTrue()
         val filteredChannels: List<SpecialChannelDto> = officialChannels
@@ -39,7 +46,7 @@ class SpecialFolderService(
                 // Always show channels where user is admin/owner
                 val isUserAdmin: Boolean = channelSubscriberRepository.findByChannelIdAndUserId(channel.id!!, userId)?.isAdmin == true
                     || channel.owner?.id == userId
-                isUserAdmin || isChannelRelevantForUser(channel, userProvince, userCity, userUniversity, userFieldOfStudy, userEducationLevel)
+                isUserAdmin || isChannelRelevantForUser(channel, userProvince, userCity, userUniversity, userFieldOfStudy, userEducationLevel, user.educationalRole, userMinistries)
             }
             .map { channel ->
                 val subscriberCount: Long = channelSubscriberRepository.countByChannelId(channel.id!!)
@@ -58,7 +65,7 @@ class SpecialFolderService(
                 // Always show groups where user is admin/owner
                 val member: GroupMember? = groupMemberRepository.findByGroupIdAndUserId(group.id!!, userId)
                 val isUserAdmin: Boolean = member != null && (member.role == MemberRole.OWNER || member.role == MemberRole.ADMIN)
-                isUserAdmin || isGroupRelevantForUser(group, userProvince, userCity, userUniversity, userFieldOfStudy, userEducationLevel)
+                isUserAdmin || isGroupRelevantForUser(group, userProvince, userCity, userUniversity, userFieldOfStudy, userEducationLevel, user.educationalRole, userMinistries)
             }
             .map { group ->
                 val memberCount: Long = groupMemberRepository.countByGroupId(group.id!!)
@@ -122,6 +129,11 @@ class SpecialFolderService(
         val userRole = user.educationalRole
         val userGradeLevel = user.gradeLevel
         val userMajor = user.major
+
+        // Gather all ministries associated with user's universities
+        val userMinistries: Set<String> = user.profileDetails?.universities?.mapNotNull { uniName ->
+            universityRepository.findByNameIgnoreCase(uniName).firstOrNull()?.ministryName
+        }?.toSet() ?: emptySet()
         
         // Auto-join mandatory role-based channels
         if (!userRole.isNullOrBlank()) {
@@ -153,7 +165,7 @@ class SpecialFolderService(
         // Auto-join official channels
         val officialChannels: List<Channel> = channelRepository.findByIsOfficialTrue()
         for (channel: Channel in officialChannels) {
-            if (!isChannelRelevantForUser(channel, userProvince, userCity, userUniversity, userFieldOfStudy, userEducationLevel)) continue
+            if (!isChannelRelevantForUser(channel, userProvince, userCity, userUniversity, userFieldOfStudy, userEducationLevel, user.educationalRole, userMinistries)) continue
             val existingSub: ChannelSubscriber? = channelSubscriberRepository.findByChannelIdAndUserId(channel.id!!, userId)
             if (existingSub == null) {
                 val newSub: ChannelSubscriber = ChannelSubscriber(
@@ -164,10 +176,11 @@ class SpecialFolderService(
                 channelSubscriberRepository.save(newSub)
             }
         }
-        // Auto-join official groups
+        // Auto-join official groups (except course groups)
         val officialGroups: List<Group> = groupRepository.findByIsOfficialTrue()
         for (group: Group in officialGroups) {
-            if (!isGroupRelevantForUser(group, userProvince, userCity, userUniversity, userFieldOfStudy, userEducationLevel)) continue
+            if (group.officialCategory == OfficialGroupCategory.COURSE_GROUP) continue
+            if (!isGroupRelevantForUser(group, userProvince, userCity, userUniversity, userFieldOfStudy, userEducationLevel, user.educationalRole, userMinistries)) continue
             val existingMember: GroupMember? = groupMemberRepository.findByGroupIdAndUserId(group.id!!, userId)
             if (existingMember == null) {
                 val newMember: GroupMember = GroupMember(
@@ -191,8 +204,15 @@ class SpecialFolderService(
         userCity: String?,
         userUniversity: String?,
         userFieldOfStudy: String?,
-        userEducationLevel: String?
+        userEducationLevel: String?,
+        userEducationalRole: String?,
+        userMinistries: Set<String> = emptySet()
     ): Boolean {
+        if (channel.targetAudienceType != null) {
+            val role = userEducationalRole?.uppercase() ?: ""
+            if (channel.targetAudienceType == "STUDENT" && role != "UNI_STUDENT") return false
+            if (channel.targetAudienceType == "PUPIL" && role != "SCHOOL_STUDENT") return false
+        }
         if (channel.targetProvince != null) {
             if (userProvince == null || !channel.targetProvince!!.split(",").map { it.trim() }.contains(userProvince.trim())) return false
         }
@@ -208,6 +228,10 @@ class SpecialFolderService(
         if (channel.targetEducationLevel != null) {
             if (userEducationLevel == null || !channel.targetEducationLevel!!.split(",").map { it.trim() }.contains(userEducationLevel.trim())) return false
         }
+        if (channel.targetMinistry != null) {
+            val targets = channel.targetMinistry!!.split(",").map { it.trim() }
+            if (userMinistries.none { targets.contains(it) }) return false
+        }
         return true
     }
 
@@ -222,8 +246,15 @@ class SpecialFolderService(
         userCity: String?,
         userUniversity: String?,
         userFieldOfStudy: String?,
-        userEducationLevel: String?
+        userEducationLevel: String?,
+        userEducationalRole: String?,
+        userMinistries: Set<String> = emptySet()
     ): Boolean {
+        if (group.targetAudienceType != null) {
+            val role = userEducationalRole?.uppercase() ?: ""
+            if (group.targetAudienceType == "STUDENT" && role != "UNI_STUDENT") return false
+            if (group.targetAudienceType == "PUPIL" && role != "SCHOOL_STUDENT") return false
+        }
         if (group.targetProvince != null) {
             if (userProvince == null || !group.targetProvince!!.split(",").map { it.trim() }.contains(userProvince.trim())) return false
         }
@@ -236,6 +267,10 @@ class SpecialFolderService(
         if (group.targetFieldOfStudy != null) {
             if (userFieldOfStudy == null || !group.targetFieldOfStudy!!.split(",").map { it.trim() }.contains(userFieldOfStudy.trim())) return false
         }
+        if (group.targetMinistry != null) {
+            val targets = group.targetMinistry!!.split(",").map { it.trim() }
+            if (userMinistries.none { targets.contains(it) }) return false
+        }
         if (group.targetEducationLevel != null) {
             if (userEducationLevel == null || !group.targetEducationLevel!!.split(",").map { it.trim() }.contains(userEducationLevel.trim())) return false
         }
@@ -247,8 +282,7 @@ class SpecialFolderService(
             name = request.name,
             botType = request.botType,
             description = request.description,
-            avatarUrl = request.avatarUrl,
-            displayOrder = request.displayOrder
+            avatarUrl = request.avatarUrl
         )
         return aiBotRepository.save(bot).toDto()
     }
@@ -258,7 +292,7 @@ class SpecialFolderService(
     }
 
     fun getAllAiBots(): List<AiBotDto> {
-        return aiBotRepository.findAllByIsActiveTrueOrderByDisplayOrderAsc().map { it.toDto() }
+        return aiBotRepository.findAllByIsActiveTrue().map { it.toDto() }
     }
 
     fun createOfficialGroup(request: CreateOfficialGroupRequest, creatorId: UUID): SpecialGroupDto {
@@ -272,6 +306,7 @@ class SpecialFolderService(
             avatarUrl = request.avatarUrl,
             isPublic = true,
             isOfficial = true,
+            isSystemOfficial = true,
             officialCategory = request.category,
             hideMembers = request.hideMembers,
             displayMode = try { OfficialDisplayMode.valueOf(request.displayMode) } catch (e: Exception) { OfficialDisplayMode.SPECIAL },
@@ -281,6 +316,7 @@ class SpecialFolderService(
             targetCity = request.targetCity,
             targetUniversity = request.targetUniversity,
             targetMinistry = request.targetMinistry,
+            targetAudienceType = request.targetAudienceType,
             createdBy = creator
         )
         val savedGroup: Group = groupRepository.save(group)
@@ -323,6 +359,7 @@ class SpecialFolderService(
             avatarUrl = request.avatarUrl,
             isPublic = true,
             isOfficial = true,
+            isSystemOfficial = true,
             officialCategory = request.category,
             displayMode = try { OfficialDisplayMode.valueOf(request.displayMode) } catch (e: Exception) { OfficialDisplayMode.SPECIAL },
             targetFieldOfStudy = request.targetFieldOfStudy,
@@ -331,6 +368,7 @@ class SpecialFolderService(
             targetCity = request.targetCity,
             targetUniversity = request.targetUniversity,
             targetMinistry = request.targetMinistry,
+            targetAudienceType = request.targetAudienceType,
             owner = creator
         )
         val savedChannel: Channel = channelRepository.save(channel)
@@ -414,7 +452,7 @@ class SpecialFolderService(
 
     @Transactional(readOnly = true)
     fun getAllOfficialChannels(): List<OfficialChannelAdminDto> {
-        val channels: List<Channel> = channelRepository.findByIsOfficialTrue()
+        val channels: List<Channel> = channelRepository.findByIsSystemOfficialTrue()
         return channels.map { channel ->
             val subscriberCount: Long = channelSubscriberRepository.countByChannelId(channel.id!!)
             val admins: List<UserDto> = channelSubscriberRepository.findByChannelId(channel.id!!)
@@ -434,14 +472,43 @@ class SpecialFolderService(
                 targetProvince = channel.targetProvince,
                 targetCity = channel.targetCity,
                 targetUniversity = channel.targetUniversity,
-                targetMinistry = channel.targetMinistry
+                targetMinistry = channel.targetMinistry,
+                targetAudienceType = channel.targetAudienceType
+            )
+        }
+    }
+
+    @Transactional(readOnly = true)
+    fun getAllAppCreatedChannels(): List<OfficialChannelAdminDto> {
+        val channels: List<Channel> = channelRepository.findByIsSystemOfficialFalse().filter { it.isOfficial }
+        return channels.map { channel ->
+            val subscriberCount: Long = channelSubscriberRepository.countByChannelId(channel.id!!)
+            val admins: List<UserDto> = channelSubscriberRepository.findByChannelId(channel.id!!)
+                .filter { it.isAdmin }
+                .mapNotNull { it.user?.toDto() }
+            OfficialChannelAdminDto(
+                id = channel.id.toString(),
+                name = channel.name,
+                description = channel.description,
+                avatarUrl = channel.avatarUrl,
+                category = channel.officialCategory?.name ?: "",
+                subscriberCount = subscriberCount.toInt(),
+                admins = admins,
+                displayMode = channel.displayMode.name,
+                targetFieldOfStudy = channel.targetFieldOfStudy,
+                targetEducationLevel = channel.targetEducationLevel,
+                targetProvince = channel.targetProvince,
+                targetCity = channel.targetCity,
+                targetUniversity = channel.targetUniversity,
+                targetMinistry = channel.targetMinistry,
+                targetAudienceType = channel.targetAudienceType
             )
         }
     }
 
     @Transactional(readOnly = true)
     fun getAllOfficialGroups(): List<OfficialGroupAdminDto> {
-        val groups: List<Group> = groupRepository.findByIsOfficialTrue()
+        val groups: List<Group> = groupRepository.findByIsSystemOfficialTrue()
         return groups.map { group ->
             val memberCount: Long = groupMemberRepository.countByGroupId(group.id!!)
             val admins: List<UserDto> = groupMemberRepository.findByGroupId(group.id!!)
@@ -462,7 +529,37 @@ class SpecialFolderService(
                 targetProvince = group.targetProvince,
                 targetCity = group.targetCity,
                 targetUniversity = group.targetUniversity,
-                targetMinistry = group.targetMinistry
+                targetMinistry = group.targetMinistry,
+                targetAudienceType = group.targetAudienceType
+            )
+        }
+    }
+
+    @Transactional(readOnly = true)
+    fun getAllAppCreatedGroups(): List<OfficialGroupAdminDto> {
+        val groups: List<Group> = groupRepository.findByIsSystemOfficialFalse().filter { it.isOfficial }
+        return groups.map { group ->
+            val memberCount: Long = groupMemberRepository.countByGroupId(group.id!!)
+            val admins: List<UserDto> = groupMemberRepository.findByGroupId(group.id!!)
+                .filter { it.role == MemberRole.ADMIN || it.role == MemberRole.OWNER }
+                .mapNotNull { it.user?.toDto() }
+            OfficialGroupAdminDto(
+                id = group.id.toString(),
+                name = group.name,
+                description = group.description,
+                avatarUrl = group.avatarUrl,
+                category = group.officialCategory?.name ?: "",
+                hideMembers = group.hideMembers,
+                memberCount = memberCount.toInt(),
+                admins = admins,
+                displayMode = group.displayMode.name,
+                targetFieldOfStudy = group.targetFieldOfStudy,
+                targetEducationLevel = group.targetEducationLevel,
+                targetProvince = group.targetProvince,
+                targetCity = group.targetCity,
+                targetUniversity = group.targetUniversity,
+                targetMinistry = group.targetMinistry,
+                targetAudienceType = group.targetAudienceType
             )
         }
     }
@@ -486,6 +583,7 @@ class SpecialFolderService(
         channel.targetCity = request.targetCity
         channel.targetUniversity = request.targetUniversity
         channel.targetMinistry = request.targetMinistry
+        channel.targetAudienceType = request.targetAudienceType
         val savedChannel: Channel = channelRepository.save(channel)
         val subscriberCount: Long = channelSubscriberRepository.countByChannelId(savedChannel.id!!)
         val admins: List<UserDto> = channelSubscriberRepository.findByChannelId(savedChannel.id!!)
@@ -505,7 +603,8 @@ class SpecialFolderService(
             targetProvince = savedChannel.targetProvince,
             targetCity = savedChannel.targetCity,
             targetUniversity = savedChannel.targetUniversity,
-            targetMinistry = savedChannel.targetMinistry
+            targetMinistry = savedChannel.targetMinistry,
+            targetAudienceType = savedChannel.targetAudienceType
         )
     }
 
@@ -529,6 +628,7 @@ class SpecialFolderService(
         group.targetCity = request.targetCity
         group.targetUniversity = request.targetUniversity
         group.targetMinistry = request.targetMinistry
+        group.targetAudienceType = request.targetAudienceType
         val savedGroup: Group = groupRepository.save(group)
         val memberCount: Long = groupMemberRepository.countByGroupId(savedGroup.id!!)
         val admins: List<UserDto> = groupMemberRepository.findByGroupId(savedGroup.id!!)
@@ -549,7 +649,8 @@ class SpecialFolderService(
             targetProvince = savedGroup.targetProvince,
             targetCity = savedGroup.targetCity,
             targetUniversity = savedGroup.targetUniversity,
-            targetMinistry = savedGroup.targetMinistry
+            targetMinistry = savedGroup.targetMinistry,
+            targetAudienceType = savedGroup.targetAudienceType
         )
     }
 

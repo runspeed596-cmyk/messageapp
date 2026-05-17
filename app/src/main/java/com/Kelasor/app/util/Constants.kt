@@ -11,7 +11,7 @@ object Constants {
     // ═══════════════════════════════════════════════════════════════
     // 🔧 SWITCH: Change this ONE value to toggle Local ↔ Server
     // ═══════════════════════════════════════════════════════════════
-    private const val isLocalMode: Boolean = false
+    private const val isLocalMode: Boolean = true
 
     // ─── Endpoints ────────────────────────────────────────────────
     private const val LOCAL_IP: String = "192.168.70.113"

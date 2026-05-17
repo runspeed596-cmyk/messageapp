@@ -51,6 +51,7 @@ fun AcademyPublicProfileScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var selectedTabIndex by remember { mutableStateOf(0) }
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.events.collectLatest { event ->
@@ -59,6 +60,13 @@ fun AcademyPublicProfileScreen(
                 is AcademyPublicProfileEvent.NavigateToUserProfile -> onNavigateToUserProfile(event.userId)
                 is AcademyPublicProfileEvent.NavigateToEditProfile -> onNavigateToEditProfile(event.institutionId)
                 is AcademyPublicProfileEvent.NavigateToChannel -> onNavigateToChannel(event.channelId)
+                is AcademyPublicProfileEvent.ShowToast -> {
+                    com.Kelasor.app.ui.components.KelasorToast.show(
+                        context = context,
+                        message = event.message,
+                        type = event.type
+                    )
+                }
             }
         }
     }
@@ -135,6 +143,7 @@ fun AcademyPublicProfileScreen(
             ProfileHeader(
                 institution = institution,
                 isFollowing = state.isFollowing,
+                isFollowLoading = state.isFollowLoading,
                 isOwner = state.isOwner,
                 calculatedScore = state.calculatedScore,
                 calculatedRating = state.calculatedRating,
@@ -209,6 +218,7 @@ fun AcademyPublicProfileScreen(
 fun ProfileHeader(
     institution: Institution,
     isFollowing: Boolean,
+    isFollowLoading: Boolean,
     isOwner: Boolean,
     calculatedScore: Double,
     calculatedRating: Double,
@@ -323,7 +333,8 @@ fun ProfileHeader(
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (isFollowing) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary
-                    )
+                    ),
+                    enabled = !isFollowLoading
                 ) {
                     Text(
                         text = if (isFollowing) "دنبال شده" else "دنبال کردن",
@@ -637,12 +648,42 @@ fun AcademyProfileCourseItem(
                     val discountPct = course.discountPercentage ?: 0
                     val discountedPrice = if (discountPct > 0) price - (price * discountPct / 100) else price
                     
-                    Text(
-                        text = if (course.isFree) "رایگان" else "${discountedPrice.toPersianPrice()} تومان",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Column(horizontalAlignment = Alignment.End) {
+                        if (!course.isFree && discountPct > 0) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(Color(0xFFE53935))
+                                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "${discountPct.toString().toPersianNumbers()}%",
+                                        color = Color.White,
+                                        fontFamily = DanaFontFamily,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "${price.toPersianPrice()}",
+                                    fontFamily = DanaFontFamily,
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    style = androidx.compose.ui.text.TextStyle(textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(2.dp))
+                        }
+                        Text(
+                            text = if (course.isFree) "رایگان" else "${discountedPrice.toPersianPrice()} تومان",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontFamily = DanaFontFamily
+                        )
+                    }
                 }
                 
                 Spacer(modifier = Modifier.height(8.dp))

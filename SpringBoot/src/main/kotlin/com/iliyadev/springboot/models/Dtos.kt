@@ -301,7 +301,8 @@ data class UniversityDto(
     val studentCount: Int,
     val latitude: Double,
     val longitude: Double,
-    val imageUrl: String?
+    val imageUrl: String?,
+    val rankings: String? = null
 )
 
 fun University.toDto() = UniversityDto(
@@ -311,7 +312,8 @@ fun University.toDto() = UniversityDto(
     studentCount = studentCount,
     latitude = latitude,
     longitude = longitude,
-    imageUrl = imageUrl
+    imageUrl = imageUrl,
+    rankings = rankings
 )
 
 // Sub-DTOs for Entertainment (already used in EntertainmentService)
@@ -348,8 +350,7 @@ data class GameChallengeDto(
 
 data class RiddleOptionDto(
     val id: UUID,
-    val text: String,
-    val displayOrder: Int
+    val text: String
 )
 
 data class EntertainmentResponse(
@@ -1266,7 +1267,8 @@ data class NotificationDto(
     val actorName: String?,
     val actorAvatarUrl: String?,
     val isRead: Boolean,
-    val createdAt: Instant
+    val createdAt: Instant,
+    val status: String = "PENDING"
 )
 
 data class NotificationListResponse(
@@ -1290,7 +1292,8 @@ fun Notification.toDto(): NotificationDto = NotificationDto(
     actorName = actorName,
     actorAvatarUrl = actorAvatarUrl,
     isRead = isRead,
-    createdAt = createdAt
+    createdAt = createdAt,
+    status = status
 )
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -1386,15 +1389,13 @@ data class UsernameAvailabilityResponse(
 data class FieldOfStudyDto(
     val id: String,
     val name: String,
-    val educationLevel: String,
-    val displayOrder: Int
+    val educationLevel: String
 )
 
 fun FieldOfStudy.toDto(): FieldOfStudyDto = FieldOfStudyDto(
     id = id.toString(),
     name = name,
-    educationLevel = educationLevel,
-    displayOrder = displayOrder
+    educationLevel = educationLevel
 )
 
 data class EducationLevelDto(
@@ -1402,8 +1403,7 @@ data class EducationLevelDto(
     val name: String,
     val roleValueEn: String? = null,
     val hasFieldOfStudy: Boolean = false,
-    val hasFaculty: Boolean = false,
-    val displayOrder: Int
+    val hasFaculty: Boolean = false
 )
 
 fun EducationLevel.toDto(): EducationLevelDto = EducationLevelDto(
@@ -1411,22 +1411,19 @@ fun EducationLevel.toDto(): EducationLevelDto = EducationLevelDto(
     name = name,
     roleValueEn = roleValueEn,
     hasFieldOfStudy = hasFieldOfStudy,
-    hasFaculty = hasFaculty,
-    displayOrder = displayOrder
+    hasFaculty = hasFaculty
 )
 
 data class FacultyDto(
     val id: String,
     val name: String,
-    val educationLevel: String? = null,
-    val displayOrder: Int
+    val educationLevel: String? = null
 )
 
 fun Faculty.toDto(): FacultyDto = FacultyDto(
     id = id.toString(),
     name = name,
-    educationLevel = educationLevel,
-    displayOrder = displayOrder
+    educationLevel = educationLevel
 )
 
 data class UniversitySimpleDto(
@@ -1447,40 +1444,34 @@ data class EducationalRoleOptionDto(
     val id: String,
     val labelFa: String,
     val valueEn: String,
-    val emoji: String,
-    val displayOrder: Int
+    val emoji: String
 )
 
 fun EducationalRoleOption.toDto(): EducationalRoleOptionDto = EducationalRoleOptionDto(
     id = id.toString(),
     labelFa = labelFa,
     valueEn = valueEn,
-    emoji = emoji,
-    displayOrder = displayOrder
+    emoji = emoji
 )
 
 data class ClubDto(
     val id: String,
-    val name: String,
-    val displayOrder: Int
+    val name: String
 )
 
 fun Club.toDto() = ClubDto(
     id = id.toString(),
-    name = name,
-    displayOrder = displayOrder
+    name = name
 )
 
 data class StudentOrgDto(
     val id: String,
-    val name: String,
-    val displayOrder: Int
+    val name: String
 )
 
 fun StudentOrg.toDto() = StudentOrgDto(
     id = id.toString(),
-    name = name,
-    displayOrder = displayOrder
+    name = name
 )
 
 data class ReferenceDataDto(
@@ -1530,6 +1521,8 @@ data class InstitutionResponse(
     val totalTeachersCount: Int = 0,
     val totalCollaborations: Int = 0,
     val totalRevenue: Long? = null,
+    val totalViews: Long = 0,
+    val totalClicks: Long = 0,
     val rating: Double = 0.0,
     val averageRating: Double = 0.0,
     val reviewCount: Int = 0,
@@ -1573,7 +1566,9 @@ fun Institution.toResponse() = InstitutionResponse(
     totalPersonHours = 0,
     totalTeachersCount = 0,
     totalCollaborations = 0,
-    totalRevenue = null
+    totalRevenue = null,
+    totalViews = 0,
+    totalClicks = 0
 )
 
 data class InstitutionHonorDto(
@@ -1699,8 +1694,7 @@ data class AiBotDto(
     val botType: String,
     val category: String,
     val description: String?,
-    val avatarUrl: String?,
-    val displayOrder: Int
+    val avatarUrl: String?
 )
 
 fun AiBot.toDto(): AiBotDto = AiBotDto(
@@ -1709,8 +1703,7 @@ fun AiBot.toDto(): AiBotDto = AiBotDto(
     botType = botType,
     category = category,
     description = description,
-    avatarUrl = avatarUrl,
-    displayOrder = displayOrder
+    avatarUrl = avatarUrl
 )
 
 data class SpecialChannelDto(
@@ -1733,8 +1726,7 @@ data class CreateAiBotRequest(
     val name: String,
     val botType: String,
     val description: String? = null,
-    val avatarUrl: String? = null,
-    val displayOrder: Int = 0
+    val avatarUrl: String? = null
 )
 
 data class CreateOfficialGroupRequest(
@@ -1750,6 +1742,7 @@ data class CreateOfficialGroupRequest(
     val targetCity: String? = null,
     val targetUniversity: String? = null,
     val targetMinistry: String? = null,
+    val targetAudienceType: String? = null,
     val adminIds: List<String>? = null
 )
 
@@ -1765,6 +1758,7 @@ data class CreateOfficialChannelRequest(
     val targetCity: String? = null,
     val targetUniversity: String? = null,
     val targetMinistry: String? = null,
+    val targetAudienceType: String? = null,
     val adminIds: List<String>? = null
 )
 
@@ -1786,7 +1780,8 @@ data class OfficialChannelAdminDto(
     val targetProvince: String? = null,
     val targetCity: String? = null,
     val targetUniversity: String? = null,
-    val targetMinistry: String? = null
+    val targetMinistry: String? = null,
+    val targetAudienceType: String? = null
 )
 
 data class OfficialGroupAdminDto(
@@ -1804,7 +1799,8 @@ data class OfficialGroupAdminDto(
     val targetProvince: String? = null,
     val targetCity: String? = null,
     val targetUniversity: String? = null,
-    val targetMinistry: String? = null
+    val targetMinistry: String? = null,
+    val targetAudienceType: String? = null
 )
 
 
@@ -1863,6 +1859,8 @@ data class CourseDto(
     val syllabusDuration: String? = null,
     val averageRating: Double = 0.0,
     val reviewCount: Int = 0,
+    val viewCount: Long = 0,
+    val clickCount: Long = 0,
     val isVerticalPoster: Boolean = false,
     val hasOnlineClass: Boolean = false,
     val organizerType: String? = null,
@@ -1941,6 +1939,8 @@ fun Course.toDto(organizerType: String? = null): CourseDto {
     syllabusDuration = syllabusDuration,
     averageRating = averageRating,
     reviewCount = reviewCount,
+    viewCount = viewCount,
+    clickCount = clickCount,
     isVerticalPoster = isVerticalPoster,
     hasOnlineClass = bbbMeetingId != null,
     organizerType = organizerType,

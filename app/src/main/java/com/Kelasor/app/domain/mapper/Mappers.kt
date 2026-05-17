@@ -826,11 +826,49 @@ internal fun parseSyllabusDuration(durationStr: String?): Int {
     var hours = 0
     var minutes = 0
     
-    val hMatch = Regex("(\\d+)h").find(durationStr)
-    if (hMatch != null) hours = hMatch.groupValues[1].toInt()
+    val normalized = durationStr.lowercase().trim()
+        .replace("۰", "0")
+        .replace("۱", "1")
+        .replace("۲", "2")
+        .replace("۳", "3")
+        .replace("۴", "4")
+        .replace("۵", "5")
+        .replace("۶", "6")
+        .replace("۷", "7")
+        .replace("۸", "8")
+        .replace("۹", "9")
     
-    val mMatch = Regex("(\\d+)m").find(durationStr)
-    if (mMatch != null) minutes = mMatch.groupValues[1].toInt()
+    val hMatch = Regex("(\\d+)\\s*h").find(normalized)
+    if (hMatch != null) {
+        hours = hMatch.groupValues[1].toIntOrNull() ?: 0
+    } else {
+        val persHMatch = Regex("(\\d+)\\s*ساعت").find(normalized)
+        if (persHMatch != null) {
+            hours = persHMatch.groupValues[1].toIntOrNull() ?: 0
+        }
+    }
+    
+    val mMatch = Regex("(\\d+)\\s*m").find(normalized)
+    if (mMatch != null) {
+        minutes = mMatch.groupValues[1].toIntOrNull() ?: 0
+    } else {
+        val persMMatch = Regex("(\\d+)\\s*دقیقه").find(normalized)
+        if (persMMatch != null) {
+            minutes = persMMatch.groupValues[1].toIntOrNull() ?: 0
+        }
+    }
+    
+    if (hours == 0 && minutes == 0) {
+        val digitOnly = normalized.filter { it.isDigit() }
+        if (digitOnly.isNotEmpty()) {
+            val num = digitOnly.toIntOrNull() ?: 0
+            if (normalized.contains("ساعت")) {
+                hours = num
+            } else {
+                minutes = num
+            }
+        }
+    }
     
     return (hours * 60) + minutes
 }
@@ -894,10 +932,13 @@ fun InstitutionDto.toDomain(): Institution = Institution(
     totalTeachersCount = totalTeachersCount,
     totalCollaborations = totalCollaborations,
     totalRevenue = totalRevenue,
+    totalViews = totalViews,
+    totalClicks = totalClicks,
     rating = rating,
     averageRating = averageRating,
     reviewCount = reviewCount,
-    honors = honors.map { it.toDomain() }
+    honors = honors.map { it.toDomain() },
+    createdAt = parseInstant(createdAt)
 )
 
 fun InstitutionHonorDto.toDomain(): InstitutionHonor = InstitutionHonor(
@@ -945,6 +986,8 @@ fun CourseDto.toDomain(): Course = Course(
     rating = averageRating,
     reviewCount = reviewCount,
     favoritesCount = favoritesCount,
+    viewCount = viewCount,
+    clickCount = clickCount,
     status = status,
     adminNote = adminNote,
     tags = tags,
@@ -956,6 +999,7 @@ fun CourseDto.toDomain(): Course = Course(
     hasOnlineClass = hasOnlineClass,
     discountPercentage = discountPercentage ?: 0,
     organizerType = organizerType,
+    organizerChannelId = organizerChannelId,
     createdAt = parseInstant(createdAt) ?: Instant.now()
 )
 

@@ -300,9 +300,13 @@ class AcademyProfileViewModel @Inject constructor(
             }
             if (result.isSuccess) {
                 state = state.copy(isLoading = false)
+                // Refresh current user to local database BEFORE screen exits so the button immediately syncs
+                try {
+                    userRepository.getCurrentUser(forceRefresh = true).collect()
+                } catch (e: Exception) {
+                    android.util.Log.e("AcademyVM", "Failed to refresh user profile during setup sync", e)
+                }
                 _events.emit(AcademyProfileEvent.Success)
-                // Refresh current user to get the updated institutionLogoUrl
-                userRepository.getCurrentUser(forceRefresh = true).collect()
             } else {
                 state = state.copy(isLoading = false, error = result.exceptionOrNull()?.message)
                 _events.emit(AcademyProfileEvent.Error(state.error ?: "خطا در ثبت اطلاعات"))

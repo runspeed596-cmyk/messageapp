@@ -25,6 +25,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.Kelasor.app.data.remote.dto.UserDto
 import com.Kelasor.app.ui.theme.DanaFontFamily
+import com.Kelasor.app.util.toPersianNumbers
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,6 +93,9 @@ fun TeacherPublicProfileScreen(
             TeacherProfileHeader(
                 teacher = teacher,
                 courseCount = state.courses.size,
+                isFollowing = state.isFollowing,
+                followerCount = state.followerCount,
+                onFollowClick = { viewModel.toggleFollow() },
                 onMessageClick = { onNavigateToChat(teacher.id) },
                 onChannelClick = { 
                     teacher.officialChannelId?.let { onNavigateToChannel(it) }
@@ -152,6 +156,9 @@ fun TeacherPublicProfileScreen(
 fun TeacherProfileHeader(
     teacher: UserDto,
     courseCount: Int,
+    isFollowing: Boolean,
+    followerCount: Int,
+    onFollowClick: () -> Unit,
     onMessageClick: () -> Unit,
     onChannelClick: () -> Unit
 ) {
@@ -184,25 +191,6 @@ fun TeacherProfileHeader(
                         .fillMaxSize()
                         .clip(CircleShape)
                 )
-
-                // Rating Badge Overlay
-                if (teacher.averageRating >= 4.0) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .size(24.dp)
-                            .background(Color(0xFFFFD700), CircleShape)
-                            .border(2.dp, MaterialTheme.colorScheme.background, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Star,
-                            contentDescription = "محبوب",
-                            tint = Color.White,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                }
             }
             
             Spacer(modifier = Modifier.width(24.dp))
@@ -212,41 +200,35 @@ fun TeacherProfileHeader(
                 modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                ProfileStat(count = courseCount.toString(), label = "دوره‌ها")
-                ProfileStat(count = String.format("%.1f", teacher.averageRating), label = "امتیاز مدرس")
-                ProfileStat(count = teacher.reviewCount.toString(), label = "نظرات")
+                ProfileStat(count = courseCount.toString().toPersianNumbers(), label = "دوره‌ها")
+                ProfileStat(count = followerCount.toString().toPersianNumbers(), label = "دنبال‌کننده‌ها")
+                ProfileStat(count = String.format("%.1f", teacher.averageRating).toPersianNumbers(), label = "امتیاز")
             }
         }
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        // Action Buttons
+        // Action Buttons Row
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Button(
-                onClick = onMessageClick,
+                onClick = onFollowClick,
                 modifier = Modifier
                     .weight(1f)
                     .height(36.dp),
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
+                    containerColor = if (isFollowing) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary
                 )
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.Chat,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onPrimary
-                )
-                Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "ارسال پیام",
+                    text = if (isFollowing) "دنبال شده" else "دنبال کردن",
                     fontFamily = DanaFontFamily,
                     fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onPrimary
+                    color = if (isFollowing) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onPrimary
                 )
             }
 
@@ -276,6 +258,20 @@ fun TeacherProfileHeader(
                     )
                 }
             }
+
+            IconButton(
+                onClick = onMessageClick,
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.Chat,
+                    contentDescription = "پیام",
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -298,8 +294,11 @@ fun TeacherBio(teacher: UserDto) {
             )
         }
         
+        // Always show "مدرس" on teacher profile pages — educationalRole is irrelevant here
+        val roleText = "مدرس"
+        
         Text(
-            text = teacher.educationalRole ?: "مدرس",
+            text = roleText,
             fontFamily = DanaFontFamily,
             fontSize = 13.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

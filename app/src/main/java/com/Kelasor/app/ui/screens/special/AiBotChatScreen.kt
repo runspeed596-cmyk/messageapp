@@ -165,18 +165,36 @@ fun AiBotChatScreen(
             )
         },
         bottomBar = {
-            ChatInputBar(
-                messageText = messageText,
-                onMessageChange = { messageText = it },
-                onSend = {
-                    val text: String = messageText.trim()
-                    if (text.isNotBlank()) {
-                        viewModel.sendMessage(botId, text)
-                        messageText = ""
-                    }
-                },
-                isSending = state.isSending
-            )
+            if (botType == "mosbat_elm_bot") {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "امکان ارسال پیام به این ربات وجود ندارد. این ربات صرفاً جهت اطلاع‌رسانی است.",
+                        fontFamily = com.Kelasor.app.ui.theme.DanaFontFamily,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                ChatInputBar(
+                    messageText = messageText,
+                    onMessageChange = { messageText = it },
+                    onSend = {
+                        val text: String = messageText.trim()
+                        if (text.isNotBlank()) {
+                            viewModel.sendMessage(botId, text)
+                            messageText = ""
+                        }
+                    },
+                    isSending = state.isSending
+                )
+            }
         }
     ) { paddingValues ->
         Box(
@@ -259,23 +277,30 @@ private fun ChatBubble(message: AiBotMessageDto, onActionClick: (String) -> Unit
             }
 
             if (message.actionLabel != null && message.actionUrl != null) {
-                Spacer(modifier = Modifier.height(8.dp))
-                androidx.compose.material3.Button(
-                    onClick = { onActionClick(message.actionUrl) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = extendedColors.accent.copy(alpha = 0.9f)
-                    ),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    androidx.compose.material3.Text(
-                        text = message.actionLabel,
-                        fontFamily = com.Kelasor.app.ui.theme.DanaFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        color = Color.White
-                    )
+                val isStart = message.actionLabel.contains("شروع") || 
+                              message.actionLabel.contains("استارت") || 
+                              message.actionLabel.contains("Start") || 
+                              message.actionLabel.contains("start") ||
+                              message.actionUrl.contains("start")
+                if (!isStart) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    androidx.compose.material3.Button(
+                        onClick = { onActionClick(message.actionUrl) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = extendedColors.accent.copy(alpha = 0.9f)
+                        ),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        androidx.compose.material3.Text(
+                            text = message.actionLabel,
+                            fontFamily = com.Kelasor.app.ui.theme.DanaFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = Color.White
+                        )
+                    }
                 }
             }
         }
